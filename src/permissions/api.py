@@ -67,7 +67,7 @@ class GrantHdmsAccessSchema(BaseModel):
     """Schema for granting HDMS access"""
     employee_id: str  # IAK-0001 format
     password: str
-    role: str  # requester, moderator, assignee
+    role: str  # requestor, moderator, assignee
     change_password: bool = True  # For existing users, whether to change password
 
 class GrantHdmsAccessResponse(Schema):
@@ -198,7 +198,7 @@ def grant_hdms_access(request, payload: GrantHdmsAccessSchema):
             return 400, {"error": "Password must be alphanumeric only"}
     
     # Validate role
-    valid_roles = ['requestor', 'moderator', 'assignee']
+    valid_roles = ['requestor', 'moderator', 'assignee', 'admin']
     if payload.role not in valid_roles:
         return 400, {"error": f"Role must be one of: {', '.join(valid_roles)}"}
     

@@ -3,16 +3,19 @@ Authentication API endpoints using Django Ninja.
 
 Endpoints:
 - POST /api/auth/login - Login with employee_code + password
+- POST /api/auth/login-hdms - Login with HDMS role validation
 - POST /api/auth/logout - Logout (blacklist token)
 - POST /api/auth/refresh - Refresh access token
 - GET /api/auth/me - Get current user info
 """
+from typing import Optional
 from django.http import HttpRequest
 from ninja import Router, Schema
 from ninja.security import HttpBearer
 from datetime import datetime, timedelta
 from django.utils import timezone
 from employees.models import Employee
+from permissions.models import ServiceAccess, HdmsRole
 from .models import UserCredentials, RefreshToken, BlacklistedToken
 from .jwt_utils import (
     generate_access_token,
@@ -31,6 +34,13 @@ router = Router(tags=["Authentication"])
 class LoginRequest(Schema):
     employee_code: str
     password: str
+
+
+class HdmsLoginRequest(Schema):
+    """Login request for HDMS with role validation"""
+    employee_code: str
+    password: str
+    role: str  # Selected role from dropdown (admin, moderator, assignee, requestor)
 
 
 class LoginResponse(Schema):
@@ -292,4 +302,152 @@ def get_current_user(request: HttpRequest):
         "designation": employee.designation.position_name,
         "is_superadmin": employee.is_superadmin,
         "is_active": employee.is_active
+    }
+
+
+# ================== HDMS Login Endpoint ==================
+
+class HdmsLoginResponse(Schema):
+    """Response for HDMS login with role and permissions"""
+    access_token: str
+    refresh_token: str
+    expires_in: int
+    user: dict
+
+
+class HdmsErrorResponse(Schema):
+    """Error response for HDMS login"""
+    error: str
+    detail: Optional[str] = None
+    assigned_role: Optional[str] = None  # For role mismatch errors
+
+
+@router.post("/login-hdms", response={200: HdmsLoginResponse, 401: HdmsErrorResponse, 403: HdmsErrorResponse, 423: HdmsErrorResponse})
+def login_hdms(request: HttpRequest, payload: HdmsLoginRequest):
+    """
+    Login to HDMS with role validation.
+    
+    Validates:
+    1. Employee credentials
+    2. HDMS service access exists
+    3. Selected role matches assigned HdmsRole
+    
+    Returns user info with role and permissions.
+    """
+    # Validate role input
+    valid_roles = ['admin', 'moderator', 'assignee', 'requestor']
+    if payload.role not in valid_roles:
+        return 401, {
+            "error": "invalid_role",
+            "detail": f"Role must be one of: {', '.join(valid_roles)}"
+        }
+    
+    # Get employee by employee_code
+    try:
+        employee = Employee.objects.get(
+            employee_code=payload.employee_code,
+            is_active=True,
+            is_deleted=False
+        )
+    except Employee.DoesNotExist:
+        return 401, {
+            "error": "invalid_credentials",
+            "detail": "Employee code not found or account inactive"
+        }
+    
+    # Get user credentials
+    try:
+        credentials = UserCredentials.objects.get(employee=employee, is_deleted=False)
+    except UserCredentials.DoesNotExist:
+        return 401, {
+            "error": "invalid_credentials",
+            "detail": "No credentials found for this employee"
+        }
+    
+    # Check if account is locked
+    if credentials.is_locked():
+        return 423, {
+            "error": "account_locked",
+            "detail": f"Too many failed attempts. Try again after {credentials.locked_until}"
+        }
+    
+    # Verify password
+    if not credentials.check_password(payload.password):
+        credentials.record_failed_login()
+        return 401, {
+            "error": "invalid_credentials",
+            "detail": "Incorrect password"
+        }
+    
+    # Check HDMS service access
+    try:
+        service_access = ServiceAccess.objects.get(
+            employee=employee,
+            service='hdms',
+            is_active=True,
+            is_deleted=False
+        )
+    except ServiceAccess.DoesNotExist:
+        return 403, {
+            "error": "no_hdms_access",
+            "detail": "You don't have HDMS access. Contact admin."
+        }
+    
+    # Get HDMS role
+    try:
+        hdms_role = service_access.hdms_role
+    except HdmsRole.DoesNotExist:
+        return 403, {
+            "error": "no_hdms_role",
+            "detail": "No HDMS role assigned. Contact admin."
+        }
+    
+    # Validate selected role matches assigned role
+    if hdms_role.role_type != payload.role:
+        return 403, {
+            "error": "role_mismatch",
+            "detail": f"You are assigned as {hdms_role.get_role_type_display()}, not {payload.role.capitalize()}",
+            "assigned_role": hdms_role.role_type
+        }
+    
+    # Get client IP
+    client_ip = request.META.get('REMOTE_ADDR')
+    user_agent = request.META.get('HTTP_USER_AGENT', '')
+    
+    # Record successful login
+    credentials.record_successful_login(ip_address=client_ip)
+    
+    # Generate tokens
+    access_token = generate_access_token(employee)
+    refresh_token_str = generate_refresh_token(employee)
+    
+    # Store refresh token in database
+    RefreshToken.objects.create(
+        employee=employee,
+        token=refresh_token_str,
+        expires_at=timezone.now() + timedelta(days=7),
+        device_info=user_agent[:255],
+        ip_address=client_ip
+    )
+    
+    # Build user response with permissions
+    return 200, {
+        "access_token": access_token,
+        "refresh_token": refresh_token_str,
+        "expires_in": 3600,  # 1 hour
+        "user": {
+            "id": str(employee.id),
+            "employee_id": employee.employee_id,
+            "employee_code": employee.employee_code,
+            "name": employee.full_name,
+            "email": employee.email or "",
+            "department": employee.department.dept_name,
+            "role": hdms_role.role_type,
+            "permissions": {
+                "can_view_all_tickets": hdms_role.can_view_all_tickets,
+                "can_assign_tickets": hdms_role.can_assign_tickets,
+                "can_close_tickets": hdms_role.can_close_tickets,
+                "can_manage_users": hdms_role.can_manage_users
+            }
+        }
     }

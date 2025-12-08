@@ -125,11 +125,13 @@ class HdmsRole(SoftDeleteModel):
     Only for HDMS service! SIS uses designation as role.
     
     Roles:
+    - Admin: Full system access, can manage users and all settings
     - Moderator: Can manage tickets, assign to others, close tickets
     - Assignee: Can be assigned tickets, update status, add notes
     - Requestor: Can only create tickets and view own tickets
     
     Example:
+    - Admin with HDMS access → Full system control
     - Teacher with HDMS access → Could be Moderator (manages student tech issues)
     - IT Staff with HDMS access → Could be Assignee (fixes issues)
     - Any employee with HDMS access → Could be Requestor (reports issues)
@@ -144,6 +146,7 @@ class HdmsRole(SoftDeleteModel):
     )
     
     ROLE_CHOICES = [
+        ('admin', 'Administrator (Full system access)'),
         ('moderator', 'Moderator (Full ticket management)'),
         ('assignee', 'Assignee (Can be assigned tickets)'),
         ('requestor', 'Requestor (Can only create tickets)'),
@@ -167,6 +170,11 @@ class HdmsRole(SoftDeleteModel):
     can_close_tickets = models.BooleanField(
         default=False,
         help_text="Can close/resolve tickets (moderator privilege)"
+    )
+    
+    can_manage_users = models.BooleanField(
+        default=False,
+        help_text="Can manage HDMS users and permissions (admin privilege)"
     )
     
     assigned_at = models.DateTimeField(
@@ -203,18 +211,26 @@ class HdmsRole(SoftDeleteModel):
         self.full_clean()
         
         # Set permissions based on role
-        if self.role_type == 'moderator':
+        if self.role_type == 'admin':
             self.can_view_all_tickets = True
             self.can_assign_tickets = True
             self.can_close_tickets = True
+            self.can_manage_users = True
+        elif self.role_type == 'moderator':
+            self.can_view_all_tickets = True
+            self.can_assign_tickets = True
+            self.can_close_tickets = True
+            self.can_manage_users = False
         elif self.role_type == 'assignee':
             self.can_view_all_tickets = False
             self.can_assign_tickets = False
             self.can_close_tickets = True  # Can close tickets assigned to them
+            self.can_manage_users = False
         elif self.role_type == 'requestor':
             self.can_view_all_tickets = False
             self.can_assign_tickets = False
             self.can_close_tickets = False
+            self.can_manage_users = False
         
         super().save(*args, **kwargs)
 

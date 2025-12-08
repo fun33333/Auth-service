@@ -20,7 +20,7 @@ class TestGrantHdmsAccessAPI:
             data=json.dumps({
                 "employee_id": sample_employee.employee_id,
                 "password": "TestPass1",
-                "role": "requestor"  # Note: 'requestor' not 'requester'
+                "role": "requestor"  # Note: 'requestor' not 'requestor'
             }),
             content_type='application/json'
         )

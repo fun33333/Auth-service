@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'employees',
     'authentication',
     'permissions',
+    'audit',
 ]
 
 MIDDLEWARE = [
