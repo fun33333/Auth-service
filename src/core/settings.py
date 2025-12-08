@@ -14,8 +14,19 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-dev-key-change-in-pro
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 
+# JWT Configuration
+JWT_SECRET = os.getenv('JWT_SECRET', SECRET_KEY)
+JWT_ALGORITHM = 'HS256'
+ACCESS_TOKEN_EXPIRY_HOURS = 1
+REFRESH_TOKEN_EXPIRY_DAYS = 7
+
 ALLOWED_HOSTS = ['*']
 CORS_ALLOW_ALL_ORIGINS = True
+
+# Additional CORS settings
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_HEADERS = ['*']
+CORS_EXPOSE_HEADERS = ['Authorization']
 
 # Application definition
 INSTALLED_APPS = [
@@ -28,6 +39,8 @@ INSTALLED_APPS = [
     'corsheaders',
     'ninja',
     'employees',
+    'authentication',
+    'permissions',
 ]
 
 MIDDLEWARE = [
@@ -102,4 +115,4 @@ MEDIA_ROOT = BASE_DIR / 'media'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Custom User Model
-AUTH_USER_MODEL = 'employees.User'
+# Using default Django User model (no custom AUTH_USER_MODEL)

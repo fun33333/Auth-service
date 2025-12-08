@@ -87,6 +87,40 @@ class ErrorResponseSchema(BaseModel):
     """Error response schema"""
     error: str
 
+class DepartmentCreateSchema(BaseModel):  # Changed from Schema to BaseModel
+    """Schema for creating a department"""
+    dept_code: str
+    dept_name: str
+    dept_sector: str = 'other'
+    description: str = None
+
+class DepartmentUpdateSchema(BaseModel):  # Changed from Schema to BaseModel
+    """Schema for updating a department"""
+    dept_name: str = None
+    dept_sector: str = None
+    description: str = None
+
+class DepartmentDetailSchema(BaseModel):  # Changed from Schema to BaseModel
+    """Schema for department detail response"""
+    department_id: str
+    dept_code: str
+    dept_name: str
+    dept_sector: str
+    description: str = None
+    employee_count: int
+    designations: list
+
+class DesignationCreateSchema(BaseModel):
+    """Schema for creating a designation"""
+    department_code: str  # dept_code of the department
+    position_code: str
+    position_name: str
+    description: str = None
+
+class DesignationUpdateSchema(BaseModel):
+    """Schema for updating a designation"""
+    position_name: str = None
+    description: str = None
 
 @router.post(
     "/employees",
@@ -279,6 +313,99 @@ def list_departments(request):
     )
     return list(departments)
 
+@router.post("/departments", response={201: dict, 400: ErrorResponseSchema})
+def create_department(request, payload: DepartmentCreateSchema):
+    """Create a new department"""
+    import re
+    
+    # Validate dept_code length
+    if len(payload.dept_code) > 6:
+        return 400, {"error": "Department code must be 6 characters or less"}
+    
+    # Validate alphanumeric
+    if not re.match(r'^[A-Za-z0-9]+$', payload.dept_code):
+        return 400, {"error": "Department code must be alphanumeric only"}
+    
+    # Check uniqueness
+    if Department.objects.filter(dept_code=payload.dept_code).exists():
+        return 400, {"error": f"Department code '{payload.dept_code}' already exists"}
+    
+    try:
+        dept = Department.objects.create(
+            dept_code=payload.dept_code.upper(),
+            dept_name=payload.dept_name,
+            dept_sector=payload.dept_sector,
+            description=payload.description
+        )
+        return 201, {
+            "message": "Department created successfully",
+            "department_id": dept.department_id,
+            "dept_code": dept.dept_code
+        }
+    except Exception as e:
+        return 400, {"error": str(e)}
+
+
+@router.get("/departments/{dept_code}", response={200: dict, 404: ErrorResponseSchema})
+def get_department(request, dept_code: str):
+    """Get single department with employee count and designations"""
+    try:
+        dept = Department.objects.get(dept_code=dept_code)
+        return 200, {
+            "department_id": dept.department_id,
+            "dept_code": dept.dept_code,
+            "dept_name": dept.dept_name,
+            "dept_sector": dept.dept_sector,
+            "description": dept.description,
+            "employee_count": dept.employees.filter(is_deleted=False).count(),
+            "designations": [
+                {"position_code": d.position_code, "position_name": d.position_name}
+                for d in dept.designations.filter(is_deleted=False)
+            ]
+        }
+    except Department.DoesNotExist:
+        return 404, {"error": f"Department '{dept_code}' not found"}
+
+
+@router.put("/departments/{dept_code}", response={200: dict, 400: ErrorResponseSchema, 404: ErrorResponseSchema})
+def update_department(request, dept_code: str, payload: DepartmentUpdateSchema):
+    """Update department details"""
+    try:
+        dept = Department.objects.get(dept_code=dept_code)
+        
+        if payload.dept_name is not None:
+            dept.dept_name = payload.dept_name
+        if payload.dept_sector is not None:
+            dept.dept_sector = payload.dept_sector
+        if payload.description is not None:
+            dept.description = payload.description
+        
+        dept.save()
+        return 200, {
+            "message": "Department updated successfully",
+            "dept_code": dept.dept_code
+        }
+    except Department.DoesNotExist:
+        return 404, {"error": f"Department '{dept_code}' not found"}
+    except Exception as e:
+        return 400, {"error": str(e)}
+
+
+@router.delete("/departments/{dept_code}", response={200: dict, 400: ErrorResponseSchema, 404: ErrorResponseSchema})
+def delete_department(request, dept_code: str):
+    """Soft delete a department (only if no active employees)"""
+    try:
+        dept = Department.objects.get(dept_code=dept_code)
+        
+        # Check for active employees
+        active_employees = dept.employees.filter(is_deleted=False).count()
+        if active_employees > 0:
+            return 400, {"error": f"Cannot delete department with {active_employees} active employees"}
+        
+        dept.soft_delete()  # Use soft_delete method
+        return 200, {"message": f"Department '{dept_code}' deleted successfully"}
+    except Department.DoesNotExist:
+        return 404, {"error": f"Department '{dept_code}' not found"}
 
 @router.get("/designations", response=List[dict])
 def list_designations(request, department_code: str = None):
@@ -293,6 +420,102 @@ def list_designations(request, department_code: str = None):
     )
     return list(designations)
 
+@router.post("/designations", response={201: dict, 400: ErrorResponseSchema})
+def create_designation(request, payload: DesignationCreateSchema):
+    """Create a new designation for a department"""
+    import re
+    
+    # Validate position_code length
+    if len(payload.position_code) > 4:
+        return 400, {"error": "Position code must be 4 characters or less"}
+    
+    # Validate alphanumeric
+    if not re.match(r'^[A-Za-z0-9]+$', payload.position_code):
+        return 400, {"error": "Position code must be alphanumeric only"}
+    
+    # Find department
+    try:
+        department = Department.objects.get(dept_code=payload.department_code, is_deleted=False)
+    except Department.DoesNotExist:
+        return 400, {"error": f"Department '{payload.department_code}' not found"}
+    
+    # Check uniqueness within department
+    if Designation.objects.filter(department=department, position_code=payload.position_code).exists():
+        return 400, {"error": f"Position code '{payload.position_code}' already exists in department '{payload.department_code}'"}
+    
+    try:
+        designation = Designation.objects.create(
+            department=department,
+            position_code=payload.position_code.upper(),
+            position_name=payload.position_name,
+            description=payload.description
+        )
+        return 201, {
+            "message": "Designation created successfully",
+            "id": str(designation.id),
+            "position_code": designation.position_code,
+            "department_code": department.dept_code
+        }
+    except Exception as e:
+        return 400, {"error": str(e)}
+
+
+@router.get("/designations/{designation_id}", response={200: dict, 404: ErrorResponseSchema})
+def get_designation(request, designation_id: str):
+    """Get single designation details"""
+    try:
+        designation = Designation.objects.select_related('department').get(id=designation_id)
+        return 200, {
+            "id": str(designation.id),
+            "position_code": designation.position_code,
+            "position_name": designation.position_name,
+            "description": designation.description,
+            "department": {
+                "dept_code": designation.department.dept_code,
+                "dept_name": designation.department.dept_name
+            }
+        }
+    except Designation.DoesNotExist:
+        return 404, {"error": "Designation not found"}
+
+
+@router.put("/designations/{designation_id}", response={200: dict, 400: ErrorResponseSchema, 404: ErrorResponseSchema})
+def update_designation(request, designation_id: str, payload: DesignationUpdateSchema):
+    """Update designation details"""
+    try:
+        designation = Designation.objects.get(id=designation_id)
+        
+        if payload.position_name is not None:
+            designation.position_name = payload.position_name
+        if payload.description is not None:
+            designation.description = payload.description
+        
+        designation.save()
+        return 200, {
+            "message": "Designation updated successfully",
+            "position_code": designation.position_code
+        }
+    except Designation.DoesNotExist:
+        return 404, {"error": "Designation not found"}
+    except Exception as e:
+        return 400, {"error": str(e)}
+
+
+@router.delete("/designations/{designation_id}", response={200: dict, 400: ErrorResponseSchema, 404: ErrorResponseSchema})
+def delete_designation(request, designation_id: str):
+    """Soft delete a designation (only if no active employees)"""
+    try:
+        designation = Designation.objects.get(id=designation_id)
+        
+        # Check for active employees
+        active_employees = designation.employees.filter(is_deleted=False).count()
+        if active_employees > 0:
+            return 400, {"error": f"Cannot delete designation with {active_employees} active employees"}
+        
+        designation.soft_delete()  # Use soft_delete method
+        return 200, {"message": f"Designation '{designation.position_code}' deleted successfully"}
+    except Designation.DoesNotExist:
+        return 404, {"error": "Designation not found"}
 
 @router.get("/employees", response=dict)
 def list_employees(
