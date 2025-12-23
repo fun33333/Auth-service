@@ -7,6 +7,7 @@ Handles:
 - Token validation and decoding
 """
 import jwt
+import uuid
 from datetime import datetime, timedelta
 from django.conf import settings
 from decouple import config
@@ -42,7 +43,9 @@ def generate_access_token(employee):
         'is_active': employee.is_active,
         'exp': datetime.utcnow() + ACCESS_TOKEN_EXPIRY,
         'iat': datetime.utcnow(),
-        'type': 'access'
+        'token_type': 'access',
+        'user_id': str(employee.id),
+        'jti': str(uuid.uuid4()),
     }
     
     token = jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
@@ -59,7 +62,9 @@ def generate_refresh_token(employee):
         'employee_id': employee.employee_id,
         'exp': datetime.utcnow() + REFRESH_TOKEN_EXPIRY,
         'iat': datetime.utcnow(),
-        'type': 'refresh'
+        'token_type': 'refresh',
+        'user_id': str(employee.id),
+        'jti': str(uuid.uuid4()),
     }
     
     token = jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
@@ -91,7 +96,7 @@ def verify_access_token(token):
         payload = decode_token(token)
         
         # Check token type
-        if payload.get('type') != 'access':
+        if payload.get('token_type') != 'access':
             return None
         
         return payload.get('employee_id')
@@ -109,7 +114,7 @@ def verify_refresh_token(token):
         payload = decode_token(token)
         
         # Check token type
-        if payload.get('type') != 'refresh':
+        if payload.get('token_type') != 'refresh':
             return None
         
         return payload.get('employee_id')
