@@ -40,7 +40,6 @@ class HdmsLoginRequest(Schema):
     """Login request for HDMS with role validation"""
     employee_code: str
     password: str
-    role: str  # Selected role from dropdown (admin, moderator, assignee, requestor)
 
 
 class LoginResponse(Schema):
@@ -330,17 +329,9 @@ def login_hdms(request: HttpRequest, payload: HdmsLoginRequest):
     Validates:
     1. Employee credentials
     2. HDMS service access exists
-    3. Selected role matches assigned HdmsRole
     
     Returns user info with role and permissions.
     """
-    # Validate role input
-    valid_roles = ['admin', 'moderator', 'assignee', 'requestor']
-    if payload.role not in valid_roles:
-        return 401, {
-            "error": "invalid_role",
-            "detail": f"Role must be one of: {', '.join(valid_roles)}"
-        }
     
     # Get employee by employee_code
     try:
@@ -400,14 +391,6 @@ def login_hdms(request: HttpRequest, payload: HdmsLoginRequest):
         return 403, {
             "error": "no_hdms_role",
             "detail": "No HDMS role assigned. Contact admin."
-        }
-    
-    # Validate selected role matches assigned role
-    if hdms_role.role_type != payload.role:
-        return 403, {
-            "error": "role_mismatch",
-            "detail": f"You are assigned as {hdms_role.get_role_type_display()}, not {payload.role.capitalize()}",
-            "assigned_role": hdms_role.role_type
         }
     
     # Get client IP
