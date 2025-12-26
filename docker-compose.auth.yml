@@ -8,7 +8,7 @@ services:
       POSTGRES_USER: erp_user
       POSTGRES_PASSWORD: change_me_in_production
     ports:
-      - "5433:5432" # Changed to 5433 to avoid conflict
+      - "0.0.0.0:5432:5432"  # ✅ Changed: Now accessible from network!
     volumes:
       - auth_postgres_data:/var/lib/postgresql/data
     healthcheck:
