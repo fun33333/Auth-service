@@ -10,6 +10,7 @@ All models inherit from SoftDeleteModel for soft delete functionality.
 import uuid, re
 from django.db import models
 from django.core.exceptions import ValidationError
+# ObjectDoesNotExist
 from .utils import SoftDeleteModel
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 
