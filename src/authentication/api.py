@@ -400,8 +400,8 @@ def login_hdms(request: HttpRequest, payload: HdmsLoginRequest):
     # Record successful login
     credentials.record_successful_login(ip_address=client_ip)
     
-    # Generate tokens
-    access_token = generate_access_token(employee)
+    # Generate tokens with specific HDMS role
+    access_token = generate_access_token(employee, role=hdms_role.role_type)
     refresh_token_str = generate_refresh_token(employee)
     
     # Store refresh token in database

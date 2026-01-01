@@ -5,3 +5,5 @@ python-decouple==3.8
 redis==5.0.1
 PyJWT==2.8.0
 python-dotenv==1.0.0
+dj-database-url>=2.1.0
+django-cors-headers>=4.3.0

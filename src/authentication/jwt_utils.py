@@ -20,7 +20,7 @@ ACCESS_TOKEN_EXPIRY = timedelta(hours=1)
 REFRESH_TOKEN_EXPIRY = timedelta(days=7)
 
 
-def generate_access_token(employee):
+def generate_access_token(employee, **kwargs):
     """
     Generate JWT access token for employee.
     
@@ -39,14 +39,19 @@ def generate_access_token(employee):
         'department_id': employee.department.department_id,
         'department_name': employee.department.dept_name,
         'designation': employee.designation.position_name,
+        'email': employee.email,
         'is_superadmin': employee.is_superadmin,
         'is_active': employee.is_active,
         'exp': datetime.utcnow() + ACCESS_TOKEN_EXPIRY,
         'iat': datetime.utcnow(),
         'token_type': 'access',
+        'sub': str(employee.id),  # Standard subject claim
         'user_id': str(employee.id),
         'jti': str(uuid.uuid4()),
     }
+    
+    # Add any extra claims (e.g. role from HDMS login)
+    payload.update(kwargs)
     
     token = jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
     return token
