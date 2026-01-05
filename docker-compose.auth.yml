@@ -1,57 +1,32 @@
 services:
-  # PostgreSQL for auth service only
-  postgres-auth:
-    image: postgres:16
-    container_name: auth_postgres
-    environment:
-      POSTGRES_DB: erp_users_db
-      POSTGRES_USER: erp_user
-      POSTGRES_PASSWORD: change_me_in_production
-    ports:
-      - "0.0.0.0:5432:5432" # ✅ Changed: Now accessible from network!
-    volumes:
-      - auth_postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U erp_user -d erp_users_db" ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+  # Removed local postgres-auth (using shared erp_postgres)
+  # Removed local redis-auth (unused)
 
-  # Redis for token blacklist
-  redis-auth:
-    image: redis:7
-    container_name: auth_redis
-    command: redis-server --appendonly yes
-    ports:
-      - "6380:6379"
-    volumes:
-      - auth_redis_data:/data
-    healthcheck:
-      test: [ "CMD", "redis-cli", "ping" ]
-      interval: 10s
-      timeout: 5s
-      retries: 3
+
 
   # Auth Service
   auth-service:
     build: .
     container_name: auth_service
+    env_file:
+      - ../.env
     environment:
-      - DATABASE_URL=postgresql://erp_user:change_me_in_production@postgres-auth:5432/erp_users_db
-      - REDIS_URL=redis://redis-auth:6379/0
-      - SECRET_KEY=dev-secret-key-change-in-production
       - DEBUG=True
+      - DATABASE_URL=${AUTH_DATABASE_URL}
     ports:
       - "8000:8000"
     volumes:
       - ./src:/app
-    depends_on:
-      postgres-auth:
-        condition: service_healthy
-      redis-auth:
-        condition: service_healthy
+    networks:
+      - erp_network # Attach to shared network
+    # depends_on:
+    #   - erp_postgres # (External dependency, compose might warn if not found in this file, managed via network connectivity)
     restart: unless-stopped
 
-volumes:
-  auth_postgres_data:
-  auth_redis_data:
+networks:
+  erp_network:
+    external: true # Use the shared network created by infra
+
+# volumes:
+#   auth_postgres_data:
+#   auth_redis_data:
