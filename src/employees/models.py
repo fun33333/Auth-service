@@ -314,14 +314,17 @@ class EmployeeAssignment(SoftDeleteModel):
             
             new_code = f"{prefix}-{shift_code}-{year}-{role}-{seq}"
             old_code = self.employee.employee_code
-
+            
             if old_code != new_code:
                 self.employee.employee_code = new_code
                 self.employee.save(update_fields=['employee_code'])
                 
-                # Trigger Notification
+                # Trigger Email Notification
                 from .notifications import send_employee_code_notification
-                send_employee_code_notification(self.employee, old_code, new_code)
+                send_employee_code_notification(self.employee, new_code)
+                
+                # Store new code in instance for Admin feedback
+                self._new_employee_code = new_code
 
     def __str__(self):
         scope = self.institution.inst_code if self.institution else "Global"

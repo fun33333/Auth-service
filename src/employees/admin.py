@@ -103,6 +103,22 @@ class EmployeeAdmin(SoftDeleteAdmin):
     readonly_fields = ['employee_id', 'employee_code']
     inlines = [AssignmentInline]
     
+    def save_related(self, request, form, formsets, change):
+        super().save_related(request, form, formsets, change)
+        # Check if code was changed during assignment saves
+        for formset in formsets:
+            if formset.model == EmployeeAssignment:
+                for obj in formset.queryset.all():
+                    if hasattr(obj, '_new_employee_code'):
+                        from django.contrib import messages
+                        self.message_user(
+                            request, 
+                            f"Success: Employee code for {obj.employee.full_name} has been updated to {obj._new_employee_code}",
+                            level=messages.SUCCESS
+                        )
+                        # Clean up so it doesn't fire multiple times on next save if object is reused
+                        del obj._new_employee_code
+    
     actions = ['activate_employees', 'deactivate_employees', 'restore_items']
 
     def is_active_badge(self, obj):
@@ -127,18 +143,15 @@ class EmployeeAssignmentAdmin(SoftDeleteAdmin):
     search_fields = ['employee__full_name', 'employee__employee_id']
 
     def save_model(self, request, obj, form, change):
-        # Capture old code from the linked employee before saving
-        old_code = obj.employee.employee_code if obj.employee else None
-        
         super().save_model(request, obj, form, change)
-        
-        # After save_model calls obj.save(), the employee_code is updated in the model
-        # We re-fetch or rely on the updated state if the model save() updated it
-        new_code = obj.employee.employee_code
-        
-        if old_code and new_code and old_code != new_code:
-            from .notifications import notify_admin_of_code_change
-            notify_admin_of_code_change(request, old_code, new_code)
+        if hasattr(obj, '_new_employee_code'):
+            from django.contrib import messages
+            self.message_user(
+                request, 
+                f"Success: Employee code for {obj.employee.full_name} has been updated to {obj._new_employee_code}",
+                level=messages.SUCCESS
+            )
+            del obj._new_employee_code
 
     def institution_display(self, obj):
         return obj.institution.inst_code if obj.institution else "Global"
