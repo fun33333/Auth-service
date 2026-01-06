@@ -50,486 +50,279 @@ from django.contrib.auth.models import AbstractUser, BaseUserManager
 #     def __str__(self):
 #         return self.email
 
+class Organization(SoftDeleteModel):
+    """
+    The root entity (NGO or Company). 
+    Centralizes global settings and basic info.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=255, help_text="Organization Name (e.g., Al-Khidmat Foundation)")
+    org_code = models.CharField(max_length=10, unique=True, help_text="Short code for the organization (e.g., AKF)")
+    website = models.URLField(blank=True, null=True)
+    address = models.TextField(blank=True, null=True)
+    
+    class Meta:
+        verbose_name = "Organization"
+        verbose_name_plural = "Organizations"
+    def __str__(self):
+        return f"{self.name} ({self.org_code})"
+
+
+class Institution(SoftDeleteModel):
+    """
+    Specific entities under the Organization (Schools, Hospitals, Kitchens).
+    Replaces AcademicInstitutionInformation with a more generic structure.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name='institutions', null=True, blank=True)
+    
+    inst_id = models.CharField(max_length=50, unique=True, editable=False, help_text="Auto-generated serial ID")
+    inst_code = models.CharField(max_length=20, unique=True, help_text="Unique code (e.g., AIT01, AMC01)")
+    name = models.CharField(max_length=255)
+    
+    INST_TYPE_CHOICES = [
+        ('educational', 'Educational (School, College, University)'),
+        ('healthcare', 'Healthcare (Hospital, Clinic, Lab)'),
+        ('social_welfare', 'Social Welfare (Kitchen, Shelter, Center)'),
+        ('administrative', 'Administrative (Office, branch)'),
+        ('technical', 'Technical / Vocational'),
+        ('operational', 'Operational / Project Site'),
+        ('other', 'Other'),
+    ]
+    inst_type = models.CharField(max_length=30, choices=INST_TYPE_CHOICES)
+    
+    # 🔗 For syncing with existing SIS Campuses
+    legacy_campus_id = models.UUIDField(null=True, blank=True, help_text="Link to existing SIS Campus UUID")
+    
+    # 🆕 DYNAMIC SCHEMA FOR INSTITUTION
+    # For School: capacity, principal_name, established_year
+    # For Hospital: num_beds, md_name, registration_no
+    attribute_schema = models.JSONField(
+        default=list, 
+        blank=True, 
+        help_text="JSON schema for institution-specific attributes"
+    )
+    
+    # Values stored here matching the schema
+    extra_data = models.JSONField(default=dict, blank=True)
+
+    # Address/Contact remains common
+    address = models.TextField(blank=True, null=True)
+    city = models.CharField(max_length=100, blank=True, null=True)
+    contact_number = models.CharField(max_length=20, blank=True, null=True)
+
+    class Meta:
+        verbose_name = "Institution"
+        verbose_name_plural = "Institutions"
+
+    def save(self, *args, **kwargs):
+        if not self.inst_id:
+            last = Institution.all_objects.all().order_by('inst_id').last()
+            if last and last.inst_id:
+                try:
+                    num_part = last.inst_id.split('-')[-1]
+                    new_num = int(num_part) + 1
+                except (ValueError, IndexError):
+                    new_num = 1
+            else:
+                new_num = 1
+            self.inst_id = f"INST-{new_num:03d}"
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.name} ({self.inst_code})"
 
 class Department(SoftDeleteModel):
     """
-    Organizational departments/units with auto-generated department_id.
-    
-    Department ID Format: IAK-D-001, IAK-D-002, IAK-D-003...
-    
-    Sectors:
-    - Academic: Schools, campuses (SIS)
-    - IT: Technology department
-    - Finance: Accounting, budgeting
-    - Medical: Health facilities
-    - HR: Human resources
-    - Administration: General admin
-    - Other: Miscellaneous
+    Departments can be Global (linked to Org) or Local (linked to Institution).
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     
-    # 🆕 AUTO-GENERATED DEPARTMENT ID
-    department_id = models.CharField(
-        max_length=20,
-        unique=True,
-        editable=False,
-        blank=True,
-        help_text="Auto-generated department ID (e.g., IAK-D-001)"
-    )
+    organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name='global_departments', null=True, blank=True)
+    institution = models.ForeignKey(Institution, on_delete=models.CASCADE, null=True, blank=True, related_name='local_departments')
     
-    dept_code = models.CharField(
-        max_length=6, 
-        unique=True,
-        help_text="Department code used in employee_code (e.g., C06-M, AIT01, FIN)"
-    )
-    dept_name = models.CharField(
-        max_length=200,
-        help_text="Full department name"
-    )
+    dept_code = models.CharField(max_length=10, help_text="e.g., HR, FIN, ACAD")
+    dept_name = models.CharField(max_length=200)
     
-    SECTOR_CHOICES = [
-        ('academic', 'Academic (Schools/Campuses)'),
-        ('it', 'Information Technology'),
-        ('finance', 'Finance & Accounting'),
-        ('medical', 'Medical & Health'),
-        ('hr', 'Human Resources'),
-        ('administration', 'Administration'),
-        ('procurement', 'Procurement'),
-        ('other', 'Other'),
-    ]
-    dept_sector = models.CharField(
-        max_length=20,
-        choices=SECTOR_CHOICES,
-        default='other',
-        help_text="Organization sector this department belongs to"
-    )
-    
-    description = models.TextField(
-        blank=True, 
-        null=True,
-        help_text="Additional details about department"
-    )
-    
+    # Removed dept_sector as requested - the dept itself defines its nature
+    description = models.TextField(blank=True, null=True)
     class Meta:
         verbose_name = "Department"
         verbose_name_plural = "Departments"
-        ordering = ['department_id']
-    
-    def clean(self):
-        """Validate dept_code is alphanumeric only"""
-        super().clean()
-        if self.dept_code and not re.match(r'^[A-Za-z0-9]+$', self.dept_code):
-            raise ValidationError({
-                'dept_code': 'Department code must be alphanumeric only (letters and numbers).'
-            })
-    
-    def save(self, *args, **kwargs):
-        """Auto-generate department_id if not present"""
-        if not self.department_id:
-            # Get the last department_id
-            last_dept = Department.all_objects.filter(
-                department_id__startswith='IAK-D-'
-            ).order_by('department_id').last()
-            
-            if last_dept and last_dept.department_id:
-                # Extract number and increment
-                last_num = int(last_dept.department_id.split('-')[-1])
-                new_num = last_num + 1
-            else:
-                new_num = 1
-            
-            self.department_id = f"IAK-D-{new_num:03d}"
-        
-        super().save(*args, **kwargs)
-    
+        unique_together = [['institution', 'dept_code'], ['organization', 'dept_code']]
+    @property
+    def is_global(self):
+        return self.institution is None
     def __str__(self):
-        return f"{self.department_id} - {self.dept_code} ({self.dept_name})"
-
+        scope = "Global" if self.is_global else self.institution.inst_code
+        return f"{self.dept_name} [{scope}]"
 
 class Designation(SoftDeleteModel):
     """
-    Position types - DEPARTMENT SPECIFIC!
-    
-    A designation MUST belong to a department.
-    When creating employee, only designations for selected department are shown.
-    
-    Examples:
-    - Department: C06-M (Academic) → Designation: Teacher, Principal
-    - Department: AIT01 (IT) → Designation: Developer, System Admin
-    - Department: FIN (Finance) → Designation: Accountant, Analyst
+    Position types within a Department.
+    Includes a JSON Schema for role-specific dynamic data.
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     
-    # 🆕 REQUIRED: Department FK
-    department = models.ForeignKey(
-        Department,
-        on_delete=models.CASCADE,
-        related_name='designations',
-        help_text="Department this designation belongs to (REQUIRED)"
-    )
+    department = models.ForeignKey(Department, on_delete=models.CASCADE, related_name='designations')
     
-    position_code = models.CharField(
-        max_length=4,
-        help_text="Position code used in employee_code (e.g., T, P, DEV, ACC)"
-    )
-    position_name = models.CharField(
-        max_length=100,
-        help_text="Full position name (e.g., Teacher, Developer)"
-    )
-    description = models.TextField(
+    position_name = models.CharField(max_length=100, help_text="e.g., Teacher, Surgeon, Manager")
+    position_code = models.CharField(max_length=10, help_text="Short code for ID generation (e.g., T, D, M)")
+    
+    # 🆕 DYNAMIC SCHEMA
+    # Defines what extra data is required for this specific designation
+    # format: [{"name": "field_id", "label": "Label", "type": "text|number|date|choice|entity_link", "target": "service.Model"}]
+    attribute_schema = models.JSONField(
+        default=list, 
         blank=True, 
-        null=True,
-        help_text="Role description and responsibilities"
+        help_text="JSON schema for designation-specific attributes (Google Form style)"
     )
-    
+
     class Meta:
         verbose_name = "Designation"
         verbose_name_plural = "Designations"
-        ordering = ['department__dept_code', 'position_name']
-        # Unique together: same position_code allowed for different departments
         unique_together = [['department', 'position_code']]
-    
-    def clean(self):
-        """Validate position_code is alphanumeric only"""
-        super().clean()
-        if self.position_code and not re.match(r'^[A-Za-z0-9]+$', self.position_code):
-            raise ValidationError({
-                'position_code': 'Position code must be alphanumeric only (letters and numbers).'
-            })
 
     def __str__(self):
-        return f"{self.department.dept_code} - {self.position_name} ({self.position_code})"
-
-
-class AcademicInstitutionInformation(SoftDeleteModel):
-    """
-    Academic institution details - ONLY for Academic sector departments.
-    
-    Renamed from CampusInformation to be more specific.
-    Only departments with dept_sector='academic' can have this.
-    
-    This follows the same pattern as TeacherProfile in SIS:
-    - Core data in Department
-    - Academic-specific details here
-    """
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    
-    department = models.OneToOneField(
-        Department,
-        on_delete=models.CASCADE,
-        related_name='academic_info',
-        help_text="Academic department this info belongs to"
-    )
-    
-    address = models.TextField(
-        blank=True,
-        null=True,
-        help_text="Physical address of institution"
-    )
-    principal_name = models.CharField(
-        max_length=200,
-        blank=True,
-        null=True,
-        help_text="Current principal's name"
-    )
-    contact_number = models.CharField(
-        max_length=20,
-        blank=True,
-        null=True,
-        help_text="Institution contact number"
-    )
-    student_capacity = models.IntegerField(
-        blank=True,
-        null=True,
-        help_text="Total student capacity"
-    )
-    established_year = models.IntegerField(
-        blank=True,
-        null=True,
-        help_text="Year institution was established"
-    )
-    
-    class Meta:
-        verbose_name = "Academic Institution Information"
-        verbose_name_plural = "Academic Institution Information"
-    
-    def clean(self):
-        """Validate that department is academic sector"""
-        if self.department and self.department.dept_sector != 'academic':
-            raise ValidationError(
-                'Academic Institution Information can only be created for Academic sector departments.'
-            )
-    
-    def save(self, *args, **kwargs):
-        self.full_clean()
-        super().save(*args, **kwargs)
-    
-    def __str__(self):
-        return f"Academic Info: {self.department.dept_name}"
-
+        scope = "Global" if self.department.is_global else self.department.institution.inst_code
+        return f"{self.position_name} ({self.department.dept_name} - {scope})"
 
 class Employee(SoftDeleteModel):
     """
-    Core Employee model with AUTO-GENERATED dual identifiers.
-    
-    Auto-Generated Fields:
-    1. employee_id: IAK-0001, IAK-0002, IAK-0003... (simple, sequential)
-    2. employee_code: C06-M-24-T-0001 (detailed, based on department+designation)
-    
-    Designation Filtering:
-    - When department is selected, only that department's designations are available
-    
-    Notes:
-    - NO password here (authentication app handles that)
-    - NO shift here (SIS-specific, stored in SIS db)
+    Central Employee identity. Stores ALL common personal & HR data.
     """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     
-    # Primary Key
-    id = models.UUIDField(
-        primary_key=True, 
-        default=uuid.uuid4, 
-        editable=False,
-        help_text="Internal UUID for database relations"
-    )
-    
-    # 🆕 AUTO-GENERATED DUAL IDENTIFIERS
+    # NGO-wide ID (IAK-0001 -> IAK-10000)
     employee_id = models.CharField(
-        max_length=20,
-        unique=True,
-        editable=False,
-        blank=True,
-        db_index=True,
-        help_text="Auto-generated simple ID (e.g., IAK-0001)"
+        max_length=20, unique=True, editable=False, blank=True, db_index=True,
+        help_text="Central Organization ID"
     )
+    
+    # Derived from Primary Assignment
     employee_code = models.CharField(
-        max_length=50,
-        unique=True,
-        editable=False,
-        blank=True,
-        db_index=True,
-        help_text="Auto-generated detailed code (e.g., C06-M-24-T-0001)"
+        max_length=50, unique=True, editable=False, blank=True, db_index=True,
+        help_text="Generated from Primary Assignment"
     )
     
-    # Personal Information
-    full_name = models.CharField(
-        max_length=200,
-        help_text="Employee's full name"
-    )
-    cnic = models.CharField(
-        max_length=15,
-        help_text="National ID card number (CNIC)"
-    )
-    phone = models.CharField(
-        max_length=20,
-        help_text="Contact phone number"
-    )
-    email = models.EmailField(
-        blank=True,
-        null=True,
-        help_text="Email address (optional)"
-    )
-    dob = models.DateField(
-        help_text="Date of birth"
-    )
+    organization = models.ForeignKey(Organization, on_delete=models.PROTECT, related_name='employees', null=True, blank=True)
     
-    GENDER_CHOICES = [
-        ('male', 'Male'),
-        ('female', 'Female'),
-        ('other', 'Other'),
+    # Core Personal Data
+    full_name = models.CharField(max_length=200)
+    cnic = models.CharField(max_length=15, unique=True)
+    personal_phone = models.CharField(max_length=20, blank=True, null=True)
+    personal_email = models.EmailField(blank=True, null=True, unique=True) # Renamed 
+    dob = models.DateField()
+    
+    GENDER_CHOICES = [('male', 'Male'), ('female', 'Female'), ('other', 'Other')]
+    gender = models.CharField(max_length=10, choices=GENDER_CHOICES)
+    
+    MARITAL_STATUS_CHOICES = [
+        ('single', 'Single'), ('married', 'Married'), 
+        ('divorced', 'Divorced'), ('widowed', 'Widowed')
     ]
-    gender = models.CharField(
-        max_length=10,
-        choices=GENDER_CHOICES,
-        help_text="Gender"
-    )
+    marital_status = models.CharField(max_length=20, choices=MARITAL_STATUS_CHOICES, blank=True, null=True)
+    nationality = models.CharField(max_length=100, default='Pakistani')
+    religion = models.CharField(max_length=100, blank=True, null=True)
     
-    # Extended Personal Information
-    nationality = models.CharField(
-        max_length=100,
-        blank=True,
-        null=True,
-        default='Pakistani',
-        help_text="Employee's nationality"
-    )
-    religion = models.CharField(
-        max_length=100,
-        blank=True,
-        null=True,
-        help_text="Employee's religion (optional)"
-    )
-    emergency_contact_phone = models.CharField(
-        max_length=20,
-        blank=True,
-        null=True,
-        help_text="Emergency contact phone number"
-    )
+    # Address Details
+    residential_address = models.TextField(blank=True, null=True)
+    permanent_address = models.TextField(blank=True, null=True)
+    city = models.CharField(max_length=100, blank=True, null=True)
+    state = models.CharField(max_length=100, blank=True, null=True)
     
-    # Address Information
-    residential_address = models.TextField(
-        blank=True,
-        null=True,
-        help_text="Current residential address"
-    )
-    permanent_address = models.TextField(
-        blank=True,
-        null=True,
-        help_text="Permanent home address"
-    )
-    city = models.CharField(
-        max_length=100,
-        blank=True,
-        null=True,
-        help_text="City of residence"
-    )
-    state = models.CharField(
-        max_length=100,
-        blank=True,
-        null=True,
-        help_text="State/Province"
-    )
+    # Emergency Contact
+    emergency_contact_name = models.CharField(max_length=200, blank=True, null=True)
+    emergency_contact_phone = models.CharField(max_length=20, blank=True, null=True)
+
+    # Organization Contact
+    org_email = models.EmailField(blank=True, null=True, unique=True, help_text="Official Organization Email")
+    org_phone = models.CharField(max_length=20, blank=True, null=True, help_text="Official Mobile/Extension")
     
     # Bank Information
-    bank_name = models.CharField(
-        max_length=200,
-        blank=True,
-        null=True,
-        help_text="Bank name for salary account"
-    )
-    account_number = models.CharField(
-        max_length=50,
-        blank=True,
-        null=True,
-        help_text="Bank account number"
-    )
+    bank_name = models.CharField(max_length=200, blank=True, null=True)
+    account_number = models.CharField(max_length=50, blank=True, null=True)
+    
+    # Education & Work Experience (Comprehensive HR History)
+    education_history = models.JSONField(default=list, blank=True, help_text="[{degree, institute, passingYear, grade}]")
+    work_experience = models.JSONField(default=list, blank=True, help_text="[{employer, jobTitle, startDate, endDate, responsibilities}]")
+    
+    is_active = models.BooleanField(default=True)
 
-    
-    # Work Assignment
-    department = models.ForeignKey(
-        Department,
-        on_delete=models.PROTECT,
-        related_name='employees',
-        help_text="Department employee belongs to"
-    )
-    designation = models.ForeignKey(
-        Designation,
-        on_delete=models.PROTECT,
-        related_name='employees',
-        help_text="Employee's position (filtered by department)"
-    )
-    joining_date = models.DateField(
-        help_text="Date employee joined organization"
-    )
-    
-    # Employment Type
-    EMPLOYMENT_TYPE_CHOICES = [
-        ('full_time', 'Full-time'),
-        ('part_time', 'Part-time'),
-        ('contract', 'Contract'),
-        ('intern', 'Intern'),
-    ]
-    employment_type = models.CharField(
-        max_length=20,
-        choices=EMPLOYMENT_TYPE_CHOICES,
-        default='full_time',
-        help_text="Type of employment"
-    )
-    organization_phone = models.CharField(
-        max_length=20,
-        blank=True,
-        null=True,
-        help_text="Phone number provided by organization"
-    )
-    
-    # Education and Experience (JSON)
-    education_history = models.JSONField(
-        blank=True,
-        null=True,
-        help_text="Array of education records: [{degree, institute, passingYear}]"
-    )
-    work_experience = models.JSONField(
-        blank=True,
-        null=True,
-        help_text="Array of experience records: [{employer, jobTitle, startDate, endDate, responsibilities}]"
-    )
-    
-    # Resume File
-    resume = models.FileField(
-        upload_to='resumes/%Y/%m/',
-        blank=True,
-        null=True,
-        help_text="Employee resume/CV file"
-    )
-
-    
-    # Status
-    is_active = models.BooleanField(
-        default=True,
-        help_text="Can this employee access services?"
-    )
-    is_superadmin = models.BooleanField(
-        default=False,
-        help_text="Has access to all services and full permissions"
-    )
-    
     class Meta:
         verbose_name = "Employee"
         verbose_name_plural = "Employees"
-        ordering = ['-created_at']
-        indexes = [
-            models.Index(fields=['employee_id']),
-            models.Index(fields=['employee_code']),
-            models.Index(fields=['cnic']),
-            models.Index(fields=['is_active']),
-            models.Index(fields=['is_deleted']),
-        ]
-    
-    def clean(self):
-        """Validate that designation belongs to selected department"""
-        if self.designation and self.department:
-            if self.designation.department != self.department:
-                raise ValidationError({
-                    'designation': f'This designation belongs to {self.designation.department.dept_code}. '
-                                   f'Please select a designation for {self.department.dept_code}.'
-                })
-    
+
     def save(self, *args, **kwargs):
-        """Auto-generate employee_id and employee_code if not present"""
-        # Validate first
-        self.full_clean()
-        
-        # Auto-generate employee_id
         if not self.employee_id:
-            last_emp = Employee.all_objects.filter(
-                employee_id__startswith='IAK-'
-            ).order_by('employee_id').last()
-            
-            if last_emp and last_emp.employee_id:
-                last_num = int(last_emp.employee_id.split('-')[-1])
-                new_num = last_num + 1
-            else:
-                new_num = 1
-            
-            self.employee_id = f"IAK-{new_num:04d}"
-        
-        # Auto-generate employee_code
-        if not self.employee_code:
-            # Format: {DEPT_CODE}-{YEAR}-{POSITION}-{GLOBAL_SEQ}
-            year_short = str(self.joining_date.year)[-2:]
-            
-            # Get global sequence (same as employee_id number)
-            seq_num = int(self.employee_id.split('-')[-1])
-            
-            self.employee_code = f"{self.department.dept_code}-{year_short}-{self.designation.position_code}-{seq_num:04d}"
+            last = Employee.all_objects.all().order_by('employee_id').last()
+            num = (int(last.employee_id.split('-')[-1]) + 1) if last and last.employee_id else 1
+            padding = 4 if num < 10000 else len(str(num))
+            self.employee_id = f"IAK-{num:0{padding}d}"
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.full_name} ({self.employee_id})"
+
+
+class EmployeeAssignment(SoftDeleteModel):
+    """
+    Handles multiple roles for an Employee across Institutions/Departments.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    
+    employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='assignments')
+    institution = models.ForeignKey(Institution, on_delete=models.CASCADE, null=True, blank=True, related_name='assignments')
+    department = models.ForeignKey(Department, on_delete=models.PROTECT, related_name='assignments')
+    designation = models.ForeignKey(Designation, on_delete=models.PROTECT, related_name='assignments')
+    
+    joining_date = models.DateField()
+    is_primary = models.BooleanField(default=True, help_text="Determines the central Employee Code")
+    is_active = models.BooleanField(default=True)
+    
+    SHIFT_CHOICES = [
+        ('morning', 'Morning'), ('afternoon', 'Afternoon'), ('night', 'Night'),
+        ('general', 'General/Office'), ('hourly', 'Hourly Base')
+    ]
+    shift = models.CharField(max_length=20, choices=SHIFT_CHOICES, default='general')
+    
+    # Dynamic Role Data (Designation specific)
+    role_data = models.JSONField(default=dict, blank=True)
+
+    class Meta:
+        verbose_name = "Employee Assignment"
+        verbose_name_plural = "Employee Assignments"
+        unique_together = [['employee', 'department', 'designation']]
+
+    def save(self, *args, **kwargs):
+        if self.is_primary:
+            EmployeeAssignment.objects.filter(employee=self.employee).exclude(pk=self.pk).update(is_primary=False)
         
         super().save(*args, **kwargs)
-    
+        
+        if self.is_primary:
+            # Prefix logic: Use Department Code if Global, otherwise Institution Code
+            if self.department.is_global:
+                prefix = self.department.dept_code
+            else:
+                prefix = self.institution.inst_code if self.institution else self.department.organization.org_code
+                
+            shift_code = self.shift[0].upper() if self.shift != 'general' else 'G'
+            year = str(self.joining_date.year)[-2:]
+            role = self.designation.position_code
+            seq = self.employee.employee_id.split('-')[-1]
+            
+            new_code = f"{prefix}-{shift_code}-{year}-{role}-{seq}"
+            old_code = self.employee.employee_code
+
+            if old_code != new_code:
+                self.employee.employee_code = new_code
+                self.employee.save(update_fields=['employee_code'])
+                
+                # Trigger Notification
+                from .notifications import send_employee_code_notification
+                send_employee_code_notification(self.employee, old_code, new_code)
+
     def __str__(self):
-        return f"{self.full_name} ({self.employee_id} / {self.employee_code})"
-    
-    def get_full_name(self):
-        """Return full name"""
-        return self.full_name
-    
-    def get_short_name(self):
-        """Return employee ID (short identifier)"""
-        return self.employee_id
+        scope = self.institution.inst_code if self.institution else "Global"
+        return f"{self.employee.full_name} - {self.designation.position_name} ({scope})"

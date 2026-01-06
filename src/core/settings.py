@@ -76,8 +76,12 @@ TEMPLATES = [
 WSGI_APPLICATION = 'core.wsgi.application'
 
 # Database
-# Use DATABASE_URL if available, otherwise fallback to local postgres
-default_db_url = 'postgresql://erp_user:change_me_in_production@localhost:5432/erp_users_db'
+# Use DATABASE_URL if available (from .env or docker env)
+# Fallback to the erp_admin credentials and auth_db name defined in root .env
+default_db_url = os.environ.get(
+    'DATABASE_URL', 
+    'postgresql://erp_admin:erp_admin_password_change_me_in_prod@localhost:5432/auth_db'
+)
 DATABASES = {
     'default': dj_database_url.config(default=default_db_url, conn_max_age=600)
 }
@@ -117,3 +121,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Custom User Model
 # Using default Django User model (no custom AUTH_USER_MODEL)
+# Email Configuration (Development: Console Backend)
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+EMAIL_HOST_USER = 'no-reply@iak-ngo.org'
+DEFAULT_FROM_EMAIL = 'IAK Human Resources <no-reply@iak-ngo.org>'

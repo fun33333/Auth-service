@@ -5,250 +5,141 @@ Registers all models with auto-generation, soft delete support, and filters.
 """
 from django.contrib import admin
 from django.utils.html import format_html
-from .models import Department, Designation, Employee, AcademicInstitutionInformation
+from .models import Organization, Institution, Department, Designation, Employee, EmployeeAssignment
+
+
+class SoftDeleteAdmin(admin.ModelAdmin):
+    """Base Admin for all models supporting soft delete"""
+    def is_deleted_badge(self, obj):
+        if obj.is_deleted:
+            return format_html('<span style="color: red; font-weight: bold;">🗑️ DELETED</span>')
+        return format_html('<span style="color: green; font-weight: bold;">✓ Active</span>')
+    is_deleted_badge.short_description = 'Status'
+
+    def restore_items(self, request, queryset):
+        count = 0
+        for obj in queryset:
+            if obj.is_deleted:
+                obj.restore()
+                count += 1
+        self.message_user(request, f'{count} item(s) restored.')
+    restore_items.short_description = 'Restore selected'
+
+    def get_queryset(self, request):
+        return self.model.all_objects.all()
+
+
+@admin.register(Organization)
+class OrganizationAdmin(SoftDeleteAdmin):
+    list_display = ['org_code', 'name', 'website', 'is_deleted_badge']
+    search_fields = ['org_code', 'name']
+    actions = ['restore_items']
+
+
+@admin.register(Institution)
+class InstitutionAdmin(SoftDeleteAdmin):
+    list_display = ['inst_code', 'name', 'inst_type', 'organization', 'is_deleted_badge']
+    list_filter = ['inst_type', 'organization']
+    search_fields = ['inst_code', 'name']
+    actions = ['restore_items']
 
 
 @admin.register(Department)
-class DepartmentAdmin(admin.ModelAdmin):
-    """Admin panel for Department with auto-generated department_id"""
-    list_display = ['department_id', 'dept_code', 'dept_name', 'dept_sector', 'is_deleted_badge', 'created_at']
-    list_filter = ['dept_sector', 'is_deleted', 'created_at']
-    search_fields = ['department_id', 'dept_code', 'dept_name']
-    readonly_fields = ['department_id', 'created_at', 'updated_at', 'deleted_at', 'deleted_by']
-    
-    fieldsets = (
-        ('Auto-Generated ID', {
-            'fields': ('department_id',),
-            'description': 'Department ID is auto-generated (IAK-D-001, IAK-D-002...)'
-        }),
-        ('Department Information', {
-            'fields': ('dept_code', 'dept_name', 'dept_sector', 'description')
-        }),
-        ('Soft Delete', {
-            'fields': ('is_deleted', 'deleted_at', 'deleted_by', 'deletion_reason'),
-            'classes': ('collapse',)
-        }),
-        ('Timestamps', {
-            'fields': ('created_at', 'updated_at'),
-            'classes': ('collapse',)
-        }),
-    )
-    
+class DepartmentAdmin(SoftDeleteAdmin):
+    list_display = ['dept_name', 'dept_code', 'scope_display', 'is_deleted_badge']
+    list_filter = ['institution', 'organization']
+    search_fields = ['dept_code', 'dept_name']
     actions = ['restore_items']
-    
-    def is_deleted_badge(self, obj):
-        if obj.is_deleted:
-            return format_html('<span style="color: red; font-weight: bold;">🗑️ DELETED</span>')
-        return format_html('<span style="color: green; font-weight: bold;">✓ Active</span>')
-    is_deleted_badge.short_description = 'Status'
-    
-    def restore_items(self, request, queryset):
-        count = 0
-        for obj in queryset:
-            if obj.is_deleted:
-                obj.restore()
-                count += 1
-        self.message_user(request, f'{count} department(s) restored.')
-    restore_items.short_description = 'Restore selected'
-    
-    def get_queryset(self, request):
-        return Department.all_objects.all()
+
+    def scope_display(self, obj):
+        return "Global" if obj.is_global else obj.institution.inst_code
+    scope_display.short_description = 'Scope'
 
 
 @admin.register(Designation)
-class DesignationAdmin(admin.ModelAdmin):
-    """Admin panel for Designation - Department Specific!"""
-    list_display = ['department', 'position_code', 'position_name', 'is_deleted_badge', 'created_at']
-    list_filter = ['department', 'is_deleted', 'created_at']
-    search_fields = ['position_code', 'position_name', 'department__dept_name']
-    readonly_fields = ['created_at', 'updated_at', 'deleted_at', 'deleted_by']
-    
-    fieldsets = (
-        ('Designation Information', {
-            'fields': ('department', 'position_code', 'position_name', 'description'),
-            'description': 'Designation MUST belong to a department'
-        }),
-        ('Soft Delete', {
-            'fields': ('is_deleted', 'deleted_at', 'deleted_by', 'deletion_reason'),
-            'classes': ('collapse',)
-        }),
-        ('Timestamps', {
-            'fields': ('created_at', 'updated_at'),
-            'classes': ('collapse',)
-        }),
-    )
-    
+class DesignationAdmin(SoftDeleteAdmin):
+    list_display = ['position_name', 'position_code', 'department_display', 'is_deleted_badge']
+    list_filter = ['department']
+    search_fields = ['position_name', 'position_code']
     actions = ['restore_items']
-    
-    def is_deleted_badge(self, obj):
-        if obj.is_deleted:
-            return format_html('<span style="color: red; font-weight: bold;">🗑️ DELETED</span>')
-        return format_html('<span style="color: green; font-weight: bold;">✓ Active</span>')
-    is_deleted_badge.short_description = 'Status'
-    
-    def restore_items(self, request, queryset):
-        count = 0
-        for obj in queryset:
-            if obj.is_deleted:
-                obj.restore()
-                count += 1
-        self.message_user(request, f'{count} designation(s) restored.')
-    restore_items.short_description = 'Restore selected'
-    
-    def get_queryset(self, request):
-        return Designation.all_objects.all()
+
+    def department_display(self, obj):
+        return str(obj.department)
+    department_display.short_description = 'Department'
+
+
+class AssignmentInline(admin.TabularInline):
+    model = EmployeeAssignment
+    extra = 1
 
 
 @admin.register(Employee)
-class EmployeeAdmin(admin.ModelAdmin):
-    """Admin panel for Employee with auto-generated IDs"""
-    list_display = ['employee_id', 'employee_code', 'full_name', 'department', 'designation', 
-                    'employment_type', 'is_active_badge', 'is_superadmin', 'is_deleted_badge', 'created_at']
-    list_filter = ['is_active', 'is_superadmin', 'is_deleted', 'gender', 'employment_type',
-                   'department', 'designation', 'created_at']
-    search_fields = ['employee_id', 'employee_code', 'full_name', 'cnic', 'phone', 'email']
-    readonly_fields = ['id', 'employee_id', 'employee_code', 'created_at', 'updated_at', 'deleted_at', 'deleted_by']
+class EmployeeAdmin(SoftDeleteAdmin):
+    list_display = ['employee_id', 'employee_code', 'full_name', 'cnic', 'is_active_badge', 'is_deleted_badge']
+    list_filter = ['is_active', 'organization']
+    search_fields = ['employee_id', 'employee_code', 'full_name', 'cnic']
     
     fieldsets = (
-        ('Auto-Generated Identifiers', {
-            'fields': ('employee_id', 'employee_code'),
-            'description': 'Both IDs are AUTO-GENERATED'
+        ('Personal Info', {
+            'fields': ('full_name', 'cnic', 'dob', 'gender', 'marital_status', 'nationality', 'religion')
         }),
-        ('Personal Information', {
-            'fields': ('full_name', 'cnic', 'dob', 'gender', 'nationality', 'religion')
+        ('Contact Details', {
+            'fields': (('personal_email', 'personal_phone'), ('org_email', 'org_phone'))
         }),
-        ('Contact Information', {
-            'fields': ('email', 'phone', 'emergency_contact_phone', 'organization_phone')
-        }),
-        ('Address Information', {
+        ('Address', {
             'fields': ('residential_address', 'permanent_address', 'city', 'state')
         }),
-        ('Employment Details', {
-            'fields': ('department', 'designation', 'joining_date', 'employment_type')
+        ('Emergency & Bank', {
+            'fields': (('emergency_contact_name', 'emergency_contact_phone'), ('bank_name', 'account_number'))
         }),
-        ('Bank Information', {
-            'fields': ('bank_name', 'account_number'),
-            'classes': ('collapse',)
+        ('HR Records', {
+            'fields': ('education_history', 'work_experience')
         }),
-        ('Additional Information', {
-            'fields': ('education_history', 'work_experience', 'resume'),
-            'classes': ('collapse',),
-            'description': 'Education and experience stored as JSON, resume as file'
-        }),
-        ('Status', {
-            'fields': ('is_active', 'is_superadmin')
-        }),
-        ('Soft Delete', {
-            'fields': ('is_deleted', 'deleted_at', 'deleted_by', 'deletion_reason'),
-            'classes': ('collapse',)
-        }),
-        ('System Info', {
-            'fields': ('id', 'created_at', 'updated_at'),
-            'classes': ('collapse',)
+        ('System Metadata', {
+            'fields': ('employee_id', 'employee_code', 'organization', 'is_active')
         }),
     )
     
-    actions = ['activate_employees', 'deactivate_employees', 'restore_items']
+    readonly_fields = ['employee_id', 'employee_code']
+    inlines = [AssignmentInline]
     
+    actions = ['activate_employees', 'deactivate_employees', 'restore_items']
+
     def is_active_badge(self, obj):
         if obj.is_active:
             return format_html('<span style="color: green; font-weight: bold;">✓ Active</span>')
         return format_html('<span style="color: orange; font-weight: bold;">⚠ Inactive</span>')
-    is_active_badge.short_description = 'Active'
-    
-    def is_deleted_badge(self, obj):
-        if obj.is_deleted:
-            return format_html('<span style="color: red; font-weight: bold;">🗑️ DELETED</span>')
-        return format_html('<span style="color: green; font-weight: bold;">✓ Not Deleted</span>')
-    is_deleted_badge.short_description = 'Deletion'
-    
+    is_active_badge.short_description = 'Access'
+
     def activate_employees(self, request, queryset):
-        count = queryset.update(is_active=True)
-        self.message_user(request, f'{count} employee(s) activated.')
+        queryset.update(is_active=True)
     activate_employees.short_description = 'Activate selected'
-    
+
     def deactivate_employees(self, request, queryset):
-        count = queryset.update(is_active=False)
-        self.message_user(request, f'{count} employee(s) deactivated.')
+        queryset.update(is_active=False)
     deactivate_employees.short_description = 'Deactivate selected'
-    
-    def restore_items(self, request, queryset):
-        count = 0
-        for obj in queryset:
-            if obj.is_deleted:
-                obj.restore()
-                count += 1
-        self.message_user(request, f'{count} employee(s) restored.')
-    restore_items.short_description = 'Restore selected'
-    
-    def get_queryset(self, request):
-        return Employee.all_objects.all()
-    
-    def formfield_for_foreignkey(self, db_field, request, **kwargs):
-        """Filter designations by selected department"""
-        if db_field.name == "designation":
-            # Get department from request (if editing existing employee)
-            try:
-                employee_id = request.resolver_match.kwargs.get('object_id')
-                if employee_id:
-                    employee = Employee.all_objects.get(pk=employee_id)
-                    kwargs["queryset"] = Designation.objects.filter(department=employee.department)
-                else:
-                    # For new employee, show all designations
-                    # User must select department first, then designation field will update via JS
-                    kwargs["queryset"] = Designation.objects.all()
-            except:
-                kwargs["queryset"] = Designation.objects.all()
-        return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
 
-@admin.register(AcademicInstitutionInformation)
-class AcademicInstitutionInformationAdmin(admin.ModelAdmin):
-    """Admin panel for Academic Institution - Academic sector only"""
-    list_display = ['department', 'principal_name', 'contact_number', 'student_capacity', 
-                    'established_year', 'is_deleted_badge', 'created_at']
-    list_filter = ['is_deleted', 'created_at']
-    search_fields = ['department__dept_name', 'principal_name', 'contact_number']
-    readonly_fields = ['created_at', 'updated_at', 'deleted_at', 'deleted_by']
-    
-    fieldsets = (
-        ('Academic Institution Details', {
-            'fields': ('department', 'address', 'principal_name', 'contact_number', 
-                      'student_capacity', 'established_year'),
-            'description': 'Only Academic sector departments'
-        }),
-        ('Soft Delete', {
-            'fields': ('is_deleted', 'deleted_at', 'deleted_by', 'deletion_reason'),
-            'classes': ('collapse',)
-        }),
-        ('Timestamps', {
-            'fields': ('created_at', 'updated_at'),
-            'classes': ('collapse',)
-        }),
-    )
-    
-    actions = ['restore_items']
-    
-    def is_deleted_badge(self, obj):
-        if obj.is_deleted:
-            return format_html('<span style="color: red; font-weight: bold;">🗑️ DELETED</span>')
-        return format_html('<span style="color: green; font-weight: bold;">✓ Active</span>')
-    is_deleted_badge.short_description = 'Status'
-    
-    def restore_items(self, request, queryset):
-        count = 0
-        for obj in queryset:
-            if obj.is_deleted:
-                obj.restore()
-                count += 1
-        self.message_user(request, f'{count} academic info(s) restored.')
-    restore_items.short_description = 'Restore selected'
-    
-    def get_queryset(self, request):
-        return AcademicInstitutionInformation.all_objects.all()
-    
-    def formfield_for_foreignkey(self, db_field, request, **kwargs):
-        """Only show Academic sector departments"""
-        if db_field.name == "department":
-            kwargs["queryset"] = Department.objects.filter(dept_sector='academic')
-        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+@admin.register(EmployeeAssignment)
+class EmployeeAssignmentAdmin(SoftDeleteAdmin):
+    list_display = ['employee', 'designation', 'institution_display', 'is_primary', 'is_deleted_badge']
+    list_filter = ['is_primary', 'shift', 'institution']
+    search_fields = ['employee__full_name', 'employee__employee_id']
+
+    def save_model(self, request, obj, form, change):
+        # Capture old code from the linked employee before saving
+        old_code = obj.employee.employee_code if obj.employee else None
+        
+        super().save_model(request, obj, form, change)
+        
+        # After save_model calls obj.save(), the employee_code is updated in the model
+        # We re-fetch or rely on the updated state if the model save() updated it
+        new_code = obj.employee.employee_code
+        
+        if old_code and new_code and old_code != new_code:
+            from .notifications import notify_admin_of_code_change
+            notify_admin_of_code_change(request, old_code, new_code)
+
+    def institution_display(self, obj):
+        return obj.institution.inst_code if obj.institution else "Global"
+    institution_display.short_description = 'Institution'

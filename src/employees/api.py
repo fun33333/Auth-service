@@ -7,9 +7,10 @@ retrieval, and updates for integration with HDMS frontend.
 from ninja import Router, File
 from ninja.files import UploadedFile
 from typing import Optional, List
-from pydantic import BaseModel
+from pydantic import BaseModel, validator
 from datetime import date, datetime
-from employees.models import Employee, Department, Designation
+from employees.models import Employee, Organization, Institution, Department, Designation, EmployeeAssignment
+from django.db import transaction
 from django.shortcuts import get_object_or_404
 import re
 import logging
@@ -42,35 +43,55 @@ class EmployeeCreateSchema(BaseModel):
     dob: Optional[str] = None
     cnic: str
     gender: str
-    nationality: Optional[str] = None
+    maritalStatus: Optional[str] = None
+    nationality: Optional[str] = 'Pakistani'
     religion: Optional[str] = None
     
     # Contact Information
     personalEmail: str
     mobile: str
+    orgEmail: Optional[str] = None
+    orgPhone: Optional[str] = None
+    emergencyName: Optional[str] = None
     emergencyPhone: Optional[str] = None
     residentialAddress: str
     permanentAddress: Optional[str] = None
     city: Optional[str] = None
     state: Optional[str] = None
     
-    # Employment Details
-    department: str  # department code
-    designation: str  # position code
-    dateOfJoining: Optional[str] = None
-    employmentType: Optional[str] = 'Full-time'
+    # Assignment Details (Mapped to primary assignment)
+    organizationCode: str = 'IAK'  # Default for NGO
+    institutionCode: Optional[str] = None
+    departmentCode: str 
+    designationCode: str
+    joiningDate: Optional[str] = None
+    shift: Optional[str] = 'general'
     
     # Bank Information
-    bankName: str
-    accountNumber: str
-    
-    # Organization Provided
-    orgEmail: Optional[str] = None
-    orgPhone: Optional[str] = None
+    bankName: Optional[str] = None
+    accountNumber: Optional[str] = None
     
     # Additional Data
     education: Optional[List[EducationSchema]] = None
     experience: Optional[List[ExperienceSchema]] = None
+
+    @validator('cnic')
+    def validate_cnic(cls, v):
+        if not re.match(r'^\d{5}-?\d{7}-?\d{1}$', v):
+            raise ValueError('Invalid Pakistani CNIC format (XXXXX-XXXXXXX-X)')
+        return v.replace('-', '')
+
+    @validator('mobile', 'emergencyPhone', 'orgPhone')
+    def validate_phone(cls, v):
+        if v and not re.match(r'^(\+92|92|0|0092)?3\d{2}-?\d{7}$', v):
+            raise ValueError('Invalid Pakistani Mobile number format')
+        return v
+
+    @validator('personalEmail', 'orgEmail')
+    def validate_email(cls, v):
+        if v and not re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', v):
+            raise ValueError('Invalid email format')
+        return v
 
 
 class EmployeeResponseSchema(BaseModel):
@@ -129,169 +150,80 @@ class DesignationUpdateSchema(BaseModel):
     description="Create employee from frontend form with comprehensive validation"
 )
 def create_employee(request, payload: EmployeeCreateSchema):
-    """
-    Create new employee from HDMS frontend with comprehensive validation.
-    
-    Args:
-        payload: Employee data from frontend form
-        
-    Returns:
-        201: Success with employee_id and employee_code
-        400: Validation error with field-level details
-    """
     field_errors = {}
     
     try:
         # === VALIDATION PHASE ===
+        cnic_clean = payload.cnic.replace('-', '').replace(' ', '')
+        if Employee.objects.filter(cnic=cnic_clean, is_deleted=False).exists():
+            field_errors['cnic'] = ['An employee with this CNIC already exists']
         
-        # Validate CNIC format (13 digits)
-        if payload.cnic:
-            cnic_clean = payload.cnic.replace('-', '').replace(' ', '')
-            if not re.match(r'^\d{13}$', cnic_clean):
-                field_errors['cnic'] = ['CNIC must be exactly 13 digits']
-            else:
-                # Check for duplicate CNIC
-                if Employee.objects.filter(cnic=cnic_clean, is_deleted=False).exists():
-                    field_errors['cnic'] = ['An employee with this CNIC already exists']
+        # Org/Inst/Dept/Designation Validation
+        org = Organization.objects.filter(org_code=payload.organizationCode).first()
+        if not org:
+            field_errors['organizationCode'] = ["Organization not found"]
+            
+        inst = None
+        if payload.institutionCode:
+            inst = Institution.objects.filter(inst_code=payload.institutionCode).first()
+            if not inst:
+                field_errors['institutionCode'] = ["Institution not found"]
         
-        # Validate email format and uniqueness
-        if payload.personalEmail:
-            if not re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', payload.personalEmail):
-                field_errors['personalEmail'] = ['Invalid email format']
-            elif Employee.objects.filter(email=payload.personalEmail, is_deleted=False).exists():
-                field_errors['personalEmail'] = ['This email is already registered']
-        
-        # Validate mobile format
-        if payload.mobile:
-            mobile_clean = payload.mobile.replace('-', '').replace(' ', '').replace('+', '')
-            if not re.match(r'^\d{10,15}$', mobile_clean):
-                field_errors['mobile'] = ['Mobile number must be 10-15 digits']
-        
-        # Validate department exists
-        try:
-            department = Department.objects.get(dept_code=payload.department, is_deleted=False)
-        except Department.DoesNotExist:
-            field_errors['department'] = [
-                f"Department '{payload.department}' not found. Please create it in admin panel first."
-            ]
-            department = None
-        
-        # Validate designation exists for this department
-        if department:
-            try:
-                designation = Designation.objects.get(
-                    department=department,
-                    position_code=payload.designation,
-                    is_deleted=False
-                )
-            except Designation.DoesNotExist:
-                field_errors['designation'] = [
-                    f"Designation '{payload.designation}' not found for department '{payload.department}'"
-                ]
-                designation = None
-        else:
-            designation = None
-        
-        # Validate dates
-        if payload.dob:
-            try:
-                dob = datetime.strptime(payload.dob, '%Y-%m-%d').date()
-                # Check age range (15-100 years)
-                today = date.today()
-                age = today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
-                if age < 15 or age > 100:
-                    field_errors['dob'] = ['Age must be between 15 and 100 years']
-            except ValueError:
-                field_errors['dob'] = ['Invalid date format. Use YYYY-MM-DD']
-                dob = None
-        else:
-            dob = date(1990, 1, 1)
-        
-        if payload.dateOfJoining:
-            try:
-                joining_date = datetime.strptime(payload.dateOfJoining, '%Y-%m-%d').date()
-            except ValueError:
-                field_errors['dateOfJoining'] = ['Invalid date format. Use YYYY-MM-DD']
-                joining_date = None
-        else:
-            joining_date = date.today()
-        
-        # If there are validation errors, return them
+        dept = Department.objects.filter(dept_code=payload.departmentCode).first()
+        if not dept:
+            field_errors['departmentCode'] = ["Department not found"]
+            
+        designation = None
+        if dept:
+            designation = Designation.objects.filter(department=dept, position_code=payload.designationCode).first()
+            if not designation:
+                field_errors['designationCode'] = ["Designation not found for this department"]
+
         if field_errors:
-            logger.warning(f"Validation failed for employee creation: {field_errors}")
-            return 400, {
-                "error": "Validation failed. Please check the highlighted fields.",
-                "field_errors": field_errors
-            }
-        
-        # === DATA PROCESSING PHASE ===
-        
-        # Map employment type
-        employment_type_map = {
-            'Full-time': 'full_time',
-            'Part-time': 'part_time',
-            'Contract': 'contract',
-            'Intern': 'intern',
-        }
-        employment_type = employment_type_map.get(
-            payload.employmentType,
-            'full_time'
-        )
-        
-        # Convert education and experience to list of dicts
-        education_history = None
-        if payload.education:
-            education_history = [
-                {
-                    'degree': e.degree,
-                    'institute': e.institute,
-                    'passingYear': e.passingYear
-                }
-                for e in payload.education if e.degree or e.institute
-            ]
-        
-        work_experience = None
-        if payload.experience:
-            work_experience = [
-                {
-                    'employer': e.employer,
-                    'jobTitle': e.jobTitle,
-                    'startDate': e.startDate,
-                    'endDate': e.endDate,
-                    'responsibilities': e.responsibilities
-                }
-                for e in payload.experience if e.employer or e.jobTitle
-            ]
-        
-        # === CREATE EMPLOYEE ===
-        
-        employee = Employee.objects.create(
-            full_name=payload.fullName,
-            email=payload.orgEmail or payload.personalEmail,
-            phone=payload.mobile,
-            cnic=cnic_clean if payload.cnic else '',
-            dob=dob,
-            gender=payload.gender,
-            nationality=payload.nationality,
-            religion=payload.religion,
-            emergency_contact_phone=payload.emergencyPhone,
-            residential_address=payload.residentialAddress,
-            permanent_address=payload.permanentAddress,
-            city=payload.city,
-            state=payload.state,
-            department=department,
-            designation=designation,
-            joining_date=joining_date,
-            employment_type=employment_type,
-            organization_phone=payload.orgPhone,
-            bank_name=payload.bankName,
-            account_number=payload.accountNumber,
-            education_history=education_history,
-            work_experience=work_experience,
-        )
-        
-        logger.info(f"Employee created successfully: {employee.employee_code} - {employee.full_name}")
-        
+            return 400, {"error": "Validation failed", "field_errors": field_errors}
+
+        # Date Parsing
+        dob = datetime.strptime(payload.dob, '%Y-%m-%d').date() if payload.dob else date(1990, 1, 1)
+        joining_date = datetime.strptime(payload.joiningDate, '%Y-%m-%d').date() if payload.joiningDate else date.today()
+
+        with transaction.atomic():
+            # Create Employee
+            employee = Employee.objects.create(
+                organization=org,
+                full_name=payload.fullName,
+                cnic=cnic_clean,
+                personal_phone=payload.mobile,
+                personal_email=payload.personalEmail,
+                org_email=payload.orgEmail,
+                org_phone=payload.orgPhone,
+                dob=dob,
+                gender=payload.gender,
+                marital_status=payload.maritalStatus,
+                nationality=payload.nationality or 'Pakistani',
+                religion=payload.religion,
+                residential_address=payload.residentialAddress,
+                permanent_address=payload.permanentAddress,
+                city=payload.city,
+                state=payload.state,
+                emergency_contact_name=payload.emergencyName,
+                emergency_contact_phone=payload.emergencyPhone,
+                bank_name=payload.bankName,
+                account_number=payload.accountNumber,
+                education_history=[e.dict() for e in payload.education or []],
+                work_experience=[e.dict() for e in payload.experience or []],
+            )
+
+            # Create Primary Assignment
+            EmployeeAssignment.objects.create(
+                employee=employee,
+                institution=inst,
+                department=dept,
+                designation=designation,
+                joining_date=joining_date,
+                is_primary=True,
+                shift=payload.shift or 'general'
+            )
+
         return 201, {
             "message": "Employee created successfully",
             "employee_id": employee.employee_id,
@@ -299,10 +231,8 @@ def create_employee(request, payload: EmployeeCreateSchema):
         }
     
     except Exception as e:
-        logger.error(f"Unexpected error creating employee: {str(e)}", exc_info=True)
-        return 400, {
-            "error": f"Server error: {str(e)}. Please contact administrator if this persists."
-        }
+        logger.error(f"Unexpected error: {str(e)}", exc_info=True)
+        return 400, {"error": f"Server error: {str(e)}"}
 
 
 @router.get("/departments", response=List[dict])
@@ -540,72 +470,59 @@ def list_employees(
     """
     try:
         # Base query - only non-deleted employees
-        query = Employee.objects.filter(is_deleted=False).select_related('department', 'designation')
+        query = Employee.objects.filter(is_deleted=False).prefetch_related('assignments', 'assignments__department', 'assignments__designation', 'assignments__institution')
         
         # Apply search filter
         if search:
             from django.db.models import Q
             query = query.filter(
                 Q(full_name__icontains=search) |
-                Q(email__icontains=search) |
+                Q(personal_email__icontains=search) |
+                Q(org_email__icontains=search) |
                 Q(employee_code__icontains=search) |
                 Q(employee_id__icontains=search)
             )
         
-        # Apply department filter
+        # Apply department filter (via assignments)
         if department:
-            query = query.filter(department__dept_code=department)
+            query = query.filter(assignments__department__dept_code=department)
         
-        # Apply designation filter
+        # Apply designation filter (via assignments)
         if designation:
-            query = query.filter(designation__position_code=designation)
-        
-        # Apply employment type filter
-        if employment_type:
-            query = query.filter(employment_type=employment_type)
+            query = query.filter(assignments__designation__position_code=designation)
         
         # Get total count
-        total = query.count()
+        total = query.distinct().count()
         
         # Pagination
-        per_page = min(per_page, 100)  # Max 100 items per page
+        per_page = min(per_page, 100)
         start = (page - 1) * per_page
-        end = start + per_page
+        employees = query.order_by('-created_at').distinct()[start:start + per_page]
         
-        employees = query.order_by('-created_at')[start:end]
-        
-        # Format response
         employee_list = []
         for emp in employees:
+            primary = emp.assignments.filter(is_primary=True).first()
             employee_list.append({
                 'employee_id': emp.employee_id,
                 'employee_code': emp.employee_code,
                 'full_name': emp.full_name,
-                'email': emp.email,
-                'phone': emp.phone,
-                'department': {
-                    'dept_code': emp.department.dept_code if emp.department else None,
-                    'dept_name': emp.department.dept_name if emp.department else None,
-                } if emp.department else None,
-                'designation': {
-                    'position_code': emp.designation.position_code if emp.designation else None,
-                    'position_name': emp.designation.position_name if emp.designation else None,
-                } if emp.designation else None,
-                'employment_type': emp.get_employment_type_display(),
-                'employment_type_value': emp.employment_type,
-                'joining_date': emp.joining_date.isoformat() if emp.joining_date else None,
-                'is_active': True,
-                'created_at': emp.created_at.isoformat() if emp.created_at else None,
+                'email': emp.personal_email,
+                'phone': emp.personal_phone,
+                'primary_assignment': {
+                    'department': primary.department.dept_name if primary else None,
+                    'designation': primary.designation.position_name if primary else None,
+                    'institution': primary.institution.name if primary and primary.institution else "Global",
+                } if primary else None,
+                'is_active': emp.is_active,
+                'created_at': emp.created_at.isoformat()
             })
-        
-        total_pages = (total + per_page - 1) // per_page
         
         return {
             'employees': employee_list,
             'total': total,
             'page': page,
             'per_page': per_page,
-            'total_pages': total_pages
+            'total_pages': (total + per_page - 1) // per_page
         }
     
     except Exception as e:
@@ -628,47 +545,55 @@ def get_employee(request, employee_id: str):
     Returns complete employee information including education, experience, etc.
     """
     try:
-        employee = Employee.objects.select_related('department', 'designation').get(
-            employee_id=employee_id,
-            is_deleted=False
-        )
+        employee = Employee.objects.prefetch_related(
+            'assignments', 'assignments__department', 'assignments__designation', 'assignments__institution'
+        ).get(employee_id=employee_id, is_deleted=False)
         
+        assignments = []
+        for asn in employee.assignments.filter(is_deleted=False):
+            assignments.append({
+                'institution': asn.institution.name if asn.institution else "Global",
+                'department': asn.department.dept_name,
+                'designation': asn.designation.position_name,
+                'shift': asn.get_shift_display(),
+                'joining_date': asn.joining_date.isoformat(),
+                'is_primary': asn.is_primary,
+                'role_data': asn.role_data
+            })
+
         return {
             'employee_id': employee.employee_id,
             'employee_code': employee.employee_code,
             'full_name': employee.full_name,
-            'email': employee.email,
-            'phone': employee.phone,
+            'personal_email': employee.personal_email,
+            'personal_phone': employee.personal_phone,
+            'org_email': employee.org_email,
+            'org_phone': employee.org_phone,
             'cnic': employee.cnic,
             'dob': employee.dob.isoformat() if employee.dob else None,
-            'gender': employee.gender,
+            'gender': employee.get_gender_display(),
+            'marital_status': employee.get_marital_status_display(),
             'nationality': employee.nationality,
             'religion': employee.religion,
-            'emergency_contact_phone': employee.emergency_contact_phone,
-            'residential_address': employee.residential_address,
-            'permanent_address': employee.permanent_address,
-            'city': employee.city,
-            'state': employee.state,
-            'department': {
-                'dept_code': employee.department.dept_code,
-                'dept_name': employee.department.dept_name,
-                'dept_sector': employee.department.dept_sector,
-            } if employee.department else None,
-            'designation': {
-                'position_code': employee.designation.position_code,
-                'position_name': employee.designation.position_name,
-            } if employee.designation else None,
-            'joining_date': employee.joining_date.isoformat() if employee.joining_date else None,
-            'employment_type': employee.get_employment_type_display(),
-            'employment_type_value': employee.employment_type,
-            'organization_phone': employee.organization_phone,
-            'bank_name': employee.bank_name,
-            'account_number': employee.account_number,
+            'emergency_contact': {
+                'name': employee.emergency_contact_name,
+                'phone': employee.emergency_contact_phone
+            },
+            'address': {
+                'residential': employee.residential_address,
+                'permanent': employee.permanent_address,
+                'city': employee.city,
+                'state': employee.state,
+            },
+            'assignments': assignments,
+            'bank_info': {
+                'bank_name': employee.bank_name,
+                'account_number': employee.account_number,
+            },
             'education_history': employee.education_history,
             'work_experience': employee.work_experience,
-            'resume': employee.resume.url if employee.resume else None,
-            'created_at': employee.created_at.isoformat() if employee.created_at else None,
-            'updated_at': employee.updated_at.isoformat() if employee.updated_at else None,
+            'is_active': employee.is_active,
+            'created_at': employee.created_at.isoformat(),
         }
     
     except Employee.DoesNotExist:

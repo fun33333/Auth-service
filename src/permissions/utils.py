@@ -82,23 +82,21 @@ def get_hdms_role(employee):
 
 def get_sis_role(employee):
     """
-    Get employee's SIS role based on designation.
-    
-    SIS role = Employee's designation
-    No separate role assignment needed!
-    
-    Returns:
-        dict with role info or None if no SIS access
+    Get employee's SIS role based on primary designation.
     """
     # Check if has SIS access
     if not has_service_access(employee, 'sis'):
         return None
     
+    primary = employee.assignments.filter(is_primary=True, is_active=True).first()
+    if not primary:
+        return None
+    
     return {
         'role_type': 'designation_based',
-        'designation': employee.designation.position_name,
-        'designation_code': employee.designation.position_code,
-        'department': employee.department.dept_name
+        'designation': primary.designation.position_name,
+        'designation_code': primary.designation.position_code,
+        'department': primary.department.dept_name
     }
 
 

@@ -19,10 +19,13 @@ def get_employee_from_request():
     """Get Employee object from current Django user (if exists)"""
     current_user = get_current_user()
     if current_user and current_user.is_authenticated:
-        # Try to find employee by email
+        from django.db.models import Q
+        # Check both personal and org email
         try:
-            return Employee.objects.get(email=current_user.email)
-        except Employee.DoesNotExist:
+            return Employee.objects.get(
+                Q(personal_email=current_user.email) | Q(org_email=current_user.email)
+            )
+        except (Employee.DoesNotExist, Employee.MultipleObjectsReturned):
             pass
     return None
 
@@ -64,11 +67,11 @@ def log_employee_change(sender, instance, created, **kwargs):
             # Track important fields
             fields_to_track = {
                 'full_name': 'Full Name',
-                'department': 'Department',
-                'designation': 'Designation',
                 'is_active': 'Active Status',
-                'email': 'Email',
-                'phone': 'Phone',
+                'personal_email': 'Email',
+                'personal_phone': 'Phone',
+                'org_email': 'Org Email',
+                'org_phone': 'Org Phone',
             }
             
             for field, display_name in fields_to_track.items():
@@ -123,7 +126,7 @@ def log_department_change(sender, instance, created, **kwargs):
             action='create',
             changed_by=changed_by,
             ip_address=ip_address,
-            notes=f"Department {instance.dept_name} ({instance.department_id}) was created"
+            notes=f"Department {instance.dept_name} ({instance.dept_code}) was created"
         )
     else:
         original_key = f'dept_{instance.pk}'
@@ -133,8 +136,9 @@ def log_department_change(sender, instance, created, **kwargs):
             fields_to_track = {
                 'dept_name': 'Name',
                 'dept_code': 'Code',
-                'dept_sector': 'Sector',
                 'description': 'Description',
+                'organization': 'Organization',
+                'institution': 'Institution',
             }
             
             for field, display_name in fields_to_track.items():
