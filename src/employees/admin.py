@@ -81,7 +81,7 @@ class EmployeeAdmin(SoftDeleteAdmin):
     
     fieldsets = (
         ('Personal Info', {
-            'fields': ('full_name', 'cnic', 'dob', 'gender', 'marital_status', 'nationality', 'religion')
+            'fields': ('full_name', 'cnic', 'dob', 'gender', 'marital_status', 'nationality', 'religion', 'resume_url')
         }),
         ('Contact Details', {
             'fields': (('personal_email', 'personal_phone'), ('org_email', 'org_phone'))

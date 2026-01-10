@@ -4,8 +4,10 @@ Employees API endpoints for Auth Service.
 Provides REST API for employee management including creation,
 retrieval, and updates for integration with HDMS frontend.
 """
-from ninja import Router, File
+from ninja import Router, File, Form
 from ninja.files import UploadedFile
+import requests
+import os
 from typing import Optional, List
 from pydantic import BaseModel, validator
 from datetime import date, datetime
@@ -58,6 +60,7 @@ class EmployeeCreateSchema(BaseModel):
     permanentAddress: Optional[str] = None
     city: Optional[str] = None
     state: Optional[str] = None
+    # resumeUrl is handled via multipart file now
     
     # Assignment Details (Mapped to primary assignment)
     organizationCode: str = 'IAK'  # Default for NGO
@@ -112,22 +115,22 @@ class DepartmentCreateSchema(BaseModel):  # Changed from Schema to BaseModel
     """Schema for creating a department"""
     dept_code: str
     dept_name: str
-    dept_sector: str = 'other'
-    description: str = None
+    dept_sector: Optional[str] = 'other'  # Optional, not stored in DB
+    description: Optional[str] = None
 
 class DepartmentUpdateSchema(BaseModel):  # Changed from Schema to BaseModel
     """Schema for updating a department"""
-    dept_name: str = None
-    dept_sector: str = None
-    description: str = None
+    dept_name: Optional[str] = None
+    dept_sector: Optional[str] = None  # Optional, not stored in DB
+    description: Optional[str] = None
 
 class DepartmentDetailSchema(BaseModel):  # Changed from Schema to BaseModel
     """Schema for department detail response"""
     department_id: str
     dept_code: str
     dept_name: str
-    dept_sector: str
-    description: str = None
+    dept_sector: Optional[str] = 'other'  # Default fallback
+    description: Optional[str] = None
     employee_count: int
     designations: list
 
@@ -143,13 +146,22 @@ class DesignationUpdateSchema(BaseModel):
     position_name: str = None
     description: str = None
 
+from authentication.api import AuthBearer
+
 @router.post(
     "/employees",
-    response={201: EmployeeResponseSchema, 400: ErrorResponseSchema},
+    response={201: dict, 400: dict},
     summary="Create New Employee",
-    description="Create employee from frontend form with comprehensive validation"
+    description="Create employee from frontend form. If a resume is provided, it is renamed based on ID and Name before being uploaded to file-service.",
+    auth=AuthBearer()
 )
-def create_employee(request, payload: EmployeeCreateSchema):
+def create_employee(request, payload: EmployeeCreateSchema = Form(...), resume: UploadedFile = File(None)):
+    token = request.auth_token if hasattr(request, 'auth_token') else None
+    # Alternatively, get it from request headers if not using custom auth wrapper logic for token storage
+    if not token:
+        auth_header = request.headers.get('Authorization')
+        if auth_header and auth_header.startswith('Bearer '):
+            token = auth_header.split(' ')[1]
     field_errors = {}
     
     try:
@@ -157,6 +169,12 @@ def create_employee(request, payload: EmployeeCreateSchema):
         cnic_clean = payload.cnic.replace('-', '').replace(' ', '')
         if Employee.objects.filter(cnic=cnic_clean, is_deleted=False).exists():
             field_errors['cnic'] = ['An employee with this CNIC already exists']
+        
+        # Check for Detailed Duplicate Warning for Personal Email
+        existing_emp = Employee.objects.filter(personal_email=payload.personalEmail, is_deleted=False).first()
+        warning = None
+        if existing_emp:
+            warning = f"Notice: This email already exists and belongs to {existing_emp.full_name} (Code: {existing_emp.employee_code}, ID: {existing_emp.employee_id})."
         
         # Org/Inst/Dept/Designation Validation
         org = Organization.objects.filter(org_code=payload.organizationCode).first()
@@ -194,6 +212,7 @@ def create_employee(request, payload: EmployeeCreateSchema):
                 cnic=cnic_clean,
                 personal_phone=payload.mobile,
                 personal_email=payload.personalEmail,
+                resume_url=None, # Managed by proxy logic after ID generation
                 org_email=payload.orgEmail,
                 org_phone=payload.orgPhone,
                 dob=dob,
@@ -224,8 +243,47 @@ def create_employee(request, payload: EmployeeCreateSchema):
                 shift=payload.shift or 'general'
             )
 
+        # === RESUME UPLOAD PROXY (After ID generation) ===
+        if resume:
+            try:
+                # Rename the file: [ID]_[Name].[ext]
+                ext = os.path.splitext(resume.name)[1]
+                safe_name = payload.fullName.replace(" ", "_")
+                new_filename = f"{employee.employee_id}_{safe_name}{ext}"
+                
+                # Forward to File Service
+                file_service_url = os.environ.get('FILE_SERVICE_URL', 'http://file-service:8005')
+                upload_endpoint = f"{file_service_url}/api/v1/files/upload" 
+                
+                headers = {}
+                if token:
+                    headers['Authorization'] = f'Bearer {token}'
+                
+                params = {
+                    'category': 'resumes',
+                    'uploaded_by_id': str(employee.id)
+                }
+                files = {'file': (new_filename, resume.read(), resume.content_type)}
+                r = requests.post(upload_endpoint, files=files, params=params, headers=headers, timeout=10)
+                
+                if r.status_code in [200, 201]:
+                    file_data = r.json()
+                    file_key = file_data.get('file_key')
+                    if file_key:
+                        # Construct a URL that the browser can access
+                        # Use PUBLIC_GATEWAY_URL if set, fallback to localhost for dev
+                        gateway_url = os.environ.get('PUBLIC_GATEWAY_URL', 'http://localhost')
+                        employee.resume_url = f"{gateway_url}/api/v1/files/{file_key}/download"
+                        employee.save(update_fields=['resume_url'])
+                else:
+                    warning = f"{warning + ' ' if warning else ''}Resume upload failed ({r.status_code}). Please attach it manually later."
+            except Exception as upload_err:
+                logger.error(f"Resume proxy failed: {str(upload_err)}")
+                warning = f"{warning + ' ' if warning else ''}Resume proxy error. Employee saved without resume."
+
         return 201, {
             "message": "Employee created successfully",
+            "warning": warning,
             "employee_id": employee.employee_id,
             "employee_code": employee.employee_code
         }
@@ -239,9 +297,19 @@ def create_employee(request, payload: EmployeeCreateSchema):
 def list_departments(request):
     """Get all active departments for dropdown"""
     departments = Department.objects.filter(is_deleted=False).values(
-        'id', 'department_id', 'dept_code', 'dept_name', 'dept_sector'
+        'id', 'dept_code', 'dept_name'
     )
-    return list(departments)
+    # Manually add department_id (from id) and dept_sector (default)
+    return [
+        {
+            'id': str(d['id']),
+            'department_id': str(d['id']),
+            'dept_code': d['dept_code'],
+            'dept_name': d['dept_name'],
+            'dept_sector': 'other',  # Default fallback since field was removed
+        }
+        for d in departments
+    ]
 
 @router.post("/departments", response={201: dict, 400: ErrorResponseSchema})
 def create_department(request, payload: DepartmentCreateSchema):
@@ -264,12 +332,11 @@ def create_department(request, payload: DepartmentCreateSchema):
         dept = Department.objects.create(
             dept_code=payload.dept_code.upper(),
             dept_name=payload.dept_name,
-            dept_sector=payload.dept_sector,
             description=payload.description
         )
         return 201, {
             "message": "Department created successfully",
-            "department_id": dept.department_id,
+            "department_id": str(dept.id),
             "dept_code": dept.dept_code
         }
     except Exception as e:
@@ -282,12 +349,12 @@ def get_department(request, dept_code: str):
     try:
         dept = Department.objects.get(dept_code=dept_code)
         return 200, {
-            "department_id": dept.department_id,
+            "department_id": str(dept.id),
             "dept_code": dept.dept_code,
             "dept_name": dept.dept_name,
-            "dept_sector": dept.dept_sector,
+            "dept_sector": "other",  # Default fallback
             "description": dept.description,
-            "employee_count": dept.employees.filter(is_deleted=False).count(),
+            "employee_count": dept.assignments.filter(is_deleted=False).count(),
             "designations": [
                 {"position_code": d.position_code, "position_name": d.position_name}
                 for d in dept.designations.filter(is_deleted=False)
@@ -305,8 +372,7 @@ def update_department(request, dept_code: str, payload: DepartmentUpdateSchema):
         
         if payload.dept_name is not None:
             dept.dept_name = payload.dept_name
-        if payload.dept_sector is not None:
-            dept.dept_sector = payload.dept_sector
+        # dept_sector is no longer stored in DB, ignore it
         if payload.description is not None:
             dept.description = payload.description
         
@@ -327,8 +393,8 @@ def delete_department(request, dept_code: str):
     try:
         dept = Department.objects.get(dept_code=dept_code)
         
-        # Check for active employees
-        active_employees = dept.employees.filter(is_deleted=False).count()
+        # Check for active employees via assignments
+        active_employees = dept.assignments.filter(is_deleted=False).count()
         if active_employees > 0:
             return 400, {"error": f"Cannot delete department with {active_employees} active employees"}
         

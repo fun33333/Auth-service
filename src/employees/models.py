@@ -153,6 +153,10 @@ class Department(SoftDeleteModel):
     @property
     def is_global(self):
         return self.institution is None
+    @property
+    def department_id(self):
+        return str(self.id)
+
     def __str__(self):
         scope = "Global" if self.is_global else self.institution.inst_code
         return f"{self.dept_name} [{scope}]"
@@ -211,7 +215,8 @@ class Employee(SoftDeleteModel):
     full_name = models.CharField(max_length=200)
     cnic = models.CharField(max_length=15, unique=True)
     personal_phone = models.CharField(max_length=20, blank=True, null=True)
-    personal_email = models.EmailField(blank=True, null=True, unique=True) # Renamed 
+    personal_email = models.EmailField(blank=True, null=True) # REMOVED unique=True
+    resume_url = models.URLField(blank=True, null=True, help_text="Reference to File Service")
     dob = models.DateField()
     
     GENDER_CHOICES = [('male', 'Male'), ('female', 'Female'), ('other', 'Other')]
@@ -248,6 +253,25 @@ class Employee(SoftDeleteModel):
     work_experience = models.JSONField(default=list, blank=True, help_text="[{employer, jobTitle, startDate, endDate, responsibilities}]")
     
     is_active = models.BooleanField(default=True)
+    is_superadmin = models.BooleanField(default=False) # Added for role check
+
+    @property
+    def email(self):
+        return self.org_email or self.personal_email or ""
+
+    @property
+    def primary_assignment(self):
+        return self.assignments.filter(is_primary=True).first()
+
+    @property
+    def department(self):
+        pa = self.primary_assignment
+        return pa.department if pa else None
+
+    @property
+    def designation(self):
+        pa = self.primary_assignment
+        return pa.designation if pa else None
 
     class Meta:
         verbose_name = "Employee"
