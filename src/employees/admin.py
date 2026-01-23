@@ -5,7 +5,7 @@ Registers all models with auto-generation, soft delete support, and filters.
 """
 from django.contrib import admin
 from django.utils.html import format_html
-from .models import Organization, Institution, Department, Designation, Employee, EmployeeAssignment
+from .models import Organization, Institution, Branch, Department, Designation, Employee, EmployeeAssignment
 
 
 class SoftDeleteAdmin(admin.ModelAdmin):
@@ -44,14 +44,24 @@ class InstitutionAdmin(SoftDeleteAdmin):
     actions = ['restore_items']
 
 
+@admin.register(Branch)
+class BranchAdmin(SoftDeleteAdmin):
+    list_display = ['branch_code', 'branch_name', 'city', 'institution', 'is_deleted_badge']
+    list_filter = ['institution', 'city', 'status']
+    search_fields = ['branch_code', 'branch_name']
+    actions = ['restore_items']
+
+
 @admin.register(Department)
 class DepartmentAdmin(SoftDeleteAdmin):
     list_display = ['dept_name', 'dept_code', 'scope_display', 'is_deleted_badge']
-    list_filter = ['institution', 'organization']
+    list_filter = ['branch', 'institution', 'organization']
     search_fields = ['dept_code', 'dept_name']
     actions = ['restore_items']
 
     def scope_display(self, obj):
+        if obj.branch:
+            return f"{obj.branch.branch_code}"
         return "Global" if obj.is_global else obj.institution.inst_code
     scope_display.short_description = 'Scope'
 
@@ -70,6 +80,7 @@ class DesignationAdmin(SoftDeleteAdmin):
 
 class AssignmentInline(admin.TabularInline):
     model = EmployeeAssignment
+    fields = ['branch', 'institution', 'department', 'designation', 'joining_date', 'shift', 'is_primary', 'is_active']
     extra = 1
 
 
@@ -138,8 +149,8 @@ class EmployeeAdmin(SoftDeleteAdmin):
 
 @admin.register(EmployeeAssignment)
 class EmployeeAssignmentAdmin(SoftDeleteAdmin):
-    list_display = ['employee', 'designation', 'institution_display', 'is_primary', 'is_deleted_badge']
-    list_filter = ['is_primary', 'shift', 'institution']
+    list_display = ['employee', 'designation', 'branch', 'institution_display', 'is_primary', 'is_deleted_badge']
+    list_filter = ['is_primary', 'shift', 'branch', 'institution']
     search_fields = ['employee__full_name', 'employee__employee_id']
 
     def save_model(self, request, obj, form, change):
