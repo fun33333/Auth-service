@@ -522,7 +522,7 @@ class EmployeeAssignment(SoftDeleteModel):
     
     SHIFT_CHOICES = [
         ('morning', 'Morning'), ('afternoon', 'Afternoon'), ('night', 'Night'),
-        ('general', 'General/Office'), ('hourly', 'Hourly Base')
+        ('general', 'General/Office'), ('hourly', 'Hourly Base'), ('both', 'Both (M+A)')
     ]
     shift = models.CharField(max_length=20, choices=SHIFT_CHOICES, default='general')
     
