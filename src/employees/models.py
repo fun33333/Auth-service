@@ -435,6 +435,14 @@ class Employee(SoftDeleteModel):
     nationality = models.CharField(max_length=100, default='Pakistani')
     religion = models.CharField(max_length=100, blank=True, null=True)
     
+    EMPLOYMENT_TYPE_CHOICES = [
+        ('full_time', 'Full-time'),
+        ('part_time', 'Part-time'),
+        ('contract', 'Contract'),
+        ('intern', 'Intern')
+    ]
+    employment_type = models.CharField(max_length=20, choices=EMPLOYMENT_TYPE_CHOICES, default='full_time')
+    
     # Address Details
     residential_address = models.TextField(blank=True, null=True)
     permanent_address = models.TextField(blank=True, null=True)
