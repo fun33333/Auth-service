@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.utils.html import format_html
-from .models import UserCredentials, RefreshToken, BlacklistedToken
+from .models import UserCredentials, RefreshToken, BlacklistedToken, SuperAdmin
 from .forms import UserCredentialsForm
 
 
@@ -13,10 +13,11 @@ class UserCredentialsAdmin(admin.ModelAdmin):
     search_fields = ['employee__employee_code', 'employee__full_name', 'last_login_ip']
     readonly_fields = ['password_hash', 'last_login', 'last_login_ip', 'password_changed_at', 
                       'created_at', 'updated_at', 'deleted_at', 'deleted_by']
+    autocomplete_fields = ['employee', 'superadmin']
     
     fieldsets = (
-        ('Employee', {
-            'fields': ('employee',)
+        ('User Identity', {
+            'fields': ('employee', 'superadmin')
         }),
         ('Password', {
             'fields': ('password', 'password_hash', 'password_changed_at'),
@@ -118,3 +119,33 @@ class BlacklistedTokenAdmin(admin.ModelAdmin):
         count = BlacklistedToken.cleanup_expired()
         self.message_user(request, f'{count} expired token(s) cleaned up.')
     cleanup_expired_tokens.short_description = 'Cleanup expired tokens'
+
+
+@admin.register(SuperAdmin)
+class SuperAdminAdmin(admin.ModelAdmin):
+    """Admin panel for SuperAdmins"""
+    list_display = ['superadmin_code', 'full_name', 'email', 'phone', 'is_active']
+    list_filter = ['is_active', 'organization']
+    search_fields = ['superadmin_code', 'full_name', 'email']
+    readonly_fields = ['created_at', 'updated_at', 'deleted_at', 'deleted_by']
+    
+    fieldsets = (
+        ('Identity', {
+            'fields': ('superadmin_code', 'full_name', 'email', 'phone')
+        }),
+        ('Status', {
+            'fields': ('is_active', 'organization')
+        }),
+        ('Soft Delete', {
+            'fields': ('is_deleted', 'deleted_at', 'deleted_by', 'deletion_reason'),
+            'classes': ('collapse',)
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    def get_queryset(self, request):
+        return SuperAdmin.all_objects.all()
+

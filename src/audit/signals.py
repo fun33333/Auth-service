@@ -7,6 +7,7 @@ from django.dispatch import receiver
 from django.contrib.contenttypes.models import ContentType
 from employees.models import Employee, Department
 from permissions.models import ServiceAccess, HdmsRole
+from authentication.models import SuperAdmin
 from .models import AuditLog
 from .middleware import get_current_user, get_current_ip
 
@@ -27,6 +28,22 @@ def get_employee_from_request():
             )
         except (Employee.DoesNotExist, Employee.MultipleObjectsReturned):
             pass
+    return None
+
+
+def get_superadmin_from_request():
+    """Get SuperAdmin object from current Django user (if exists)"""
+    current_user = get_current_user()
+    if current_user and current_user.is_authenticated:
+        try:
+            # Check by email
+            return SuperAdmin.objects.get(email=current_user.email)
+        except (SuperAdmin.DoesNotExist, SuperAdmin.MultipleObjectsReturned):
+            # Check by username if it matches superadmin_code format
+            try:
+                return SuperAdmin.objects.get(superadmin_code=current_user.username)
+            except SuperAdmin.DoesNotExist:
+                pass
     return None
 
 
@@ -55,6 +72,7 @@ def log_employee_change(sender, instance, created, **kwargs):
             object_id=str(instance.id),
             action='create',
             changed_by=changed_by,
+            changed_by_superadmin=get_superadmin_from_request(),
             ip_address=ip_address,
             notes=f"Employee {instance.full_name} ({instance.employee_code}) was created"
         )
@@ -93,6 +111,7 @@ def log_employee_change(sender, instance, created, **kwargs):
                         old_value=str(old_val) if old_val else '',
                         new_value=str(new_val) if new_val else '',
                         changed_by=changed_by,
+                        changed_by_superadmin=get_superadmin_from_request(),
                         ip_address=ip_address,
                         notes=f"Employee {instance.full_name}: {display_name} changed"
                     )
@@ -125,6 +144,7 @@ def log_department_change(sender, instance, created, **kwargs):
             object_id=str(instance.id),
             action='create',
             changed_by=changed_by,
+            changed_by_superadmin=get_superadmin_from_request(),
             ip_address=ip_address,
             notes=f"Department {instance.dept_name} ({instance.dept_code}) was created"
         )
@@ -154,6 +174,7 @@ def log_department_change(sender, instance, created, **kwargs):
                         old_value=old_val,
                         new_value=new_val,
                         changed_by=changed_by,
+                        changed_by_superadmin=get_superadmin_from_request(),
                         ip_address=ip_address,
                         notes=f"Department {instance.dept_name}: {display_name} changed"
                     )
@@ -168,13 +189,21 @@ def log_service_access_change(sender, instance, created, **kwargs):
     action = 'create' if created else 'update'
     changed_by = instance.granted_by if created else get_employee_from_request()
     
+    # Identify the user name for the notes
+    user_name = "Unknown"
+    if instance.employee:
+        user_name = instance.employee.full_name
+    elif instance.superadmin:
+        user_name = instance.superadmin.full_name
+
     AuditLog.objects.create(
         content_type=content_type,
         object_id=str(instance.id),
         action=action,
         changed_by=changed_by,
+        changed_by_superadmin=get_superadmin_from_request(),
         ip_address=get_current_ip(),
-        notes=f"Service access to {instance.service} for {instance.employee.full_name} was {action}d"
+        notes=f"Service access to {instance.service} for {user_name} was {action}d"
     )
 
 
@@ -185,13 +214,21 @@ def log_hdms_role_change(sender, instance, created, **kwargs):
     action = 'create' if created else 'update'
     changed_by = instance.assigned_by if created else get_employee_from_request()
     
+    # Identify the user name for the notes
+    user_name = "Unknown"
+    if instance.service_access.employee:
+        user_name = instance.service_access.employee.full_name
+    elif instance.service_access.superadmin:
+        user_name = instance.service_access.superadmin.full_name
+
     AuditLog.objects.create(
         content_type=content_type,
         object_id=str(instance.id),
         action=action,
         changed_by=changed_by,
+        changed_by_superadmin=get_superadmin_from_request(),
         ip_address=get_current_ip(),
-        notes=f"HDMS role {instance.role_type} for {instance.service_access.employee.full_name} was {action}d"
+        notes=f"HDMS role {instance.role_type} for {user_name} was {action}d"
     )
 
 
@@ -203,6 +240,7 @@ def log_employee_delete(sender, instance, **kwargs):
         object_id=str(instance.id),
         action='delete',
         changed_by=get_employee_from_request(),
+        changed_by_superadmin=get_superadmin_from_request(),
         ip_address=get_current_ip(),
         notes=f"Employee {instance.full_name} ({instance.employee_code}) was deleted"
     )

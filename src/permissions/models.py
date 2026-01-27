@@ -2,7 +2,7 @@
 Permissions models for service access control.
 
 Controls:
-- Which employees can access which services (SIS/HDMS/Future)
+- Which employees/superadmins can access which services (SIS/HDMS/Future)
 - HDMS-specific role assignments (Moderator/Assignee/Requestor)
 - SIS uses designation as role automatically
 """
@@ -15,24 +15,37 @@ from employees.utils import SoftDeleteModel
 
 class ServiceAccess(SoftDeleteModel):
     """
-    Tracks which employees have access to which services.
+    Tracks which employees/superadmins have access to which services.
     
     Flow:
-    1. Employee created → No service access by default
-    2. Admin grants SIS access → Employee can login to SIS with designation-based role
+    1. Employee/SuperAdmin created → No service access by default
+    2. Admin grants SIS access → Can login to SIS
     3. Admin grants HDMS access → Must also assign HdmsRole
     
     Example:
     - Ahmed (Teacher) → SIS Access ✓ → Logs in as Teacher (from designation)
     - Ahmed (Teacher) → HDMS Access ✓ + Moderator role → Logs in as Moderator
+    - SuperAdmin → All services → Full access
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     
+    # Link to either Employee OR SuperAdmin (one must be set)
     employee = models.ForeignKey(
         Employee,
         on_delete=models.CASCADE,
         related_name='service_accesses',
-        help_text="Employee who has access"
+        null=True,
+        blank=True,
+        help_text="Employee who has access (if employee)"
+    )
+    
+    superadmin = models.ForeignKey(
+        'authentication.SuperAdmin',
+        on_delete=models.CASCADE,
+        related_name='service_accesses',
+        null=True,
+        blank=True,
+        help_text="SuperAdmin who has access (if superadmin)"
     )
     
     SERVICE_CHOICES = [
@@ -50,7 +63,7 @@ class ServiceAccess(SoftDeleteModel):
     
     is_active = models.BooleanField(
         default=True,
-        help_text="Can employee currently access this service?"
+        help_text="Can user currently access this service?"
     )
     
     granted_at = models.DateTimeField(
@@ -92,15 +105,27 @@ class ServiceAccess(SoftDeleteModel):
         verbose_name = "Service Access"
         verbose_name_plural = "Service Accesses"
         db_table = "permissions_service_access"
-        unique_together = [['employee', 'service']]  # One access per service per employee
+        # Note: unique_together removed - will use custom validation instead
         indexes = [
             models.Index(fields=['employee', 'service', 'is_active']),
+            models.Index(fields=['superadmin', 'service', 'is_active']),
             models.Index(fields=['service', 'is_active']),
         ]
     
+    def clean(self):
+        """Ensure exactly one of employee or superadmin is set"""
+        if not self.employee and not self.superadmin:
+            raise ValidationError("Must link to either an Employee or SuperAdmin")
+        if self.employee and self.superadmin:
+            raise ValidationError("Cannot link to both Employee and SuperAdmin")
+    
     def __str__(self):
         status = "Active" if self.is_active else "Inactive"
-        return f"{self.employee.full_name} → {self.get_service_display()} ({status})"
+        if self.employee:
+            return f"{self.employee.full_name} → {self.get_service_display()} ({status})"
+        elif self.superadmin:
+            return f"{self.superadmin.full_name} → {self.get_service_display()} ({status})"
+        return f"ServiceAccess #{self.id}"
     
     def revoke(self, revoked_by_employee):
         """Revoke this service access"""

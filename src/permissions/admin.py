@@ -9,15 +9,16 @@ from .models import ServiceAccess, HdmsRole, PermissionAudit
 @admin.register(ServiceAccess)
 class ServiceAccessAdmin(admin.ModelAdmin):
     """Admin panel for Service Access"""
-    list_display = ['employee', 'service', 'is_active_badge', 'granted_at', 'granted_by']
+    list_display = ['employee', 'superadmin', 'service', 'is_active_badge', 'granted_at', 'granted_by']
     list_filter = ['service', 'is_active', 'granted_at']
-    search_fields = ['employee__employee_code', 'employee__full_name']
+    search_fields = ['employee__employee_code', 'employee__full_name', 'superadmin__superadmin_code', 'superadmin__full_name']
     readonly_fields = ['granted_at', 'granted_by', 'revoked_at', 'revoked_by', 
                       'created_at', 'updated_at', 'deleted_at', 'deleted_by']
+    autocomplete_fields = ['employee', 'superadmin']
     
     fieldsets = (
         ('Access Info', {
-            'fields': ('employee', 'service', 'is_active')
+            'fields': ('employee', 'superadmin', 'service', 'is_active')
         }),
         ('Grant Details', {
             'fields': ('granted_at', 'granted_by', 'notes')

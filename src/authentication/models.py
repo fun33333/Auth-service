@@ -2,9 +2,10 @@
 Authentication models for JWT-based authentication.
 
 This module contains:
-- UserCredentials: Password storage for employees
+- UserCredentials: Password storage for employees and superadmins
 - RefreshToken: JWT refresh token management
 - BlacklistedToken: Logout token blacklist
+- SuperAdmin: System superadmin accounts (imported from superadmin_models)
 """
 import uuid
 from django.db import models
@@ -14,24 +15,39 @@ from datetime import timedelta
 from employees.models import Employee
 from employees.utils import SoftDeleteModel
 
+# Import SuperAdmin from separate module
+from .superadmin_models import SuperAdmin
+
 
 class UserCredentials(SoftDeleteModel):
     """
-    Stores authentication credentials for employees.
+    Stores authentication credentials for employees and superadmins.
     
-    Separate from Employee model as per design:
-    - Employee model: Core employee data
+    Separate from Employee/SuperAdmin models as per design:
+    - Employee/SuperAdmin models: Core data
     - UserCredentials: Authentication-specific data
     
-    One-to-One relationship with Employee.
+    Can link to either Employee OR SuperAdmin (optional fields).
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     
+    # Link to either Employee OR SuperAdmin (one must be set)
     employee = models.OneToOneField(
         Employee,
         on_delete=models.CASCADE,
         related_name='credentials',
-        help_text="Employee these credentials belong to"
+        null=True,
+        blank=True,
+        help_text="Employee these credentials belong to (if employee)"
+    )
+    
+    superadmin = models.OneToOneField(
+        SuperAdmin,
+        on_delete=models.CASCADE,
+        related_name='credentials',
+        null=True,
+        blank=True,
+        help_text="SuperAdmin these credentials belong to (if superadmin)"
     )
     
     password_hash = models.CharField(
@@ -73,7 +89,19 @@ class UserCredentials(SoftDeleteModel):
         db_table = "auth_user_credentials"
     
     def __str__(self):
-        return f"Credentials for {self.employee.full_name} ({self.employee.employee_code})"
+        if self.employee:
+            return f"Credentials for {self.employee.full_name} ({self.employee.employee_code})"
+        elif self.superadmin:
+            return f"Credentials for {self.superadmin.full_name} ({self.superadmin.superadmin_code})"
+        return f"Credentials #{self.id}"
+    
+    def clean(self):
+        """Ensure exactly one of employee or superadmin is set"""
+        from django.core.exceptions import ValidationError
+        if not self.employee and not self.superadmin:
+            raise ValidationError("Must link to either an Employee or SuperAdmin")
+        if self.employee and self.superadmin:
+            raise ValidationError("Cannot link to both Employee and SuperAdmin")
     
     def set_password(self, raw_password):
         """Hash and set password"""

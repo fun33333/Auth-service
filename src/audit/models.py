@@ -36,6 +36,15 @@ class AuditLog(models.Model):
         help_text="Employee who made the change"
     )
     
+    changed_by_superadmin = models.ForeignKey(
+        'authentication.SuperAdmin',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='audit_logs',
+        help_text="SuperAdmin who made the change"
+    )
+    
     # What was changed (Generic relation to any model)
     content_type = models.ForeignKey(
         ContentType,

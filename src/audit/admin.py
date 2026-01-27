@@ -9,10 +9,10 @@ from .models import AuditLog
 @admin.register(AuditLog)
 class AuditLogAdmin(admin.ModelAdmin):
     """Admin panel for Audit Logs - Read Only"""
-    list_display = ['timestamp', 'action_badge', 'changed_by', 'content_type', 'field_name', 'value_summary']
+    list_display = ['timestamp', 'action_badge', 'actor_name', 'content_type', 'field_name', 'value_summary']
     list_filter = ['action', 'content_type', 'timestamp']
-    search_fields = ['changed_by__full_name', 'changed_by__employee_code', 'field_name', 'notes']
-    readonly_fields = ['changed_by', 'content_type', 'object_id', 'action', 
+    search_fields = ['changed_by__full_name', 'changed_by_superadmin__full_name', 'field_name', 'notes']
+    readonly_fields = ['changed_by', 'changed_by_superadmin', 'content_type', 'object_id', 'action', 
                       'field_name', 'old_value', 'new_value', 'timestamp', 
                       'ip_address', 'notes']
     
@@ -24,7 +24,7 @@ class AuditLogAdmin(admin.ModelAdmin):
             'fields': ('old_value', 'new_value')
         }),
         ('Attribution', {
-            'fields': ('changed_by', 'timestamp', 'ip_address')
+            'fields': (('changed_by', 'changed_by_superadmin'), 'timestamp', 'ip_address')
         }),
         ('Notes', {
             'fields': ('notes',),
@@ -47,11 +47,20 @@ class AuditLogAdmin(admin.ModelAdmin):
         )
     action_badge.short_description = 'Action'
     
+    def actor_name(self, obj):
+        """Show name of actor (Employee or SuperAdmin)"""
+        if obj.changed_by:
+            return obj.changed_by.full_name
+        if obj.changed_by_superadmin:
+            return f"(SA) {obj.changed_by_superadmin.full_name}"
+        return "-"
+    actor_name.short_description = 'Performed By'
+
     def value_summary(self, obj):
         """Show old → new value summary"""
-        if obj.action == 'update' and obj.old_value and obj.new_value:
-            old = obj.old_value[:30] + '...' if len(obj.old_value) > 30 else obj.old_value
-            new = obj.new_value[:30] + '...' if len(obj.new_value) > 30 else obj.new_value
+        if obj.action == 'update' and (obj.old_value or obj.new_value):
+            old = (obj.old_value[:30] + '...') if obj.old_value and len(obj.old_value) > 30 else (obj.old_value or '')
+            new = (obj.new_value[:30] + '...') if obj.new_value and len(obj.new_value) > 30 else (obj.new_value or '')
             return format_html(
                 '<span style="color: gray;">{}</span> → <span style="color: blue;">{}</span>',
                 old, new
