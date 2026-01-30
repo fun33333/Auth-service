@@ -152,7 +152,18 @@ class RefreshToken(models.Model):
         Employee,
         on_delete=models.CASCADE,
         related_name='refresh_tokens',
+        null=True,
+        blank=True,
         help_text="Employee this token belongs to"
+    )
+    
+    superadmin = models.ForeignKey(
+        SuperAdmin,
+        on_delete=models.CASCADE,
+        related_name='refresh_tokens',
+        null=True,
+        blank=True,
+        help_text="SuperAdmin this token belongs to"
     )
     
     token = models.CharField(
@@ -197,9 +208,13 @@ class RefreshToken(models.Model):
             models.Index(fields=['employee', 'is_revoked']),
             models.Index(fields=['expires_at']),
         ]
-    
+
     def __str__(self):
-        return f"Refresh token for {self.employee.employee_code}"
+        if self.employee:
+            return f"Refresh token for {self.employee.employee_code}"
+        if self.superadmin:
+            return f"Refresh token for {self.superadmin.superadmin_code}"
+        return f"Refresh token #{self.id}"
     
     def is_expired(self):
         """Check if token has expired"""

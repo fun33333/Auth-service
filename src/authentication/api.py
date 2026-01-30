@@ -17,6 +17,7 @@ from django.utils import timezone
 from employees.models import Employee
 from permissions.models import ServiceAccess, HdmsRole
 from .models import UserCredentials, RefreshToken, BlacklistedToken
+from .superadmin_models import SuperAdmin
 from .jwt_utils import (
     generate_access_token,
     generate_refresh_token,
@@ -85,7 +86,7 @@ class ErrorResponse(Schema):
 # ================== Bearer Token Authentication ==================
 
 class AuthBearer(HttpBearer):
-    """Bearer token authentication for protected endpoints"""
+    """Bearer token authentication for both employees and superadmins"""
     
     def authenticate(self, request: HttpRequest, token: str):
         # Check if token is blacklisted
@@ -93,16 +94,22 @@ class AuthBearer(HttpBearer):
             return None
         
         # Verify token
-        employee_id = verify_access_token(token)
-        if not employee_id:
+        verify_result = verify_access_token(token)
+        if not verify_result:
             return None
+            
+        user_id, is_superadmin = verify_result
         
-        # Get employee
-        try:
-            employee = Employee.objects.get(employee_id=employee_id, is_active=True, is_deleted=False)
-            return employee
-        except Employee.DoesNotExist:
-            return None
+        if is_superadmin:
+            try:
+                return SuperAdmin.objects.get(id=user_id, is_active=True)
+            except SuperAdmin.DoesNotExist:
+                return None
+        else:
+            try:
+                return Employee.objects.get(id=user_id, is_active=True, is_deleted=False)
+            except Employee.DoesNotExist:
+                return None
 
 
 # ================== Endpoints ==================
@@ -110,30 +117,39 @@ class AuthBearer(HttpBearer):
 @router.post("/login", response={200: LoginResponse, 401: ErrorResponse, 423: ErrorResponse})
 def login(request: HttpRequest, payload: LoginRequest):
     """
-    Login with employee_code and password.
-    
-    Returns access token (1 hour) and refresh token (7 days).
+    Login with employee_code (or superadmin_code) and password.
     """
+    # Try finding as employee first
+    user = None
     try:
-        # Get employee by employee_code
-        employee = Employee.objects.get(
+        user = Employee.objects.get(
             employee_code=payload.employee_code,
             is_active=True,
             is_deleted=False
         )
     except Employee.DoesNotExist:
-        return 401, {
-            "error": "Invalid credentials",
-            "detail": "Employee code not found or account inactive"
-        }
+        # Try finding as superadmin
+        try:
+            user = SuperAdmin.objects.get(
+                superadmin_code=payload.employee_code,
+                is_active=True
+            )
+        except SuperAdmin.DoesNotExist:
+            return 401, {
+                "error": "Invalid credentials",
+                "detail": "User not found or account inactive"
+            }
     
     # Get user credentials
+    is_superadmin = getattr(user, 'is_superadmin', False)
+    cred_filter = {'superadmin': user} if is_superadmin else {'employee': user}
+    
     try:
-        credentials = UserCredentials.objects.get(employee=employee, is_deleted=False)
+        credentials = UserCredentials.objects.get(**cred_filter, is_deleted=False)
     except UserCredentials.DoesNotExist:
         return 401, {
             "error": "Invalid credentials",
-            "detail": "No credentials found for this employee"
+            "detail": "No credentials found for this user"
         }
     
     # Check if account is locked
@@ -151,38 +167,45 @@ def login(request: HttpRequest, payload: LoginRequest):
             "detail": "Incorrect password"
         }
     
-    # Get client IP
+    # Record success
     client_ip = request.META.get('REMOTE_ADDR')
     user_agent = request.META.get('HTTP_USER_AGENT', '')
-    
-    # Record successful login
     credentials.record_successful_login(ip_address=client_ip)
     
     # Generate tokens
-    access_token = generate_access_token(employee)
-    refresh_token_str = generate_refresh_token(employee)
+    access_token = generate_access_token(user)
+    refresh_token_str = generate_refresh_token(user)
     
-    # Store refresh token in database
-    refresh_token_obj = RefreshToken.objects.create(
-        employee=employee,
+    # Store refresh token
+    RefreshToken.objects.create(
+        employee=user if not is_superadmin else None,
+        superadmin=user if is_superadmin else None,
         token=refresh_token_str,
         expires_at=timezone.now() + timedelta(days=7),
         device_info=user_agent[:255],
         ip_address=client_ip
     )
     
+    # Build employee dict - return code instead of employee_code for polymorphism
+    user_info = {
+        "id": str(user.id),
+        "code": user.superadmin_code if is_superadmin else user.employee_code,
+        "full_name": user.full_name,
+        "is_superadmin": is_superadmin
+    }
+    
+    if not is_superadmin:
+        user_info.update({
+            "employee_id": user.employee_id,
+            "department": user.department.dept_name,
+            "designation": user.designation.position_name,
+        })
+    
     return 200, {
         "access_token": access_token,
         "refresh_token": refresh_token_str,
-        "expires_in": 3600,  # 1 hour
-        "employee": {
-            "employee_id": employee.employee_id,
-            "employee_code": employee.employee_code,
-            "full_name": employee.full_name,
-            "department": employee.department.dept_name,
-            "designation": employee.designation.position_name,
-            "is_superadmin": employee.is_superadmin
-        }
+        "expires_in": 3600,
+        "employee": user_info
     }
 
 
@@ -230,18 +253,21 @@ def refresh_token(request: HttpRequest, payload: RefreshRequest):
     """
     try:
         # Verify refresh token
-        employee_id = verify_refresh_token(payload.refresh_token)
-        if not employee_id:
+        verify_result = verify_refresh_token(payload.refresh_token)
+        if not verify_result:
             return 401, {
                 "error": "Invalid refresh token",
                 "detail": "Token is invalid or expired"
             }
         
-        # Check if refresh token exists in database and is valid
+        user_id, is_superadmin = verify_result
+        
+        # Check refresh token database
+        cred_filter = {'superadmin__id': user_id} if is_superadmin else {'employee__id': user_id}
         try:
             refresh_token_obj = RefreshToken.objects.get(
                 token=payload.refresh_token,
-                employee__employee_id=employee_id
+                **cred_filter
             )
         except RefreshToken.DoesNotExist:
             return 401, {
@@ -249,32 +275,30 @@ def refresh_token(request: HttpRequest, payload: RefreshRequest):
                 "detail": "Token not found in database"
             }
         
-        # Check if token is valid
         if not refresh_token_obj.is_valid():
             return 401, {
                 "error": "Invalid refresh token",
                 "detail": "Token has been revoked or expired"
             }
         
-        # Get employee
-        employee = Employee.objects.get(
-            employee_id=employee_id,
-            is_active=True,
-            is_deleted=False
-        )
+        # Get user
+        if is_superadmin:
+            user = SuperAdmin.objects.get(id=user_id, is_active=True)
+        else:
+            user = Employee.objects.get(id=user_id, is_active=True, is_deleted=False)
         
         # Generate new access token
-        new_access_token = generate_access_token(employee)
+        new_access_token = generate_access_token(user)
         
         return 200, {
             "access_token": new_access_token,
             "expires_in": 3600
         }
     
-    except Employee.DoesNotExist:
+    except (Employee.DoesNotExist, SuperAdmin.DoesNotExist):
         return 401, {
-            "error": "Employee not found",
-            "detail": "Employee is inactive or deleted"
+            "error": "User not found",
+            "detail": "Account is inactive or deleted"
         }
     except Exception as e:
         return 401, {
@@ -283,25 +307,31 @@ def refresh_token(request: HttpRequest, payload: RefreshRequest):
         }
 
 
-@router.get("/me", response={200: EmployeeInfoResponse, 401: ErrorResponse}, auth=AuthBearer())
+@router.get("/me", response={200: dict, 401: ErrorResponse}, auth=AuthBearer())
 def get_current_user(request: HttpRequest):
     """
     Get current authenticated user info.
-    
-    Requires: Bearer token in Authorization header
     """
-    employee = request.auth  # Set by AuthBearer
+    user = request.auth
+    is_superadmin = getattr(user, 'is_superadmin', False)
     
-    return 200, {
-        "employee_id": employee.employee_id,
-        "employee_code": employee.employee_code,
-        "full_name": employee.full_name,
-        "email": employee.email or "",
-        "department": employee.department.dept_name,
-        "designation": employee.designation.position_name,
-        "is_superadmin": employee.is_superadmin,
-        "is_active": employee.is_active
+    user_info = {
+        "id": str(user.id),
+        "code": user.superadmin_code if is_superadmin else user.employee_code,
+        "full_name": user.full_name,
+        "email": user.email or "",
+        "is_superadmin": is_superadmin,
+        "is_active": user.is_active
     }
+    
+    if not is_superadmin:
+        user_info.update({
+            "employee_id": user.employee_id,
+            "department": user.department.dept_name,
+            "designation": user.designation.position_name,
+        })
+        
+    return 200, user_info
 
 
 # ================== HDMS Login Endpoint ==================
@@ -432,5 +462,92 @@ def login_hdms(request: HttpRequest, payload: HdmsLoginRequest):
                 "can_close_tickets": hdms_role.can_close_tickets,
                 "can_manage_users": hdms_role.can_manage_users
             }
+        }
+    }
+
+
+# ================== SIS Login Endpoint ==================
+
+class SisLoginResponse(Schema):
+    access_token: str
+    refresh_token: str
+    expires_in: int
+    user: dict
+
+
+@router.post("/login-sis", response={200: SisLoginResponse, 401: ErrorResponse, 403: ErrorResponse, 423: ErrorResponse})
+def login_sis(request: HttpRequest, payload: LoginRequest):
+    """
+    Specialized login for SIS with service access check and hydration metadata.
+    """
+    # 1. Credential Verification (shared logic)
+    user = None
+    try:
+        user = Employee.objects.get(employee_code=payload.employee_code, is_active=True, is_deleted=False)
+    except Employee.DoesNotExist:
+        try:
+            user = SuperAdmin.objects.get(superadmin_code=payload.employee_code, is_active=True)
+        except SuperAdmin.DoesNotExist:
+            return 401, {"error": "invalid_credentials", "detail": "User not found"}
+
+    is_superadmin = getattr(user, 'is_superadmin', False)
+    cred_filter = {'superadmin': user} if is_superadmin else {'employee': user}
+    
+    try:
+        credentials = UserCredentials.objects.get(**cred_filter, is_deleted=False)
+    except UserCredentials.DoesNotExist:
+        return 401, {"error": "invalid_credentials", "detail": "No credentials found"}
+
+    if credentials.is_locked():
+        return 423, {"error": "account_locked", "detail": "Too many failed attempts"}
+
+    if not credentials.check_password(payload.password):
+        credentials.record_failed_login()
+        return 401, {"error": "invalid_credentials", "detail": "Incorrect password"}
+
+    # 2. Service Access Check
+    try:
+        ServiceAccess.objects.get(
+            employee=user if not is_superadmin else None,
+            superadmin=user if is_superadmin else None,
+            service='sis',
+            is_active=True,
+            is_deleted=False
+        )
+    except ServiceAccess.DoesNotExist:
+        return 403, {"error": "no_sis_access", "detail": "You don't have SIS access assigned."}
+
+    # 3. Successful Login Actions
+    client_ip = request.META.get('REMOTE_ADDR')
+    user_agent = request.META.get('HTTP_USER_AGENT', '')
+    credentials.record_successful_login(ip_address=client_ip)
+    
+    access_token = generate_access_token(user)
+    refresh_token_str = generate_refresh_token(user)
+    
+    RefreshToken.objects.create(
+        employee=user if not is_superadmin else None,
+        superadmin=user if is_superadmin else None,
+        token=refresh_token_str,
+        expires_at=timezone.now() + timedelta(days=7),
+        device_info=user_agent[:255],
+        ip_address=client_ip
+    )
+
+    # 4. Build SIS-Compatible Response
+    return 200, {
+        "access_token": access_token,
+        "refresh_token": refresh_token_str,
+        "expires_in": 3600,
+        "user": {
+            "id": str(user.id),
+            "username": user.superadmin_code if is_superadmin else user.employee_code,
+            "full_name": user.full_name,
+            "first_name": user.full_name.split(' ')[0] if user.full_name else "",
+            "last_name": ' '.join(user.full_name.split(' ')[1:]) if user.full_name and len(user.full_name.split(' ')) > 1 else "",
+            "email": user.email or "",
+            "role": "superadmin" if is_superadmin else (user.designation.position_name.lower() if user.designation else "teacher"), # Fallback role
+            "is_active": user.is_active,
+            "is_superadmin": is_superadmin
         }
     }

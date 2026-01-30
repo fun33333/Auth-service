@@ -11,8 +11,7 @@ services:
     env_file:
       - ../.env
     environment:
-      - DEBUG=True
-      - DATABASE_URL=${AUTH_DATABASE_URL}
+      - TZ=UTC
     ports:
       - "8000:8000"
     volumes:

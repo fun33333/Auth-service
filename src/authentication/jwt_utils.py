@@ -20,35 +20,45 @@ ACCESS_TOKEN_EXPIRY = timedelta(hours=1)
 REFRESH_TOKEN_EXPIRY = timedelta(days=7)
 
 
-def generate_access_token(employee, **kwargs):
+def generate_access_token(user, **kwargs):
     """
-    Generate JWT access token for employee.
+    Generate JWT access token for employee or superadmin.
     
     Token contains:
-    - employee_id
-    - employee_code 
+    - user_id (UUID)
+    - code (employee_code or superadmin_code)
     - full_name
-    - department info
     - is_superadmin flag
     - expiry timestamp
     """
+    is_superadmin = getattr(user, 'is_superadmin', False)
+    
     payload = {
-        'employee_id': employee.employee_id,
-        'employee_code': employee.employee_code,
-        'full_name': employee.full_name,
-        'department_id': employee.department.department_id,
-        'department_name': employee.department.dept_name,
-        'designation': employee.designation.position_name,
-        'email': employee.email,
-        'is_superadmin': employee.is_superadmin,
-        'is_active': employee.is_active,
+        'user_id': str(user.id),
+        'code': user.superadmin_code if is_superadmin else user.employee_code,
+        'full_name': user.full_name,
+        'email': user.email,
+        'is_superadmin': is_superadmin,
+        'is_active': user.is_active,
         'exp': datetime.utcnow() + ACCESS_TOKEN_EXPIRY,
         'iat': datetime.utcnow(),
         'token_type': 'access',
-        'sub': str(employee.id),  # Standard subject claim
-        'user_id': str(employee.id),
+        'sub': str(user.id),
         'jti': str(uuid.uuid4()),
     }
+    
+    # Add employee-specific fields if it's an employee
+    if not is_superadmin:
+        # These are @property methods on Employee that fetch from primary_assignment
+        dept = user.department 
+        pos = user.designation
+        
+        payload.update({
+            'employee_id': user.employee_id,
+            'department_id': str(dept.id) if dept else None,
+            'department_name': dept.dept_name if dept else "N/A",
+            'designation': pos.position_name if pos else "N/A",
+        })
     
     # Add any extra claims (e.g. role from HDMS login)
     payload.update(kwargs)
@@ -57,18 +67,18 @@ def generate_access_token(employee, **kwargs):
     return token
 
 
-def generate_refresh_token(employee):
+def generate_refresh_token(user):
     """
-    Generate JWT refresh token for employee.
+    Generate JWT refresh token for employee or superadmin.
+    """
+    is_superadmin = getattr(user, 'is_superadmin', False)
     
-    Simpler payload - just identifies the employee.
-    """
     payload = {
-        'employee_id': employee.employee_id,
+        'user_id': str(user.id),
+        'code': user.superadmin_code if is_superadmin else user.employee_code,
         'exp': datetime.utcnow() + REFRESH_TOKEN_EXPIRY,
         'iat': datetime.utcnow(),
         'token_type': 'refresh',
-        'user_id': str(employee.id),
         'jti': str(uuid.uuid4()),
     }
     
@@ -93,9 +103,9 @@ def decode_token(token):
 
 def verify_access_token(token):
     """
-    Verify access token and return employee data.
+    Verify access token and return user identity data.
     
-    Returns employee_id if valid, None if invalid.
+    Returns (user_id, is_superadmin) if valid, None if invalid.
     """
     try:
         payload = decode_token(token)
@@ -104,16 +114,16 @@ def verify_access_token(token):
         if payload.get('token_type') != 'access':
             return None
         
-        return payload.get('employee_id')
+        return payload.get('user_id'), payload.get('is_superadmin', False)
     except:
         return None
 
 
 def verify_refresh_token(token):
     """
-    Verify refresh token and return employee_id.
+    Verify refresh token and return user identity data.
     
-    Returns employee_id if valid, None if invalid.
+    Returns (user_id, is_superadmin) if valid, None if invalid.
     """
     try:
         payload = decode_token(token)
@@ -122,7 +132,7 @@ def verify_refresh_token(token):
         if payload.get('token_type') != 'refresh':
             return None
         
-        return payload.get('employee_id')
+        return payload.get('user_id'), payload.get('is_superadmin', False)
     except:
         return None
 
