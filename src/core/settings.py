@@ -79,21 +79,21 @@ TEMPLATES = [
 WSGI_APPLICATION = 'core.wsgi.application'
 
 # Database
-# Use DATABASE_URL or AUTH_DATABASE_URL from .env
+# Use AUTH_DATABASE_URL or DATABASE_URL from .env
 # Fallback to local default if neither are set or if they are empty
 default_db_url = (
+    os.environ.get('AUTH_DATABASE_URL') or
     os.environ.get('DATABASE_URL') or 
-    os.environ.get('AUTH_DATABASE_URL') or 
     'postgresql://erp_admin:erp_admin_password_change_me_in_prod@localhost:5432/auth_db'
 )
 DATABASES = {
-    'default': dj_database_url.config(default=default_db_url, conn_max_age=600)
+    'default': dj_database_url.parse(default_db_url, conn_max_age=600)
 }
 
 CACHES = {
     'default': {
         'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': os.getenv('REDIS_URL') or os.getenv('AUTH_REDIS_URL') or 'redis://127.0.0.1:6379/0',
+        'LOCATION': os.getenv('AUTH_REDIS_URL') or os.getenv('REDIS_URL') or 'redis://127.0.0.1:6379/0',
         'OPTIONS': {
             'CLIENT_CLASS': 'django_redis.client.DefaultClient',
         }

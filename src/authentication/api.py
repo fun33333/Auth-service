@@ -189,7 +189,7 @@ def login(request: HttpRequest, payload: LoginRequest):
     # Build employee dict - return code instead of employee_code for polymorphism
     user_info = {
         "id": str(user.id),
-        "code": user.superadmin_code if is_superadmin else user.employee_code,
+        "code": getattr(user, 'superadmin_code', None) or getattr(user, 'employee_code', None),
         "full_name": user.full_name,
         "is_superadmin": is_superadmin
     }
@@ -541,7 +541,7 @@ def login_sis(request: HttpRequest, payload: LoginRequest):
         "expires_in": 3600,
         "user": {
             "id": str(user.id),
-            "username": user.superadmin_code if is_superadmin else user.employee_code,
+            "username": getattr(user, 'superadmin_code', None) or getattr(user, 'employee_code', None),
             "full_name": user.full_name,
             "first_name": user.full_name.split(' ')[0] if user.full_name else "",
             "last_name": ' '.join(user.full_name.split(' ')[1:]) if user.full_name and len(user.full_name.split(' ')) > 1 else "",

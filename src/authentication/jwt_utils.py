@@ -35,7 +35,7 @@ def generate_access_token(user, **kwargs):
     
     payload = {
         'user_id': str(user.id),
-        'code': user.superadmin_code if is_superadmin else user.employee_code,
+        'code': getattr(user, 'superadmin_code', None) or getattr(user, 'employee_code', None),
         'full_name': user.full_name,
         'email': user.email,
         'is_superadmin': is_superadmin,
@@ -48,13 +48,16 @@ def generate_access_token(user, **kwargs):
     }
     
     # Add employee-specific fields if it's an employee
-    if not is_superadmin:
-        # These are @property methods on Employee that fetch from primary_assignment
-        dept = user.department 
-        pos = user.designation
+    # Add employee-specific fields if available (even for superadmins who are employees)
+    if hasattr(user, 'employee_code'):
+        payload['employee_code'] = user.employee_code
+        
+        # Fetch from primary_assignment if available
+        dept = getattr(user, 'department', None)
+        pos = getattr(user, 'designation', None)
         
         payload.update({
-            'employee_id': user.employee_id,
+            'employee_id': getattr(user, 'employee_id', None),
             'department_id': str(dept.id) if dept else None,
             'department_name': dept.dept_name if dept else "N/A",
             'designation': pos.position_name if pos else "N/A",
@@ -75,7 +78,7 @@ def generate_refresh_token(user):
     
     payload = {
         'user_id': str(user.id),
-        'code': user.superadmin_code if is_superadmin else user.employee_code,
+        'code': getattr(user, 'superadmin_code', None) or getattr(user, 'employee_code', None),
         'exp': datetime.utcnow() + REFRESH_TOKEN_EXPIRY,
         'iat': datetime.utcnow(),
         'token_type': 'refresh',
