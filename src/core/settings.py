@@ -32,14 +32,13 @@ CORS_TRUSTED_ORIGINS = [
     'http://127.0.0.1',
 ]
 
-# Proxy awareness
-USE_X_FORWARDED_HOST = True
-SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-proxy_header_prefix = 'HTTP_X_FORWARDED_PREFIX'
-
 # Session cookie configuration for microservices
 SESSION_COOKIE_NAME = 'auth_sessionid'
 SESSION_COOKIE_PATH = '/'
+
+# Explicitly use prefixed paths to avoid redirect loops
+LOGIN_URL = '/auth-admin/login/'
+LOGIN_REDIRECT_URL = '/auth-admin/'
 
 # Additional CORS settings
 CORS_ALLOW_CREDENTIALS = True
