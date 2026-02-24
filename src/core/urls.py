@@ -23,7 +23,7 @@ api.add_router("/permissions", permissions_router)
 api.add_router("", employees_router)  # Employees at /api/employees
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
+    path('auth-admin/', admin.site.urls),
     path('api/', api.urls),  # All API endpoints under /api/
 ]
 

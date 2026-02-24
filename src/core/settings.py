@@ -26,12 +26,9 @@ REFRESH_TOKEN_EXPIRY_DAYS = 7
 ALLOWED_HOSTS = ['*']
 CORS_ALLOW_ALL_ORIGINS = True
 
-CORS_TRUSTED_ORIGINS = [
-    'http://10.0.8.135',
-    'http://localhost',
-    'http://127.0.0.1',
-]
-
+# Proxy awareness
+USE_X_FORWARDED_HOST = True
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 # Session cookie configuration for microservices
 SESSION_COOKIE_NAME = 'auth_sessionid'
 SESSION_COOKIE_PATH = '/'
@@ -138,7 +135,7 @@ USE_I18N = True
 USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
-STATIC_URL = 'static/'
+STATIC_URL = '/auth-admin/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 # Media files (Resume uploads)
