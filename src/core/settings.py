@@ -26,12 +26,16 @@ REFRESH_TOKEN_EXPIRY_DAYS = 7
 ALLOWED_HOSTS = ['*']
 CORS_ALLOW_ALL_ORIGINS = True
 
-# Trust the reverse-proxy origin for CSRF
-CSRF_TRUSTED_ORIGINS = [
+CORS_TRUSTED_ORIGINS = [
     'http://10.0.8.135',
     'http://localhost',
     'http://127.0.0.1',
 ]
+
+# Proxy awareness
+USE_X_FORWARDED_HOST = True
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+proxy_header_prefix = 'HTTP_X_FORWARDED_PREFIX'
 
 # Additional CORS settings
 CORS_ALLOW_CREDENTIALS = True
