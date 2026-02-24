@@ -37,6 +37,10 @@ USE_X_FORWARDED_HOST = True
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 proxy_header_prefix = 'HTTP_X_FORWARDED_PREFIX'
 
+# Session cookie configuration for microservices
+SESSION_COOKIE_NAME = 'auth_sessionid'
+SESSION_COOKIE_PATH = '/'
+
 # Additional CORS settings
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_HEADERS = ['*']
