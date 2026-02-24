@@ -15,7 +15,7 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-dev-key-change-in-pro
 DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 
 # API robustness: Prevent 500 errors on POST requests missing trailing slashes
-APPEND_SLASH = False
+APPEND_SLASH = True
 
 # JWT Configuration
 JWT_SECRET = os.getenv('JWT_SECRET', SECRET_KEY)
@@ -25,6 +25,13 @@ REFRESH_TOKEN_EXPIRY_DAYS = 7
 
 ALLOWED_HOSTS = ['*']
 CORS_ALLOW_ALL_ORIGINS = True
+
+# Trust the reverse-proxy origin for CSRF
+CSRF_TRUSTED_ORIGINS = [
+    'http://10.0.8.135',
+    'http://localhost',
+    'http://127.0.0.1',
+]
 
 # Additional CORS settings
 CORS_ALLOW_CREDENTIALS = True
