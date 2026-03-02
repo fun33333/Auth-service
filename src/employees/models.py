@@ -540,7 +540,8 @@ class EmployeeAssignment(SoftDeleteModel):
     class Meta:
         verbose_name = "Employee Assignment"
         verbose_name_plural = "Employee Assignments"
-        unique_together = [['employee', 'department', 'designation']]
+        # Include branch/institution in uniqueness to allow the same role in different locations
+        unique_together = [['employee', 'branch', 'department', 'designation']]
 
     def save(self, *args, **kwargs):
         if self.is_primary:
