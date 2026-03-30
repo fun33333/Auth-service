@@ -473,6 +473,10 @@ class Employee(SoftDeleteModel):
         return self.org_email or self.personal_email or ""
 
     @property
+    def phone(self):
+        return self.org_phone or self.personal_phone or ""
+
+    @property
     def primary_assignment(self):
         return self.assignments.filter(is_primary=True).first()
 
@@ -540,8 +544,7 @@ class EmployeeAssignment(SoftDeleteModel):
     class Meta:
         verbose_name = "Employee Assignment"
         verbose_name_plural = "Employee Assignments"
-        # Include branch/institution in uniqueness to allow the same role in different locations
-        unique_together = [['employee', 'branch', 'department', 'designation']]
+        unique_together = [['employee', 'department', 'designation']]
 
     def save(self, *args, **kwargs):
         if self.is_primary:

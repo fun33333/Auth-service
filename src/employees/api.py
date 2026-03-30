@@ -4,7 +4,7 @@ Employees API endpoints for Auth Service.
 Provides REST API for employee management including creation,
 retrieval, and updates for integration with HDMS frontend.
 """
-from ninja import Router, File, Form
+from ninja import Router, File, Form, Schema
 from ninja.files import UploadedFile
 import requests
 import os
@@ -38,7 +38,7 @@ class ExperienceSchema(BaseModel):
     responsibilities: str
 
 
-class InstitutionSchema(BaseModel):
+class InstitutionSchema(Schema):
     """Schema for Institution details"""
     inst_id: str
     inst_code: str
@@ -49,7 +49,7 @@ class InstitutionSchema(BaseModel):
     contact_number: Optional[str] = None
     extra_data: Optional[dict] = None
 
-class BranchSchema(BaseModel):
+class BranchSchema(Schema):
     """Schema for Branch details"""
     branch_id: str
     branch_code: str

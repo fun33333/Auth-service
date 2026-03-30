@@ -358,7 +358,7 @@ def list_hdms_users(
     # Get all active ServiceAccess records for HDMS
     service_accesses = ServiceAccess.objects.filter(
         service='hdms'
-    ).select_related('employee', 'employee__department')
+    ).select_related('employee').prefetch_related('employee__assignments__department')
     
     # Apply status filter
     if status == 'active':
