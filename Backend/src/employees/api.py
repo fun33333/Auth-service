@@ -40,6 +40,7 @@ class ExperienceSchema(BaseModel):
 
 class InstitutionSchema(BaseModel):
     """Schema for Institution details"""
+    id: Optional[str] = None
     inst_id: str
     inst_code: str
     name: str
@@ -48,6 +49,8 @@ class InstitutionSchema(BaseModel):
     city: Optional[str] = None
     contact_number: Optional[str] = None
     extra_data: Optional[dict] = None
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None
 
 class BranchSchema(BaseModel):
     """Schema for Branch details"""
@@ -342,6 +345,60 @@ def create_institution(request, payload: dict):
             contact_number=payload.get('contact_number')
         )
         return 201, inst
+    except Exception as e:
+        return 400, {"error": str(e)}
+
+
+@router.get("/institutions/{institution_id}", response=InstitutionSchema)
+def get_institution(request, institution_id: str):
+    """Get a specific institution by ID"""
+    try:
+        inst = Institution.objects.get(id=institution_id, is_deleted=False)
+        return inst
+    except Institution.DoesNotExist:
+        return 404, {"error": "Institution not found"}
+    except Exception as e:
+        return 400, {"error": str(e)}
+
+
+@router.put("/institutions/{institution_id}", response=InstitutionSchema)
+def update_institution(request, institution_id: str, payload: dict):
+    """Update an institution"""
+    try:
+        inst = Institution.objects.get(id=institution_id, is_deleted=False)
+        
+        # Update fields
+        if 'inst_code' in payload:
+            inst.inst_code = payload['inst_code']
+        if 'name' in payload:
+            inst.name = payload['name']
+        if 'inst_type' in payload:
+            inst.inst_type = payload['inst_type']
+        if 'address' in payload:
+            inst.address = payload['address']
+        if 'city' in payload:
+            inst.city = payload['city']
+        if 'contact_number' in payload:
+            inst.contact_number = payload['contact_number']
+        
+        inst.save()
+        return inst
+    except Institution.DoesNotExist:
+        return 404, {"error": "Institution not found"}
+    except Exception as e:
+        return 400, {"error": str(e)}
+
+
+@router.delete("/institutions/{institution_id}", response={204: dict, 400: ErrorResponseSchema})
+def delete_institution(request, institution_id: str):
+    """Delete an institution (soft delete)"""
+    try:
+        inst = Institution.objects.get(id=institution_id, is_deleted=False)
+        inst.is_deleted = True
+        inst.save()
+        return 204, {}
+    except Institution.DoesNotExist:
+        return 404, {"error": "Institution not found"}
     except Exception as e:
         return 400, {"error": str(e)}
 
