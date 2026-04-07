@@ -191,6 +191,7 @@ def login(request: HttpRequest, payload: LoginRequest):
         "id": str(user.id),
         "code": getattr(user, 'superadmin_code', None) or getattr(user, 'employee_code', None),
         "full_name": user.full_name,
+        "email": user.email,
         "is_superadmin": is_superadmin
     }
     

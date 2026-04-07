@@ -18,24 +18,25 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      // Mock Login logic for standalone frontend mode
-      await new Promise(resolve => setTimeout(resolve, 800));
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          employee_code: employeeCode,
+          password: password
+        })
+      });
 
-      if (employeeCode.length > 0 && password.length > 0) {
-        login("mock-jwt-token-xyz123", {
-          id: "1",
-          code: employeeCode,
-          full_name: "Demo User",
-          email: "demo@example.com",
-          is_superadmin: true,
-          department: "Administration",
-          designation: "Manager"
-        });
+      const data = await response.json();
+
+      if (response.ok) {
+        // Backend returns: { access_token, refresh_token, employee: { ... } }
+        login(data.access_token, data.employee);
       } else {
-        setError("Please enter any test code and password.");
+        setError(data.detail || data.error || "Invalid credentials");
       }
     } catch (err) {
-      setError("Network or server error occurred");
+      setError("Backend server se connection nahi ho paa raha.");
     } finally {
       setIsLoading(false);
     }
