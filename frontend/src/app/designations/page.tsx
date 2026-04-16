@@ -111,8 +111,8 @@ export default function DesignationsPage() {
     try {
       setLoading(true);
       const [desRes, deptRes] = await Promise.all([
-        fetchWithAuth('/designations'),
-        fetchWithAuth('/departments')
+        fetchWithAuth('/employees/designations'),
+        fetchWithAuth('/employees/departments')
       ]);
       
       if (desRes.ok) {

@@ -113,8 +113,8 @@ export default function DepartmentsPage() {
     try {
       setLoading(true);
       const [deptRes, instRes] = await Promise.all([
-        fetchWithAuth('/departments'),
-        fetchWithAuth('/institutions')
+        fetchWithAuth('/employees/departments'),
+        fetchWithAuth('/employees/institutions')
       ]);
       
       if (deptRes.ok) {
@@ -152,7 +152,7 @@ export default function DepartmentsPage() {
   async function handleSave(data: any) {
     try {
       if (editTarget) {
-        const res = await fetchWithAuth(`/departments/${editTarget.dept_code}`, {
+        const res = await fetchWithAuth(`/employees/departments/${editTarget.dept_code}`, {
           method: 'PUT',
           body: JSON.stringify({ dept_name: data.dept_name, description: data.description, institution_code: data.institution_code })
         });
@@ -162,7 +162,7 @@ export default function DepartmentsPage() {
           alert(err.error || "Failed to update department");
         }
       } else {
-        const res = await fetchWithAuth('/departments', {
+        const res = await fetchWithAuth('/employees/departments', {
           method: 'POST',
           body: JSON.stringify(data)
         });
@@ -180,7 +180,7 @@ export default function DepartmentsPage() {
 
   async function handleDelete(deptCode: string) {
     try {
-      const res = await fetchWithAuth(`/departments/${deptCode}`, { method: 'DELETE' });
+      const res = await fetchWithAuth(`/employees/departments/${deptCode}`, { method: 'DELETE' });
       if (res.ok) loadData();
       else {
         const err = await res.json();
@@ -306,7 +306,7 @@ export default function DepartmentsPage() {
                     <button onClick={() => { setEditTarget(d); setModalOpen(true); }} className="h-10 w-10 flex items-center justify-center bg-zinc-50 text-zinc-400 rounded-xl hover:bg-zinc-900 hover:text-white transition-all active:scale-95 shadow-inner">
                       <Edit2 size={14} />
                     </button>
-                    <button onClick={() => setDeleteId(d.id)} className="h-10 w-10 flex items-center justify-center bg-zinc-50 text-zinc-400 rounded-xl hover:bg-rose-600 hover:text-white transition-all active:scale-95 shadow-inner">
+                    <button onClick={() => setDeleteId(d.dept_code)} className="h-10 w-10 flex items-center justify-center bg-zinc-50 text-zinc-400 rounded-xl hover:bg-rose-600 hover:text-white transition-all active:scale-95 shadow-inner">
                       <Trash2 size={14} />
                     </button>
                   </div>

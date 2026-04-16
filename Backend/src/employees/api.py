@@ -11,7 +11,7 @@ import os
 from typing import Optional, List
 from pydantic import BaseModel, validator
 from datetime import date, datetime
-from employees.models import Employee, Organization, Institution, Department, Designation, EmployeeAssignment
+from employees.models import Employee, Organization, Institution, Department, Designation, EmployeeAssignment, Branch
 from django.db import transaction
 from django.shortcuts import get_object_or_404
 import re
@@ -178,150 +178,6 @@ class DesignationUpdateSchema(BaseModel):
     description: str = None
 
 from authentication.api import AuthBearer
-
-@router.post(
-    "/employees",
-    response={201: dict, 400: dict},
-    summary="Create New Employee",
-    description="Create employee from frontend form. If a resume is provided, it is renamed based on ID and Name before being uploaded to file-service.",
-    auth=AuthBearer()
-)
-def create_employee(request, payload: EmployeeCreateSchema = Form(...), resume: UploadedFile = File(None)):
-    token = request.auth_token if hasattr(request, 'auth_token') else None
-    # Alternatively, get it from request headers if not using custom auth wrapper logic for token storage
-    if not token:
-        auth_header = request.headers.get('Authorization')
-        if auth_header and auth_header.startswith('Bearer '):
-            token = auth_header.split(' ')[1]
-    field_errors = {}
-    
-    try:
-        # === VALIDATION PHASE ===
-        cnic_clean = payload.cnic.replace('-', '').replace(' ', '')
-        if Employee.objects.filter(cnic=cnic_clean, is_deleted=False).exists():
-            field_errors['cnic'] = ['An employee with this CNIC already exists']
-        
-        # Check for Detailed Duplicate Warning for Personal Email
-        existing_emp = Employee.objects.filter(personal_email=payload.personalEmail, is_deleted=False).first()
-        warning = None
-        if existing_emp:
-            warning = f"Notice: This email already exists and belongs to {existing_emp.full_name} (Code: {existing_emp.employee_code}, ID: {existing_emp.employee_id})."
-        
-        # Org/Inst/Dept/Designation Validation
-        org = Organization.objects.filter(org_code=payload.organizationCode).first()
-        if not org:
-            field_errors['organizationCode'] = ["Organization not found"]
-            
-        inst = None
-        if payload.institutionCode:
-            inst = Institution.objects.filter(inst_code=payload.institutionCode).first()
-            if not inst:
-                field_errors['institutionCode'] = ["Institution not found"]
-        
-        dept = Department.objects.filter(dept_code=payload.departmentCode).first()
-        if not dept:
-            field_errors['departmentCode'] = ["Department not found"]
-            
-        designation = None
-        if dept:
-            designation = Designation.objects.filter(department=dept, position_code=payload.designationCode).first()
-            if not designation:
-                field_errors['designationCode'] = ["Designation not found for this department"]
-
-        if field_errors:
-            return 400, {"error": "Validation failed", "field_errors": field_errors}
-
-        # Date Parsing
-        dob = datetime.strptime(payload.dob, '%Y-%m-%d').date() if payload.dob else date(1990, 1, 1)
-        joining_date = datetime.strptime(payload.joiningDate, '%Y-%m-%d').date() if payload.joiningDate else date.today()
-
-        with transaction.atomic():
-            # Create Employee
-            employee = Employee.objects.create(
-                organization=org,
-                full_name=payload.fullName,
-                cnic=cnic_clean,
-                personal_phone=payload.mobile,
-                personal_email=payload.personalEmail,
-                resume_url=None, # Managed by proxy logic after ID generation
-                org_email=payload.orgEmail,
-                org_phone=payload.orgPhone,
-                dob=dob,
-                gender=payload.gender,
-                marital_status=payload.maritalStatus,
-                nationality=payload.nationality or 'Pakistani',
-                religion=payload.religion,
-                residential_address=payload.residentialAddress,
-                permanent_address=payload.permanentAddress,
-                city=payload.city,
-                state=payload.state,
-                emergency_contact_name=payload.emergencyName,
-                emergency_contact_phone=payload.emergencyPhone,
-                bank_name=payload.bankName,
-                account_number=payload.accountNumber,
-                education_history=[e.dict() for e in payload.education or []],
-                work_experience=[e.dict() for e in payload.experience or []],
-            )
-
-            # Create Primary Assignment
-            EmployeeAssignment.objects.create(
-                employee=employee,
-                institution=inst,
-                department=dept,
-                designation=designation,
-                joining_date=joining_date,
-                is_primary=True,
-                shift=payload.shift or 'general'
-            )
-
-        # === RESUME UPLOAD PROXY (After ID generation) ===
-        if resume:
-            try:
-                # Rename the file: [ID]_[Name].[ext]
-                ext = os.path.splitext(resume.name)[1]
-                safe_name = payload.fullName.replace(" ", "_")
-                new_filename = f"{employee.employee_id}_{safe_name}{ext}"
-                
-                # Forward to File Service
-                file_service_url = os.environ.get('FILE_SERVICE_URL', 'http://file-service:8005')
-                upload_endpoint = f"{file_service_url}/api/v1/files/upload" 
-                
-                headers = {}
-                if token:
-                    headers['Authorization'] = f'Bearer {token}'
-                
-                params = {
-                    'category': 'resumes',
-                    'uploaded_by_id': str(employee.id)
-                }
-                files = {'file': (new_filename, resume.read(), resume.content_type)}
-                r = requests.post(upload_endpoint, files=files, params=params, headers=headers, timeout=10)
-                
-                if r.status_code in [200, 201]:
-                    file_data = r.json()
-                    file_key = file_data.get('file_key')
-                    if file_key:
-                        # Construct a URL that the browser can access
-                        # Use PUBLIC_GATEWAY_URL if set, fallback to localhost for dev
-                        gateway_url = os.environ.get('PUBLIC_GATEWAY_URL', 'http://localhost')
-                        employee.resume_url = f"{gateway_url}/api/v1/files/{file_key}/download"
-                        employee.save(update_fields=['resume_url'])
-                else:
-                    warning = f"{warning + ' ' if warning else ''}Resume upload failed ({r.status_code}). Please attach it manually later."
-            except Exception as upload_err:
-                logger.error(f"Resume proxy failed: {str(upload_err)}")
-                warning = f"{warning + ' ' if warning else ''}Resume proxy error. Employee saved without resume."
-
-        return 201, {
-            "message": "Employee created successfully",
-            "warning": warning,
-            "employee_id": employee.employee_id,
-            "employee_code": employee.employee_code
-        }
-    
-    except Exception as e:
-        logger.error(f"Unexpected error: {str(e)}", exc_info=True)
-        return 400, {"error": f"Server error: {str(e)}"}
 
 
 @router.get("/institutions", response=List[InstitutionSchema])
@@ -583,7 +439,33 @@ def list_designations(request, department_code: str = None):
     return list(designations)
 
 
-# Update create_employee for Branch support
+@router.post("/designations", response={201: dict, 400: ErrorResponseSchema})
+def create_designation(request, payload: DesignationCreateSchema):
+    """Create a new designation under a department"""
+    try:
+        dept = Department.objects.filter(dept_code=payload.department_code).first()
+        if not dept:
+            return 400, {"error": f"Department '{payload.department_code}' not found"}
+
+        if Designation.objects.filter(department=dept, position_code=payload.position_code).exists():
+            return 400, {"error": f"Position code '{payload.position_code}' already exists in this department"}
+
+        designation = Designation.objects.create(
+            department=dept,
+            position_code=payload.position_code,
+            position_name=payload.position_name,
+            description=payload.description
+        )
+        return 201, {
+            "message": "Designation created successfully",
+            "id": str(designation.id),
+            "position_code": designation.position_code
+        }
+    except Exception as e:
+        return 400, {"error": str(e)}
+
+
+# Create employee with Branch support
 @router.post(
     "/employees",
     response={201: dict, 400: dict},
