@@ -3,11 +3,12 @@
 import React, { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { fetchWithAuth } from "@/utils/api";
-import { Lock, User, LogIn, AlertCircle } from "lucide-react";
+import { Lock, User, LogIn, AlertCircle, Eye, EyeOff } from "lucide-react";
 
 export default function LoginPage() {
   const [employeeCode, setEmployeeCode] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuth();
@@ -18,7 +19,7 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/auth/login`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000/api'}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -98,13 +99,20 @@ export default function LoginPage() {
                 </div>
                 <input
                   id="password"
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full text-slate-900 border-slate-300 py-2.5 rounded-lg border pl-10 pr-3 focus:ring-2 focus:ring-indigo-600/50 focus:border-indigo-600 transition outline-none"
+                  className="w-full text-slate-900 border-slate-300 py-2.5 rounded-lg border pl-10 pr-10 focus:ring-2 focus:ring-indigo-600/50 focus:border-indigo-600 transition outline-none"
                   placeholder="••••••••"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-indigo-600 transition-colors"
+                >
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
               </div>
             </div>
 

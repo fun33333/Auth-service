@@ -1,575 +1,506 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
-import ProtectedLayout from '@/components/ProtectedLayout';
+import React, { useEffect, useState } from "react";
+import ProtectedLayout from "@/components/ProtectedLayout";
+import InstitutionCard from "@/components/InstitutionCard";
+import { fetchWithAuth } from "@/utils/api";
 import {
-  Plus, Search, Filter, Edit2, Trash2,
-  Building, MapPin, Phone, Mail, Users,
-  Globe, CheckCircle2, XCircle, X
-} from 'lucide-react';
+  Plus, Search, ArrowLeft,
+  X, GitBranch, MapPin, Phone, Mail,
+  Edit2, Trash2, Building2
+} from "lucide-react";
+
+// ── Types ───────────────────────────────────────────────────────────────────
 
 type Institution = {
   id: string;
-  code: string;
+  inst_id: string;
+  inst_code: string;
   name: string;
-  type: string;
+  inst_type: string;
+  address: string;
   city: string;
-  country: string;
+  contact_number: string;
+  organization_code?: string;
+  legacy_campus_id?: string;
+};
+
+type Organization = {
+  id: string;
+  name: string;
+  org_code: string;
+};
+
+type Branch = {
+  branch_id: string;
+  branch_code: string;
+  branch_name: string;
+  institution_code: string;
+  status: string;
+  address: string;
+  city: string;
+  contact_number: string;
   email: string;
-  phone: string;
-  employees: number;
-  established: number;
-  is_active: boolean;
-  website: string;
+  branch_head_name: string;
 };
 
-const MOCK_INSTITUTIONS: Institution[] = [
-  {
-    id: '1',
-    code: 'INST-001',
-    name: 'Punjab University',
-    type: 'University',
-    city: 'Lahore',
-    country: 'Pakistan',
-    email: 'admin@pu.edu.pk',
-    phone: '+92-42-9231100',
-    employees: 420,
-    established: 1882,
-    is_active: true,
-    website: 'www.pu.edu.pk',
-  },
-  {
-    id: '2',
-    code: 'INST-002',
-    name: 'NUST Islamabad',
-    type: 'University',
-    city: 'Islamabad',
-    country: 'Pakistan',
-    email: 'info@nust.edu.pk',
-    phone: '+92-51-9085000',
-    employees: 680,
-    established: 1991,
-    is_active: true,
-    website: 'www.nust.edu.pk',
-  },
-  {
-    id: '3',
-    code: 'INST-003',
-    name: 'City Grammar School',
-    type: 'School',
-    city: 'Karachi',
-    country: 'Pakistan',
-    email: 'info@cgs.edu.pk',
-    phone: '+92-21-3412890',
-    employees: 95,
-    established: 2003,
-    is_active: true,
-    website: 'www.cgs.edu.pk',
-  },
-  {
-    id: '4',
-    code: 'INST-004',
-    name: 'Beacon House College',
-    type: 'College',
-    city: 'Faisalabad',
-    country: 'Pakistan',
-    email: 'contact@bhcf.edu.pk',
-    phone: '+92-41-8775500',
-    employees: 130,
-    established: 1998,
-    is_active: false,
-    website: 'www.bhcf.edu.pk',
-  },
-  {
-    id: '5',
-    code: 'INST-005',
-    name: 'FAST National University',
-    type: 'University',
-    city: 'Lahore',
-    country: 'Pakistan',
-    email: 'lhr@nu.edu.pk',
-    phone: '+92-42-111128128',
-    employees: 310,
-    established: 2000,
-    is_active: true,
-    website: 'www.nu.edu.pk',
-  },
-  {
-    id: '6',
-    code: 'INST-006',
-    name: 'Roots International School',
-    type: 'School',
-    city: 'Rawalpindi',
-    country: 'Pakistan',
-    email: 'info@roots.edu.pk',
-    phone: '+92-51-4435678',
-    employees: 72,
-    established: 1988,
-    is_active: true,
-    website: 'www.roots.edu.pk',
-  },
-];
+// ── Skeleton (Small helper) ────────────────────────────────────────────────
 
-const TYPE_COLORS: Record<string, string> = {
-  University: 'bg-blue-50 text-blue-700 ring-blue-700/10 dark:bg-blue-900/20 dark:text-blue-400 dark:ring-blue-500/20',
-  College: 'bg-violet-50 text-violet-700 ring-violet-700/10 dark:bg-violet-900/20 dark:text-violet-400 dark:ring-violet-500/20',
-  School: 'bg-emerald-50 text-emerald-700 ring-emerald-700/10 dark:bg-emerald-900/20 dark:text-emerald-400 dark:ring-emerald-500/20',
-};
+const Skeleton = ({ className, height, width }: any) => (
+  <div className={`animate-pulse bg-zinc-100 rounded-xl ${className}`} style={{ height, width }} />
+);
 
-// ─── Add / Edit Modal ────────────────────────────────────────────────────────
-function InstitutionModal({
-  open,
-  onClose,
-  onSave,
-  initial,
-}: {
-  open: boolean;
-  onClose: () => void;
-  onSave: (data: Partial<Institution>) => void;
-  initial?: Institution | null;
+// ── Modals ──────────────────────────────────────────────────────────────────
+
+function InstitutionModal({ open, onClose, onSave, initial, organizations }: {
+  open: boolean; onClose: () => void;
+  onSave: (d: any) => void; initial?: Institution | null;
+  organizations: Organization[];
 }) {
   const [form, setForm] = useState({
     name: initial?.name ?? '',
-    code: initial?.code ?? '',
-    type: initial?.type ?? 'University',
+    inst_code: initial?.inst_code ?? '',
+    inst_type: initial?.inst_type ?? 'educational',
+    organization_code: initial?.organization_code ?? '',
+    legacy_campus_id: initial?.legacy_campus_id ?? '',
     city: initial?.city ?? '',
-    country: initial?.country ?? 'Pakistan',
-    email: initial?.email ?? '',
-    phone: initial?.phone ?? '',
-    website: initial?.website ?? '',
-    established: initial?.established ?? new Date().getFullYear(),
-    is_active: initial?.is_active ?? true,
+    address: initial?.address ?? '',
+    contact_number: initial?.contact_number ?? '',
   });
 
   useEffect(() => {
     setForm({
       name: initial?.name ?? '',
-      code: initial?.code ?? '',
-      type: initial?.type ?? 'University',
+      inst_code: initial?.inst_code ?? '',
+      inst_type: initial?.inst_type ?? 'educational',
+      organization_code: initial?.organization_code ?? (organizations[0]?.org_code || ''),
+      legacy_campus_id: initial?.legacy_campus_id ?? '',
       city: initial?.city ?? '',
-      country: initial?.country ?? 'Pakistan',
-      email: initial?.email ?? '',
-      phone: initial?.phone ?? '',
-      website: initial?.website ?? '',
-      established: initial?.established ?? new Date().getFullYear(),
-      is_active: initial?.is_active ?? true,
+      address: initial?.address ?? '',
+      contact_number: initial?.contact_number ?? '',
     });
-  }, [initial, open]);
+  }, [initial, open, organizations]);
 
   if (!open) return null;
 
-  const field = (key: keyof typeof form) =>
-    (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
-      setForm((prev) => ({ ...prev, [key]: e.target.value }));
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/60 backdrop-blur-sm animate-in fade-in duration-200 p-4">
-      <div className="bg-[var(--card)] rounded-2xl shadow-2xl w-full max-w-2xl border border-[var(--border)] animate-in zoom-in-95 duration-200 overflow-hidden">
-        <div className="flex items-center justify-between px-6 py-5 border-b border-[var(--border)] bg-[var(--background)]/30">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+      <div className="bg-white rounded-[3rem] shadow-2xl w-full max-w-xl border border-zinc-100 animate-in zoom-in-95 duration-200 overflow-hidden">
+        <div className="flex items-center justify-between px-10 py-8 border-b border-zinc-50">
           <div>
-            <h2 className="text-xl font-bold text-[var(--foreground)] tracking-tight">
-              {initial ? 'Edit Institution' : 'Add New Institution'}
-            </h2>
-            <p className="text-[11px] font-bold text-[var(--muted-foreground)] uppercase tracking-wider mt-1">
-              Organization Security Profile
-            </p>
+            <h2 className="text-3xl font-black text-zinc-900 tracking-tighter uppercase">{initial ? "Edit Entity" : "Register Entity"}</h2>
+            <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mt-1 italic">Registry Profile Management</p>
           </div>
-          <button
-            onClick={onClose}
-            className="p-2 text-slate-600 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition"
-          >
-            <X size={20} />
-          </button>
+          <button onClick={onClose} className="p-3 text-zinc-400 hover:text-zinc-900 rounded-2xl hover:bg-zinc-50 transition-all"><X size={24} /></button>
         </div>
-
-        <div className="px-6 py-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {[
-            { label: 'Institution Name', key: 'name', type: 'text', placeholder: 'e.g. Punjab University' },
-            { label: 'Institution Code', key: 'code', type: 'text', placeholder: 'e.g. INST-007' },
-            { label: 'Email', key: 'email', type: 'email', placeholder: 'admin@inst.edu.pk' },
-            { label: 'Phone', key: 'phone', type: 'text', placeholder: '+92-XX-XXXXXXX' },
-            { label: 'City', key: 'city', type: 'text', placeholder: 'e.g. Lahore' },
-            { label: 'Country', key: 'country', type: 'text', placeholder: 'e.g. Pakistan' },
-            { label: 'Website', key: 'website', type: 'text', placeholder: 'www.inst.edu.pk' },
-            { label: 'Established Year', key: 'established', type: 'number', placeholder: '2000' },
-          ].map(({ label, key, type, placeholder }) => (
-            <div key={key}>
-              <label className="block text-xs font-bold text-[var(--muted-foreground)] uppercase tracking-wider mb-1.5">{label}</label>
-              <input
-                type={type}
-                placeholder={placeholder}
-                value={String(form[key as keyof typeof form])}
-                onChange={field(key as keyof typeof form)}
-                className="w-full px-4 py-2.5 bg-[var(--background)] border border-[var(--border)] rounded-xl text-sm text-[var(--foreground)] focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 outline-none transition"
-              />
-            </div>
-          ))}
-
+        <div className="px-10 py-10 grid grid-cols-1 sm:grid-cols-2 gap-6">
+          <div className="col-span-2">
+            <label className="block text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2">Institution Name</label>
+            <input type="text" placeholder="e.g. Al-Khidmat Foundation" value={form.name} onChange={e => setForm(p=>({...p, name: e.target.value}))}
+              className="w-full px-6 py-4 bg-zinc-50 border border-transparent focus:border-zinc-200 focus:bg-white rounded-2xl text-xs font-black uppercase tracking-widest outline-none transition-all" />
+          </div>
           <div>
-            <label className="block text-xs font-bold text-[var(--muted-foreground)] uppercase tracking-wider mb-1.5">Type</label>
-            <select
-              value={form.type}
-              onChange={field('type')}
-              className="w-full px-4 py-2.5 bg-[var(--background)] border border-[var(--border)] rounded-xl text-sm text-[var(--foreground)] focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 outline-none transition"
-            >
-              {['University', 'College', 'School', 'Institute', 'Academy'].map((t) => (
-                <option key={t}>{t}</option>
+            <label className="block text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2">Registry Code</label>
+            <input type="text" placeholder="AKS-01" value={form.inst_code} onChange={e => setForm(p=>({...p, inst_code: e.target.value}))}
+              className="w-full px-6 py-4 bg-zinc-50 border border-transparent focus:border-zinc-200 focus:bg-white rounded-2xl text-xs font-black uppercase tracking-widest outline-none transition-all" />
+          </div>
+          <div>
+            <label className="block text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2">Entity Type</label>
+            <select value={form.inst_type} onChange={e => setForm(p=>({...p, inst_type: e.target.value}))}
+              className="w-full px-6 py-4 bg-zinc-50 border border-transparent focus:border-zinc-200 focus:bg-white rounded-2xl text-xs font-black uppercase tracking-widest outline-none transition-all">
+              <option value="educational">Educational</option>
+              <option value="healthcare">Healthcare</option>
+              <option value="social_welfare">Social Welfare</option>
+            </select>
+          </div>
+          <div className="col-span-2">
+            <label className="block text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2">Parent Organization</label>
+            <select value={form.organization_code} onChange={e => setForm(p=>({...p, organization_code: e.target.value}))}
+              className="w-full px-6 py-4 bg-zinc-50 border border-transparent focus:border-zinc-200 focus:bg-white rounded-2xl text-xs font-black uppercase tracking-widest outline-none transition-all">
+              {organizations.map(org => (
+                <option key={org.id} value={org.org_code}>{org.name}</option>
               ))}
             </select>
           </div>
-
-          <div>
-            <label className="block text-xs font-bold text-[var(--muted-foreground)] uppercase tracking-wider mb-1.5">Status</label>
-            <select
-              value={form.is_active ? 'Active' : 'Inactive'}
-              onChange={(e) =>
-                setForm((p) => ({ ...p, is_active: e.target.value === 'Active' }))
-              }
-              className="w-full px-4 py-2.5 bg-[var(--background)] border border-[var(--border)] rounded-xl text-sm text-[var(--foreground)] focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 outline-none transition"
-            >
-              <option>Active</option>
-              <option>Inactive</option>
-            </select>
+          <div className="col-span-2 pt-6 border-t border-zinc-50 flex justify-end gap-3">
+            <button onClick={onClose} className="px-8 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest hover:text-zinc-900 transition-all">Cancel</button>
+            <button onClick={() => onSave(form)} className="px-10 py-5 bg-zinc-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-600 transition-all active:scale-95 shadow-2xl">
+              {initial ? "Confirm Update" : "Establish Registry"}
+            </button>
           </div>
-        </div>
-
-        <div className="px-6 py-4 border-t border-slate-100 flex justify-end gap-3">
-          <button
-            onClick={onClose}
-            className="px-5 py-2.5 text-sm font-bold text-[var(--muted-foreground)] bg-transparent hover:bg-[var(--background)] rounded-xl transition"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={() => { onSave(form); onClose(); }}
-            className="px-6 py-2.5 text-sm font-bold text-white bg-blue-600 rounded-xl hover:bg-blue-700 shadow-lg shadow-blue-600/20 transition active:scale-95"
-          >
-            {initial ? 'Save Changes' : 'Add Institution'}
-          </button>
         </div>
       </div>
     </div>
   );
 }
 
-// ─── Main Page ───────────────────────────────────────────────────────────────
-export default function InstitutionsPage() {
-  const [institutions, setInstitutions] = useState<Institution[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
-  const [filterType, setFilterType] = useState('All');
-  const [modalOpen, setModalOpen] = useState(false);
-  const [editTarget, setEditTarget] = useState<Institution | null>(null);
-  const [deleteId, setDeleteId] = useState<string | null>(null);
-
-  useEffect(() => {
-    // Simulate API delay
-    setTimeout(() => {
-      setInstitutions(MOCK_INSTITUTIONS);
-      setLoading(false);
-    }, 700);
-  }, []);
-
-  const types = ['All', ...Array.from(new Set(MOCK_INSTITUTIONS.map((i) => i.type)))];
-
-  const filtered = institutions.filter((inst) => {
-    const matchSearch =
-      inst.name.toLowerCase().includes(search.toLowerCase()) ||
-      inst.code.toLowerCase().includes(search.toLowerCase()) ||
-      inst.city.toLowerCase().includes(search.toLowerCase());
-    const matchType = filterType === 'All' || inst.type === filterType;
-    return matchSearch && matchType;
+function BranchModal({ open, onClose, onSave, initial, institutionCode }: {
+  open: boolean; onClose: () => void;
+  onSave: (d: any) => void; initial?: Branch | null; institutionCode: string;
+}) {
+  const [form, setForm] = useState({
+    branch_name: initial?.branch_name ?? '',
+    branch_code: initial?.branch_code ?? '',
+    city: initial?.city ?? '',
+    address: initial?.address ?? '',
+    email: initial?.email ?? '',
+    contact_number: initial?.contact_number ?? '',
+    branch_head_name: initial?.branch_head_name ?? '',
+    status: initial?.status ?? 'active',
   });
 
-  const stats = [
-    { label: 'Total Institutions', value: institutions.length, icon: Building, color: 'text-blue-600', bg: 'bg-blue-50 dark:bg-blue-900/20' },
-    { label: 'Active Status', value: institutions.filter((i) => i.is_active).length, icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
-    { label: 'Inactive Status', value: institutions.filter((i) => !i.is_active).length, icon: XCircle, color: 'text-rose-600', bg: 'bg-rose-50 dark:bg-rose-900/20' },
-    { label: 'Total Staff Count', value: institutions.reduce((s, i) => s + i.employees, 0).toLocaleString(), icon: Users, color: 'text-violet-600', bg: 'bg-violet-50 dark:bg-violet-900/20' },
-  ];
+  useEffect(() => {
+    setForm({
+      branch_name: initial?.branch_name ?? '',
+      branch_code: initial?.branch_code ?? '',
+      city: initial?.city ?? '',
+      address: initial?.address ?? '',
+      email: initial?.email ?? '',
+      contact_number: initial?.contact_number ?? '',
+      branch_head_name: initial?.branch_head_name ?? '',
+      status: initial?.status ?? 'active',
+    });
+  }, [initial, open]);
 
-  function handleSave(data: Partial<Institution>) {
-    if (editTarget) {
-      setInstitutions((prev) =>
-        prev.map((i) => (i.id === editTarget.id ? { ...i, ...data } : i))
-      );
-    } else {
-      const newInst: Institution = {
-        id: String(Date.now()),
-        employees: 0,
-        ...data,
-      } as Institution;
-      setInstitutions((prev) => [newInst, ...prev]);
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+      <div className="bg-white rounded-[3rem] shadow-2xl w-full max-w-xl border border-zinc-100 animate-in zoom-in-95 duration-200 overflow-hidden">
+        <div className="flex items-center justify-between px-10 py-8 border-b border-zinc-50">
+          <div>
+            <h2 className="text-3xl font-black text-zinc-900 tracking-tighter uppercase">{initial ? "Modify Deployment" : "Deploy Branch"}</h2>
+            <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mt-1 italic">Tactical Location Management</p>
+          </div>
+          <button onClick={onClose} className="p-3 text-zinc-400 hover:text-zinc-900 rounded-2xl hover:bg-zinc-50 transition-all"><X size={24} /></button>
+        </div>
+        <div className="px-10 py-10 grid grid-cols-1 sm:grid-cols-2 gap-6">
+          <div className="col-span-2">
+            <label className="block text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2">Branch Name</label>
+            <input type="text" placeholder="e.g. Sector-01 HQ" value={form.branch_name} onChange={e => setForm(p=>({...p, branch_name: e.target.value}))}
+              className="w-full px-6 py-4 bg-zinc-50 border border-transparent focus:border-zinc-200 focus:bg-white rounded-2xl text-xs font-black uppercase tracking-widest outline-none transition-all" />
+          </div>
+          <div>
+            <label className="block text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2">Station Code</label>
+            <input type="text" placeholder="BR-01" value={form.branch_code} onChange={e => setForm(p=>({...p, branch_code: e.target.value}))}
+              className="w-full px-6 py-4 bg-zinc-50 border border-transparent focus:border-zinc-200 focus:bg-white rounded-2xl text-xs font-black uppercase tracking-widest outline-none transition-all" />
+          </div>
+           <div>
+            <label className="block text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2">Operational Status</label>
+            <select value={form.status} onChange={e => setForm(p=>({...p, status: e.target.value}))}
+              className="w-full px-6 py-4 bg-zinc-50 border border-transparent focus:border-zinc-200 focus:bg-white rounded-2xl text-xs font-black uppercase tracking-widest outline-none transition-all">
+              <option value="active">Active</option><option value="inactive">Inactive</option>
+            </select>
+          </div>
+          <div className="col-span-2 pt-6 border-t border-zinc-50 flex justify-end gap-3">
+            <button onClick={onClose} className="px-8 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest hover:text-zinc-900 transition-all">Cancel</button>
+            <button onClick={() => onSave({ ...form, institution_code: institutionCode })} 
+              className="px-10 py-5 bg-zinc-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-600 transition-all active:scale-95 shadow-2xl">
+              {initial ? "Confirm Update" : "Initialize Deployment"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Main Page ───────────────────────────────────────────────────────────────
+
+export default function InstitutionsPage() {
+  const [institutions, setInstitutions] = useState<Institution[]>([]);
+  const [branches, setBranches] = useState<Branch[]>([]);
+  const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  
+  const [view, setView] = useState<"list" | "branches">("list");
+  const [selectedInst, setSelectedInst] = useState<Institution | null>(null);
+  const [instModal, setInstModal] = useState(false);
+  const [editInstTarget, setEditInstTarget] = useState<Institution | null>(null);
+  const [branchModal, setBranchModal] = useState(false);
+  const [editBranchTarget, setEditBranchTarget] = useState<Branch | null>(null);
+
+  async function loadInitialData() {
+    try {
+      setLoading(true);
+      const [instRes, orgRes] = await Promise.all([
+        fetchWithAuth("/institutions"),
+        fetchWithAuth("/organizations")
+      ]);
+      
+      if (instRes.ok) {
+        const data = await instRes.json();
+        setInstitutions(Array.isArray(data) ? data : (data.institutions || []));
+      }
+      
+      if (orgRes.ok) {
+        const data = await orgRes.json();
+        setOrganizations(Array.isArray(data) ? data : (data.organizations || []));
+      }
+    } catch (err) {
+      console.error("Initial load failed:", err);
+      setInstitutions([]);
+      setOrganizations([]);
+    } finally {
+      setLoading(false);
     }
-    setEditTarget(null);
   }
 
-  function handleDelete(id: string) {
-    setInstitutions((prev) => prev.filter((i) => i.id !== id));
-    setDeleteId(null);
+  async function loadInstitutions() {
+    try {
+      const res = await fetchWithAuth("/institutions");
+      if (res.ok) {
+        const data = await res.json();
+        setInstitutions(Array.isArray(data) ? data : (data.institutions || []));
+      }
+    } catch (err) {
+      console.error("Reload failed:", err);
+    }
   }
+
+  async function loadBranches(instCode: string) {
+    try {
+      setLoading(true);
+      const res = await fetchWithAuth(`/branches?institution_code=${instCode}`);
+      if (res.ok) setBranches(await res.json());
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => { loadInitialData(); }, []);
+
+  async function handleSaveInstitution(data: any) {
+    const url = editInstTarget ? `/institutions/${editInstTarget.id}` : "/institutions";
+    const method = editInstTarget ? "PUT" : "POST";
+    const res = await fetchWithAuth(url, { method, body: JSON.stringify(data) });
+    if (res.ok) {
+      setInstModal(false);
+      setEditInstTarget(null);
+      loadInstitutions();
+    }
+  }
+
+  async function handleDeleteInstitution(id: string) {
+    if (!confirm("Remove this entity?")) return;
+    const res = await fetchWithAuth(`/institutions/${id}`, { method: "DELETE" });
+    if (res.ok) loadInstitutions();
+  }
+
+  async function handleSaveBranch(data: any) {
+    const url = editBranchTarget ? `/branches/${editBranchTarget.branch_id}` : "/branches";
+    const method = editBranchTarget ? "PUT" : "POST";
+    const res = await fetchWithAuth(url, { method, body: JSON.stringify(data) });
+    if (res.ok) {
+      setBranchModal(false);
+      setEditBranchTarget(null);
+      if (selectedInst) loadBranches(selectedInst.inst_code);
+    }
+  }
+
+  async function handleDeleteBranch(id: string) {
+    if (!confirm("Dissolve this branch?")) return;
+    const res = await fetchWithAuth(`/branches/${id}`, { method: "DELETE" });
+    if (res.ok && selectedInst) loadBranches(selectedInst.inst_code);
+  }
+
+  const filtered = institutions.filter(i => 
+    i.name.toLowerCase().includes(search.toLowerCase()) || 
+    i.inst_code.toLowerCase().includes(search.toLowerCase())
+  );
 
   return (
     <ProtectedLayout>
-      {/* Delete Confirm Modal */}
-      {deleteId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 p-6 animate-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-center w-12 h-12 rounded-full bg-red-100 mx-auto mb-4">
-              <Trash2 className="text-red-600 h-6 w-6" />
-            </div>
-            <h3 className="text-center text-lg font-semibold text-slate-900">Delete Institution?</h3>
-            <p className="text-center text-sm text-slate-500 mt-1">This action cannot be undone.</p>
-            <div className="flex gap-3 mt-6">
-              <button
-                onClick={() => setDeleteId(null)}
-                className="flex-1 px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-xl hover:bg-slate-50 transition"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => handleDelete(deleteId)}
-                className="flex-1 px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-xl hover:bg-red-700 transition"
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        </div>
+      <InstitutionModal 
+        open={instModal} 
+        onClose={() => { setInstModal(false); setEditInstTarget(null); }} 
+        onSave={handleSaveInstitution} 
+        initial={editInstTarget}
+        organizations={organizations}
+      />
+      {selectedInst && (
+        <BranchModal 
+          open={branchModal} 
+          onClose={() => { setBranchModal(false); setEditBranchTarget(null); }} 
+          onSave={handleSaveBranch} 
+          initial={editBranchTarget} 
+          institutionCode={selectedInst.inst_code} 
+        />
       )}
 
-      <InstitutionModal
-        open={modalOpen}
-        onClose={() => { setModalOpen(false); setEditTarget(null); }}
-        onSave={handleSave}
-        initial={editTarget}
-      />
+      <div className="p-3 sm:p-4 lg:p-6 max-w-350 mx-auto space-y-6 animate-in fade-in duration-1000">
+        
+        {view === "list" && (
+          <>
+            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-4 border-b border-zinc-100 pb-5 sm:pb-6">
+              <div className="space-y-1.5 sm:space-y-2">
+                <h1 className="text-2xl sm:text-3xl font-black tracking-tighter text-zinc-900 leading-none lowercase">institutions registry</h1>
+                <p className="text-[9px] sm:text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em] sm:tracking-[0.4em] italic opacity-60">centralized entity management & control</p>
+              </div>
+              <div className="flex flex-wrap gap-3 w-full lg:w-auto mt-2 lg:mt-0">
+                 <button onClick={() => { setEditInstTarget(null); setInstModal(true); }}
+                   className="flex-1 lg:flex-none h-10 sm:h-11 px-6 bg-zinc-900 text-white rounded-xl flex items-center justify-center gap-1.5 sm:gap-2 text-[9px] font-black uppercase tracking-widest hover:bg-blue-600 transition-all shadow-md shadow-zinc-900/10 active:scale-95"
+                 >
+                   <Plus size={14} strokeWidth={3} /> Add Institution
+                 </button>
+              </div>
+            </div>
 
-      <div className="p-6 lg:p-10 max-w-7xl mx-auto space-y-8 animate-in fade-in zoom-in-95 duration-500">
-
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight text-[var(--foreground)]">Institutions Registry</h1>
-            <p className="mt-1 text-[var(--muted-foreground)]">Manage all registered organizations and educational institutions.</p>
-          </div>
-          <button
-            id="add-institution-btn"
-            onClick={() => { setEditTarget(null); setModalOpen(true); }}
-            className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-blue-600/20 hover:bg-blue-700 transition-all active:scale-95"
-          >
-            <Plus className="-ml-1 mr-2 h-5 w-5" />
-            Add Institution
-          </button>
-        </div>
-
-        {/* Stats Cards */}
-        {loading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="animate-pulse bg-[var(--card)] p-6 rounded-2xl border border-[var(--border)] h-28 shadow-sm" />
-            ))}
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {stats.map((s) => {
-              const Icon = s.icon;
-              return (
-                <div
-                  key={s.label}
-                  className="card-professional relative group"
-                >
-                  <div className={`inline-flex p-3 rounded-xl ${s.bg} group-hover:scale-110 transition-transform mb-4`}>
-                    <Icon className={`h-6 w-6 ${s.color}`} />
-                  </div>
-                  <p className="text-sm font-bold text-[var(--muted-foreground)] uppercase tracking-wider">{s.label}</p>
-                  <p className="text-3xl font-bold text-[var(--foreground)] mt-1">{s.value}</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+              <div className="bg-white p-4 sm:p-5 rounded-2xl border border-zinc-100 shadow-sm hover:shadow-md transition-all duration-300 group relative overflow-hidden">
+                <div className="absolute top-3 right-3 p-2.5 rounded-lg bg-zinc-900 text-white group-hover:scale-105 transition-transform">
+                  <Building2 size={16} strokeWidth={2.5} />
                 </div>
-              );
-            })}
-          </div>
+                <div className="relative z-10">
+                  <p className="text-[8px] sm:text-[9px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Total Entities</p>
+                  {loading ? <Skeleton width="40%" height={24} /> : (
+                    <div className="flex items-baseline gap-1.5">
+                      <h3 className="text-xl sm:text-2xl font-black text-zinc-900 tracking-tighter leading-none">{institutions.length}</h3>
+                      <span className="text-[8px] font-bold text-emerald-500 uppercase tracking-widest">Live</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="bg-white p-4 sm:p-5 rounded-2xl border border-zinc-100 shadow-sm hover:shadow-md transition-all duration-300 group relative overflow-hidden">
+                <div className="absolute top-3 right-3 p-2.5 rounded-lg bg-blue-600 text-white group-hover:scale-105 transition-transform">
+                  <GitBranch size={16} strokeWidth={2.5} />
+                </div>
+                <div className="relative z-10">
+                  <p className="text-[8px] sm:text-[9px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Global Deployments</p>
+                  <div className="flex items-baseline gap-1.5">
+                    <h3 className="text-xl sm:text-2xl font-black text-zinc-900 tracking-tighter leading-none">...</h3>
+                    <span className="text-[8px] font-bold text-blue-500 uppercase tracking-widest">Active</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white p-3 sm:p-4 rounded-2xl border border-zinc-100 shadow-md shadow-zinc-200/20 flex flex-col xl:flex-row gap-4 items-center">
+              <div className="flex-1 w-full relative group">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-300 group-focus-within:text-zinc-900 transition-colors" />
+                <input
+                  type="text"
+                  placeholder="search central registry..."
+                  className="w-full pl-10 pr-4 py-2.5 sm:py-3 bg-zinc-50/50 border border-transparent focus:border-zinc-200 focus:bg-white rounded-xl text-[10px] font-black text-zinc-900 uppercase tracking-widest outline-none transition-all placeholder:text-zinc-400 placeholder:normal-case shadow-inner"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="relative pb-20">
+              {loading && filtered.length === 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {[1, 2, 3, 4].map(i => <Skeleton key={i} height={200} className="rounded-3xl" />)}
+                </div>
+              ) : filtered.length === 0 ? (
+                <div className="py-20 text-center bg-white rounded-3xl border border-dashed border-zinc-200 shadow-lg shadow-zinc-200/20 flex flex-col items-center justify-center">
+                  <div className="h-16 w-16 bg-zinc-50 rounded-full flex items-center justify-center text-zinc-300 mb-4"><Building2 size={32} /></div>
+                  <h4 className="text-lg font-black text-zinc-900 uppercase tracking-tighter">No Entities Matches</h4>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {filtered.map(inst => (
+                    <InstitutionCard key={inst.id} institution={inst} 
+                      onEdit={setEditInstTarget} onDelete={handleDeleteInstitution} 
+                      onViewBranches={(i) => { setSelectedInst(i); setView("branches"); loadBranches(i.inst_code); }} />
+                  ))}
+                </div>
+              )}
+            </div>
+          </>
         )}
 
-        {/* Table Card */}
-        <div className="bg-[var(--card)] rounded-2xl shadow-sm border border-[var(--border)] overflow-hidden">
-          {/* Toolbar */}
-          <div className="p-4 border-b border-[var(--border)] bg-[var(--background)]/50 flex flex-col sm:flex-row gap-4 justify-between lg:items-center">
-            <div className="relative w-full sm:max-w-md">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--muted-foreground)]" />
-              <input
-                id="institution-search"
-                type="text"
-                className="w-full pl-10 pr-4 py-2 bg-[var(--card)] border border-[var(--border)] rounded-full text-sm text-[var(--foreground)] focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 outline-none transition"
-                placeholder="Search resources..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-            </div>
-            <div className="flex gap-2 flex-wrap">
-              {types.map((t) => (
-                <button
-                  key={t}
-                  onClick={() => setFilterType(t)}
-                  className={`px-4 py-1.5 rounded-full text-xs font-bold border transition-all ${
-                    filterType === t
-                      ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-600/20'
-                      : 'bg-[var(--card)] text-[var(--muted-foreground)] border-[var(--border)] hover:border-blue-400 hover:text-blue-600'
-                  }`}
-                >
-                  {t}
-                </button>
-              ))}
-            </div>
-          </div>
+        {view === "branches" && selectedInst && (
+          <div className="space-y-8 animate-in slide-in-from-right-12 duration-700">
+              <button onClick={() => setView("list")} 
+                className="flex items-center gap-3 text-zinc-400 hover:text-zinc-900 font-black tracking-widest uppercase text-[10px] transition-all group"
+              >
+                <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
+                Return to Registry Index
+              </button>
 
-          {/* Table */}
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-[var(--border)]">
-              <thead className="bg-[var(--background)]/50">
-                <tr>
-                  {['Institution Name', 'Entity Type', 'Regional Location', 'Official Contact', 'Personnel', 'Status', ''].map((col) => (
-                    <th
-                      key={col}
-                      scope="col"
-                      className="py-4 px-4 text-left text-xs font-bold text-[var(--muted-foreground)] uppercase tracking-widest first:pl-6 last:pr-6"
-                    >
-                      {col}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[var(--border)] bg-white">
+              <div className="bg-zinc-900 rounded-3xl p-8 sm:p-10 shadow-2xl relative overflow-hidden group">
+                <div className="absolute top-0 right-0 p-8 text-white/5 pointer-events-none group-hover:scale-110 transition-transform duration-1000">
+                  <Building2 size={160} strokeWidth={1} />
+                </div>
+                <div className="relative z-10 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-8">
+                  <div className="flex items-center gap-6">
+                    <div className="h-16 w-16 rounded-2xl bg-white flex items-center justify-center text-zinc-900 shadow-xl">
+                        <Building2 size={32} strokeWidth={2.5} />
+                    </div>
+                    <div className="space-y-2">
+                       <div className="flex flex-wrap items-center gap-3">
+                          <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tighter uppercase leading-none">{selectedInst.name}</h1>
+                       </div>
+                       <p className="text-zinc-400 text-[10px] font-black uppercase tracking-widest">{selectedInst.inst_code} | {selectedInst.city}</p>
+                    </div>
+                  </div>
+                  <button onClick={() => { setEditBranchTarget(null); setBranchModal(true); }}
+                    className="w-full xl:w-auto h-12 px-8 bg-white text-zinc-900 rounded-2xl flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest hover:bg-blue-600 hover:text-white transition-all active:scale-95 shadow-xl"
+                  >
+                    <Plus size={16} strokeWidth={3} /> Deploy Branch
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {loading ? (
-                  [...Array(4)].map((_, i) => (
-                    <tr key={i}>
-                      {[...Array(7)].map((__, j) => (
-                        <td key={j} className="px-4 py-4">
-                          <div className="h-4 bg-slate-100 rounded animate-pulse" />
-                        </td>
-                      ))}
-                    </tr>
-                  ))
-                ) : filtered.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="py-16 text-center">
-                      <Building className="h-10 w-10 text-slate-300 mx-auto mb-2" />
-                      <p className="text-sm text-slate-400">No institutions found.</p>
-                    </td>
-                  </tr>
+                  [1, 2].map(i => <Skeleton key={i} height={180} className="rounded-3xl" />)
+                ) : branches.length === 0 ? (
+                  <div className="lg:col-span-2 py-20 text-center bg-white rounded-3xl border border-dashed border-zinc-200 shadow-lg shadow-zinc-200/20 flex flex-col items-center justify-center">
+                    <div className="h-16 w-16 bg-zinc-50 rounded-full flex items-center justify-center text-zinc-300 mb-5"><GitBranch size={32} /></div>
+                    <h4 className="text-lg font-black text-zinc-900 uppercase tracking-tighter">No Deployment Branches</h4>
+                  </div>
                 ) : (
-                  filtered.map((inst) => (
-                    <tr key={inst.id} className="hover:bg-slate-50/80 transition-colors group">
-                      {/* Institution */}
-                      <td className="whitespace-nowrap py-4 pl-6 pr-4">
-                        <div className="flex items-center gap-3">
-                          <div className="h-10 w-10 shrink-0 rounded-xl bg-blue-600/10 text-blue-600 flex items-center justify-center font-bold text-sm border border-blue-600/20">
-                            {inst.name.charAt(0)}
+                  branches.map(b => (
+                    <div key={b.branch_id} className="bg-white rounded-4xl p-6 border border-zinc-100 shadow-sm hover:shadow-2xl hover:shadow-zinc-300/30 transition-all group relative overflow-hidden flex flex-col">
+                      <div className="flex items-start justify-between relative z-10 mb-6">
+                        <div className="flex items-center gap-4">
+                          <div className="h-12 w-12 rounded-xl bg-zinc-900 flex items-center justify-center text-white shadow-lg group-hover:bg-blue-600 transition-colors">
+                            <GitBranch size={20} className="shrink-0" />
                           </div>
                           <div>
-                            <div className="font-bold text-[var(--foreground)] text-sm tracking-tight">{inst.name}</div>
-                            <div className="text-[10px] font-mono text-[var(--muted-foreground)] uppercase">{inst.code}</div>
+                            <h3 className="text-lg font-black text-zinc-900 group-hover:text-blue-600 transition-colors tracking-tight uppercase leading-none line-clamp-1">{b.branch_name}</h3>
+                            <span className="text-[10px] font-black text-zinc-400 tracking-widest uppercase">{b.branch_code}</span>
                           </div>
                         </div>
-                      </td>
-
-                      {/* Type */}
-                      <td className="whitespace-nowrap px-4 py-4">
-                        <span
-                          className={`inline-flex items-center rounded-md px-2.5 py-1 text-xs font-medium ring-1 ring-inset ${
-                            TYPE_COLORS[inst.type] ?? 'bg-slate-50 text-slate-700 ring-slate-700/10'
-                          }`}
-                        >
-                          {inst.type}
-                        </span>
-                      </td>
-
-                      {/* Location */}
-                      <td className="whitespace-nowrap px-4 py-4">
-                        <div className="flex items-center gap-1.5 text-sm font-medium text-[var(--foreground)]">
-                          <MapPin className="h-3.5 w-3.5 text-[var(--muted-foreground)] shrink-0" />
-                          {inst.city}
-                        </div>
-                        <div className="flex items-center gap-1.5 text-[11px] text-[var(--muted-foreground)] mt-0.5">
-                          <Globe className="h-3 w-3 shrink-0" />
-                          {inst.country}
-                        </div>
-                      </td>
-
-                      {/* Contact */}
-                      <td className="whitespace-nowrap px-4 py-4">
-                        <div className="flex items-center gap-1.5 text-sm font-medium text-[var(--foreground)]">
-                          <Mail className="h-3.5 w-3.5 text-[var(--muted-foreground)] shrink-0" />
-                          {inst.email}
-                        </div>
-                        <div className="flex items-center gap-1.5 text-[11px] text-[var(--muted-foreground)] mt-0.5 font-mono">
-                          <Phone className="h-3 w-3 shrink-0" />
-                          {inst.phone}
-                        </div>
-                      </td>
-
-                      {/* Staff */}
-                      <td className="whitespace-nowrap px-4 py-4">
-                        <div className="flex items-center gap-1.5 text-sm font-bold text-[var(--foreground)]">
-                          <Users className="h-4 w-4 text-blue-600" />
-                          {inst.employees}
-                        </div>
-                        <div className="text-[10px] font-bold text-[var(--muted-foreground)] mt-0.5 uppercase tracking-widest">Est. {inst.established}</div>
-                      </td>
-
-                      {/* Status */}
-                      <td className="whitespace-nowrap px-4 py-4">
-                        <span
-                          className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold tracking-tighter ${
-                            inst.is_active
-                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800'
-                              : 'bg-rose-50 text-rose-700 border border-rose-100 dark:bg-rose-900/20 dark:text-rose-400 dark:border-rose-800'
-                          }`}
-                        >
-                          <span
-                            className={`h-1.5 w-1.5 rounded-full ${
-                              inst.is_active ? 'bg-emerald-500' : 'bg-rose-500'
-                            }`}
-                          />
-                          {inst.is_active ? 'ACTIVE' : 'INACTIVE'}
-                        </span>
-                      </td>
-
-                      {/* Actions */}
-                      <td className="whitespace-nowrap py-4 pl-4 pr-6">
-                        <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button
-                            onClick={() => { setEditTarget(inst); setModalOpen(true); }}
-                            className="p-2 text-slate-400 hover:text-indigo-600 rounded-lg hover:bg-indigo-50 transition"
-                            title="Edit"
-                          >
-                            <Edit2 className="h-4 w-4" />
+                        <div className="flex gap-1.5 opacity-0 group-hover:opacity-100 transition-all">
+                          <button onClick={() => { setEditBranchTarget(b); setBranchModal(true); }} className="h-8 w-8 flex items-center justify-center bg-zinc-50 text-zinc-400 rounded-lg hover:bg-zinc-900 hover:text-white transition-all active:scale-95 border border-zinc-200 hover:border-zinc-900">
+                            <Edit2 size={14} />
                           </button>
-                          <button
-                            onClick={() => setDeleteId(inst.id)}
-                            className="p-2 text-slate-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition"
-                            title="Delete"
-                          >
-                            <Trash2 className="h-4 w-4" />
+                          <button onClick={() => handleDeleteBranch(b.branch_id)} className="h-8 w-8 flex items-center justify-center bg-zinc-50 text-zinc-400 rounded-lg hover:bg-rose-600 hover:text-white transition-all active:scale-95 border border-zinc-200 hover:border-rose-600">
+                            <Trash2 size={14} />
                           </button>
                         </div>
-                      </td>
-                    </tr>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-3 mb-6 pt-5 border-t border-zinc-50 flex-1">
+                         <div className="bg-zinc-50 rounded-xl p-3.5 border border-zinc-100/50 flex flex-col justify-center">
+                            <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Station City</p>
+                            <p className="text-[11px] font-black text-zinc-900 uppercase truncate">{b.city || 'Central'}</p>
+                         </div>
+                         <div className="bg-zinc-50 rounded-xl p-3.5 border border-zinc-100/50 flex flex-col justify-center">
+                            <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Station Head</p>
+                            <p className="text-[11px] font-black text-blue-600 uppercase truncate">{b.branch_head_name || 'Unassigned'}</p>
+                         </div>
+                      </div>
+                      
+                      <div className="pt-5 border-t border-zinc-50 flex items-center justify-between gap-4 text-[9px] font-bold text-zinc-400 uppercase tracking-widest mt-auto">
+                        <span className="flex items-center gap-2"><Mail size={10} className="opacity-40" /><span className="lowercase font-black tracking-normal">{b.email || '—'}</span></span>
+                        <span className={`px-2 py-0.5 rounded-md border ${b.status === 'active' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-zinc-100 text-zinc-500 border-zinc-200'}`}>
+                          {b.status} unit
+                        </span>
+                      </div>
+                    </div>
                   ))
                 )}
-              </tbody>
-            </table>
+              </div>
           </div>
-
-          {/* Footer */}
-          {!loading && filtered.length > 0 && (
-            <div className="px-6 py-3 border-t border-[var(--border)] bg-[var(--background)]/50 flex items-center justify-between">
-              <p className="text-[11px] font-bold text-[var(--muted-foreground)] uppercase tracking-wider">
-                Showing <span className="text-[var(--foreground)]">{filtered.length}</span> of{' '}
-                <span className="text-[var(--foreground)]">{institutions.length}</span> entities
-              </p>
-            </div>
-          )}
-        </div>
+        )}
       </div>
     </ProtectedLayout>
   );

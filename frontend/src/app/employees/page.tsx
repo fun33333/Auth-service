@@ -3,139 +3,188 @@
 import React, { useEffect, useState } from 'react';
 import ProtectedLayout from '@/components/ProtectedLayout';
 import Link from 'next/link';
-import { 
-  Plus, Search, Filter, Phone, Mail, MoreHorizontal, 
-  Info, Users, UserPlus, UserCheck, UserMinus, 
-  ChevronLeft, ChevronRight, X, Calendar, Hash,
-  MessageSquare, Globe, Briefcase, MapPin,
-  LayoutGrid, List as ListIcon, MoreVertical
+import {
+  Plus, Search, Filter, Phone, Mail, MoreHorizontal,
+  Users, UserPlus, UserCheck, UserMinus,
+  ChevronLeft, ChevronRight, X, Calendar,
+  LayoutGrid, List as ListIcon, MoreVertical, Download, CreditCard,
+  ShieldCheck, Smartphone, User as UserIcon,
+  ShieldAlert, MoreVertical as Dots
 } from 'lucide-react';
+import IDCard from '@/components/IDCard';
+import Skeleton from '@/components/Skeleton';
+import { fetchWithAuth } from '@/utils/api';
 
 // --- Types ---
 interface Employee {
-  id: string;
+  employee_id: string;
   employee_code: string;
   full_name: string;
   email: string;
   phone: string;
-  department: { dept_name: string };
-  designation: { position_name: string };
+  department?: { dept_name: string; dept_code: string } | null;
+  designation?: { position_name: string; position_code: string } | null;
   is_active: boolean;
-  join_date: string;
+  created_at: string; // Backend uses created_at
   image?: string;
-  priority: 'High' | 'Medium' | 'Low';
-  gender: 'Male' | 'Female' | 'Other';
+  priority?: 'High' | 'Medium' | 'Low';
+  gender?: 'Male' | 'Female' | 'Other';
   bio?: string;
   location?: string;
+  cnic?: string;
 }
+
+// --- Utils ---
+const getDeptColor = (deptName: string = '') => {
+  const name = deptName.toLowerCase();
+  if (name.includes('food')) return 'bg-emerald-50 text-emerald-600 border-emerald-100';
+  if (name.includes('acad')) return 'bg-blue-50 text-blue-600 border-blue-100';
+  if (name.includes('health') || name.includes('medic')) return 'bg-indigo-50 text-indigo-600 border-indigo-100';
+  if (name.includes('it') || name.includes('tech')) return 'bg-amber-50 text-amber-600 border-amber-100';
+  return 'bg-zinc-50 text-zinc-600 border-zinc-100';
+};
 
 // --- Components ---
 
-const StatsCard = ({ title, count, icon: Icon, color, bgColor }: any) => (
-  <div className={`p-5 rounded-2xl border border-zinc-100 shadow-sm flex items-center gap-4 bg-white hover:shadow-md transition-all group`}>
-    <div className={`p-3 rounded-xl ${bgColor} ${color.replace('bg-', 'text-')} shadow-sm group-hover:scale-110 transition-transform`}>
-      <Icon size={20} strokeWidth={2.5} />
+const StatsCard = ({ title, count, icon: Icon, color, bgColor, loading }: any) => (
+  <div className="bg-white p-6 rounded-[1.5rem] border border-zinc-100 shadow-sm flex items-center gap-5 hover:shadow-md transition-all duration-300">
+    <div className={`h-14 w-14 rounded-2xl flex items-center justify-center ${bgColor} ${color}`}>
+      <Icon size={24} strokeWidth={2.5} />
     </div>
-    <div className="space-y-0.5">
-      <p className="text-zinc-400 text-[11px] font-bold uppercase tracking-widest">{title}</p>
-      <h3 className="text-xl font-black text-zinc-900 leading-none">{count}</h3>
+    <div>
+      <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1">{title}</p>
+      {loading ? (
+        <Skeleton width="40px" height="24px" />
+      ) : (
+        <h3 className="text-2xl font-black text-zinc-900 leading-none">{count}</h3>
+      )}
     </div>
   </div>
 );
 
 const EmployeeCard = ({ employee, onClick }: { employee: Employee, onClick: () => void }) => (
-  <div className="bg-white rounded-[2.5rem] border border-zinc-100 p-6 shadow-sm hover:shadow-xl transition-all duration-300 group flex flex-col items-center text-center relative overflow-hidden">
-    <div className={`absolute top-5 right-5 h-2 w-2 rounded-full ${employee.is_active ? 'bg-emerald-400' : 'bg-rose-500'} shadow-lg`} />
-    
-    <div className="relative mb-4">
-      <div className="w-20 h-20 rounded-full bg-zinc-50 flex items-center justify-center p-1 border border-zinc-100 group-hover:border-blue-500 transition-colors overflow-hidden">
-        <div className="w-full h-full rounded-full bg-blue-600 flex items-center justify-center text-white text-xl font-bold">
-          {employee.full_name.charAt(0)}
-        </div>
+  <div
+    onClick={onClick}
+    className="bg-white rounded-[2rem] border border-zinc-100 p-8 shadow-sm hover:shadow-xl transition-all duration-300 group flex flex-col items-center text-center relative cursor-pointer"
+  >
+    {/* Status Indicator Dot */}
+    <div className={`absolute top-6 right-6 h-2 w-2 rounded-full ${employee.is_active ? 'bg-emerald-400' : 'bg-rose-500'}`} />
+
+    {/* Profile Initial */}
+    <div className="h-16 w-16 rounded-full bg-blue-600 flex items-center justify-center text-white text-xl font-black mb-4 shadow-lg shadow-blue-600/20">
+      {employee.full_name.charAt(0)}
+    </div>
+
+    {/* Name & Designation */}
+    <div className="mb-6">
+      <h4 className="text-[14px] font-black text-zinc-900 tracking-tight">{employee.full_name}</h4>
+      <p className={`text-[9px] font-black uppercase tracking-[0.2em] mt-2 px-4 py-1.5 rounded-full border ${getDeptColor(employee.department?.dept_name)}`}>
+        {employee.designation?.position_name || 'Personnel'}
+      </p>
+    </div>
+
+    {/* Metrics Pills */}
+    <div className="flex gap-2 w-full mb-8">
+      <div className="flex-1 bg-emerald-50 border border-emerald-100/50 rounded-lg p-2 text-center">
+        <p className="text-[7px] font-black text-emerald-400 uppercase tracking-widest mb-1">Emp ID</p>
+        <p className="text-[9px] font-black text-emerald-600">{employee.employee_code}</p>
+      </div>
+      <div className="flex-1 bg-zinc-50 border border-zinc-100/50 rounded-lg p-2 text-center">
+        <p className="text-[7px] font-black text-zinc-400 uppercase tracking-widest mb-1">Join Date</p>
+        <p className="text-[9px] font-black text-zinc-900">{new Date(employee.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
       </div>
     </div>
 
-    <h4 className="font-bold text-zinc-900 text-lg line-clamp-1">{employee.full_name}</h4>
-    <p className="text-blue-600 text-xs font-bold uppercase tracking-widest mb-5 opacity-80">{employee.designation.position_name}</p>
-
-    <div className="w-full grid grid-cols-2 gap-3 mb-6">
-      <div className="bg-white border border-emerald-100 rounded-2xl p-3 text-left shadow-sm">
-        <p className="text-[9px] text-zinc-400 font-bold uppercase tracking-widest leading-none mb-1">Emp ID</p>
-        <p className="text-xs font-black text-emerald-500">{employee.employee_code}</p>
-      </div>
-      <div className="bg-zinc-50 rounded-2xl p-3 text-left">
-        <p className="text-[9px] text-zinc-400 font-bold uppercase tracking-widest leading-none mb-1">Join Date</p>
-        <p className="text-xs font-bold text-zinc-700">{employee.join_date}</p>
-      </div>
-    </div>
-
-    <div className="flex items-center gap-2 mt-auto w-full">
-      <button className="flex-1 bg-zinc-900 text-white h-11 rounded-xl hover:bg-blue-600 transition-colors flex items-center justify-center gap-2 text-xs font-bold active:scale-95">
-        <Phone size={14} />
+    {/* Action Footer */}
+    <div className="flex items-center gap-3 w-full">
+      <button className="h-12 w-12 bg-zinc-900 text-white rounded-xl flex items-center justify-center hover:bg-blue-600 transition-all active:scale-95 shadow-lg shadow-zinc-900/10">
+        <Phone size={16} />
       </button>
-      <button className="flex-1 bg-zinc-50 text-zinc-500 h-11 rounded-xl hover:bg-zinc-100 transition-colors flex items-center justify-center gap-2 text-xs font-bold active:scale-95">
-        <MessageSquare size={14} />
+      <button className="h-12 w-12 bg-zinc-50 text-zinc-400 rounded-xl flex items-center justify-center hover:bg-zinc-100 transition-all active:scale-95">
+        <Filter size={16} />
       </button>
-      <button 
+      <button
         onClick={onClick}
-        className="flex-1 bg-zinc-50 text-zinc-500 h-11 rounded-xl hover:bg-indigo-50 hover:text-indigo-600 transition-colors flex items-center justify-center gap-2 text-xs font-bold active:scale-95"
+        className="flex-1 h-12 bg-white border border-zinc-100 text-zinc-400 rounded-xl flex items-center justify-center hover:text-zinc-900 hover:border-zinc-300 transition-all active:scale-95 shadow-sm"
       >
-        <Info size={14} />
+        <ShieldCheck size={18} />
       </button>
     </div>
   </div>
 );
 
-const EmployeeTable = ({ employees, onDetailClick }: { employees: Employee[], onDetailClick: (emp: Employee) => void }) => (
-  <div className="bg-white rounded-[2rem] border border-zinc-100 overflow-hidden shadow-sm">
+const EmployeeTable = ({ employees, onDetailClick, loading }: { employees: Employee[], onDetailClick: (emp: Employee) => void, loading: boolean }) => (
+  <div className="bg-white rounded-[2rem] border border-zinc-100 overflow-hidden shadow-sm mt-8">
     <div className="overflow-x-auto">
-      <table className="w-full border-collapse">
+      <table className="w-full text-left">
         <thead>
-          <tr className="border-b border-zinc-50 text-left">
-            <th className="p-6 text-[11px] font-black text-zinc-400 uppercase tracking-widest">Name</th>
-            <th className="p-6 text-[11px] font-black text-zinc-400 uppercase tracking-widest">Employee Id</th>
-            <th className="p-6 text-[11px] font-black text-zinc-400 uppercase tracking-widest">Phone</th>
-            <th className="p-6 text-[11px] font-black text-zinc-400 uppercase tracking-widest">Join Date</th>
-            <th className="p-6 text-[11px] font-black text-zinc-400 uppercase tracking-widest">Department</th>
-            <th className="p-6 text-[11px] font-black text-zinc-400 uppercase tracking-widest">Action</th>
+          <tr className="border-b border-zinc-50 bg-zinc-50/30">
+            <th className="py-6 px-8 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Name</th>
+            <th className="py-6 px-8 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Employee ID</th>
+            <th className="py-6 px-8 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Phone</th>
+            <th className="py-6 px-8 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Join Date</th>
+            <th className="py-6 px-8 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Department</th>
+            <th className="py-6 px-8 text-[10px] font-black text-zinc-400 uppercase tracking-widest text-right">Action</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-zinc-50/50">
-          {employees.map((emp) => (
-            <tr key={emp.id} className="hover:bg-zinc-50/50 transition-colors group">
-              <td className="p-6">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-full bg-black flex items-center justify-center text-white text-xs font-bold shadow-sm">
-                    {emp.full_name.charAt(0)}
-                  </div>
-                  <div>
-                    <h5 className="text-sm font-bold text-zinc-800 group-hover:text-blue-600 transition-colors">{emp.full_name}</h5>
-                    <p className="text-[11px] text-zinc-400 font-medium">{emp.email}</p>
-                  </div>
-                </div>
-              </td>
-              <td className="p-6">
-                <span className="text-xs font-black text-emerald-300 hover:bg-emerald-100 px-3 py-1 rounded-lg border border-emerald-100/50">
-                  {emp.employee_code}
-                </span>
-              </td>
-              <td className="p-6 text-xs font-bold text-zinc-700">{emp.phone}</td>
-              <td className="p-6 text-xs font-bold text-zinc-600">{emp.join_date}</td>
-              <td className="p-6">
-                <span className="px-3 py-1 bg-indigo-50 text-black rounded-lg text-[10px] font-black uppercase tracking-widest border border-indigo-100/50">
-                  {emp.department.dept_name}
-                </span>
-              </td>
-              <td className="p-6">
-                <button 
-                  onClick={() => onDetailClick(emp)}
-                  className="p-2 text-zinc-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all active:scale-95"
-                >
-                  <MoreVertical size={16} />
-                </button>
+          {loading ? (
+            [...Array(5)].map((_, i) => (
+              <tr key={i}>
+                <td className="p-8" colSpan={6}><Skeleton height={40} className="w-full" /></td>
+              </tr>
+            ))
+          ) : employees.length === 0 ? (
+            <tr>
+              <td className="p-20 text-center" colSpan={6}>
+                <p className="text-sm font-bold text-zinc-400 uppercase tracking-widest">No personnel records found</p>
               </td>
             </tr>
-          ))}
+          ) : (
+            employees.map((emp) => (
+              <tr
+                key={emp.employee_id}
+                onClick={() => onDetailClick(emp)}
+                className="hover:bg-zinc-50 transition-colors group cursor-pointer border-b border-zinc-50/50 last:border-0"
+              >
+                <td className="py-5 px-8">
+                  <div className="flex items-center gap-4">
+                    <div className="h-10 w-10 border border-zinc-100 rounded-full bg-zinc-900 flex items-center justify-center text-white text-xs font-black">
+                      {emp.full_name.charAt(0)}
+                    </div>
+                    <div>
+                      <h5 className="text-[13px] font-black text-zinc-900 group-hover:text-blue-600 transition-colors">{emp.full_name}</h5>
+                      <p className="text-[10px] font-bold text-zinc-400 lowercase italic">{emp.email}</p>
+                    </div>
+                  </div>
+                </td>
+                <td className="py-5 px-8">
+                  <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 px-3 py-1 rounded-md tracking-wider border border-emerald-100/50">
+                    {emp.employee_code}
+                  </span>
+                </td>
+                <td className="py-5 px-8 text-[11px] font-bold text-zinc-500">
+                  {emp.phone}
+                </td>
+                <td className="py-5 px-8 text-[11px] font-bold text-zinc-500">
+                  {new Date(emp.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                </td>
+                <td className="py-5 px-8 text-[11px]">
+                  <span className={`px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest border ${getDeptColor(emp.department?.dept_name)}`}>
+                    {emp.department?.dept_name || 'General'}
+                  </span>
+                </td>
+                <td className="py-5 px-8 text-right">
+                  <button
+                    onClick={() => onDetailClick(emp)}
+                    className="h-8 w-8 rounded-lg hover:bg-zinc-100 flex items-center justify-center text-zinc-400 transition-colors ml-auto"
+                  >
+                    <Dots size={16} />
+                  </button>
+                </td>
+              </tr>
+            ))
+          )}
         </tbody>
       </table>
     </div>
@@ -143,258 +192,286 @@ const EmployeeTable = ({ employees, onDetailClick }: { employees: Employee[], on
 );
 
 const DetailModal = ({ employee, open, onClose }: { employee: Employee | null, open: boolean, onClose: () => void }) => {
+  const [showCard, setShowCard] = useState(false);
+
+  useEffect(() => {
+    if (!open) setShowCard(false);
+  }, [open]);
+
   if (!open || !employee) return null;
+
+  const handlePrint = () => {
+    window.print();
+  };
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-      <div className="fixed inset-0 bg-zinc-900/60 backdrop-blur-md animate-in fade-in duration-300" onClick={onClose} />
-      <div className="bg-white w-full max-w-2xl rounded-[3rem] shadow-2xl relative z-70 overflow-hidden animate-in zoom-in-95 slide-in-from-bottom-8 duration-500">
-        <button onClick={onClose} className="absolute top-8 right-8 h-10 w-10 flex items-center justify-center rounded-full bg-zinc-100 text-zinc-500 hover:bg-zinc-200 transition-all active:scale-90 z-20"><X size={20} /></button>
-        <div className="flex flex-col md:flex-row h-full">
-          <div className="w-full md:w-64 bg-zinc-50/50 p-10 flex flex-col items-center border-r border-zinc-100">
-            <div className="w-32 h-32 rounded-[2.5rem] bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white text-4xl font-bold shadow-2xl mb-8 ring-8 ring-white">
-              {employee.full_name.charAt(0)}
+      <div className="fixed inset-0 bg-zinc-900/80 backdrop-blur-xl animate-in fade-in duration-500" onClick={onClose} />
+      <div className="bg-white w-full max-w-2xl rounded-[3rem] shadow-2xl relative z-70 overflow-hidden animate-in zoom-in-95 duration-500">
+        <div className="p-12 relative flex flex-col items-center max-h-[90vh] overflow-y-auto custom-scrollbar">
+          <button onClick={onClose} className="absolute top-10 right-10 text-zinc-400 hover:text-zinc-900 border border-zinc-100 p-2 rounded-xl transition-all print:hidden"><X size={24} /></button>
+
+          {!showCard ? (
+            <>
+              <div className="h-32 w-32 rounded-[2.5rem] bg-blue-600 flex items-center justify-center text-white text-5xl font-black mb-6 shadow-2xl shadow-blue-600/20">
+                {employee.full_name.charAt(0)}
+              </div>
+              <h3 className="text-3xl font-black text-zinc-900 tracking-tight">{employee.full_name}</h3>
+              <p className="text-blue-600 text-[10px] font-black uppercase tracking-[0.4em] mt-3 bg-blue-50 px-6 py-2 rounded-full border border-blue-100">{employee.designation?.position_name || 'No Designation'}</p>
+
+              <div className="grid grid-cols-2 gap-8 w-full mt-12 pt-12 border-t border-zinc-100">
+                <div className="bg-zinc-50 p-6 rounded-3xl border border-zinc-100">
+                  <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1.5 ">Email Address</p>
+                  <p className="text-sm font-bold text-zinc-900 truncate">{employee.email}</p>
+                </div>
+                <div className="bg-zinc-50 p-6 rounded-3xl border border-zinc-100">
+                  <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1.5">Phone Access</p>
+                  <p className="text-sm font-bold text-zinc-900">{employee.phone}</p>
+                </div>
+              </div>
+
+              <div className="mt-10 w-full flex gap-4">
+                <button
+                  onClick={() => setShowCard(true)}
+                  className="flex-1 h-14 bg-zinc-900 text-white rounded-2xl flex items-center justify-center gap-3 text-[10px] font-black uppercase tracking-widest hover:bg-blue-600 transition-all shadow-xl active:scale-95"
+                >
+                  <CreditCard size={18} /> Generate ID Card
+                </button>
+              </div>
+            </>
+          ) : (
+            <div className="flex flex-col items-center w-full animate-in slide-in-from-bottom-4 duration-500">
+              <IDCard employee={{
+                ...employee,
+                join_date: new Date(employee.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+                designation: { position_name: employee.designation?.position_name || 'Personnel' },
+                department: { dept_name: employee.department?.dept_name || 'General' }
+              }} />
+
+              <div className="mt-8 flex gap-4 w-full px-8 print:hidden">
+                <button
+                  onClick={() => setShowCard(false)}
+                  className="flex-1 h-14 bg-zinc-100 text-zinc-400 rounded-2xl flex items-center justify-center text-[10px] font-black uppercase tracking-widest hover:bg-zinc-200 hover:text-zinc-900 transition-all"
+                >
+                  Back to Profile
+                </button>
+                <button
+                  onClick={handlePrint}
+                  className="flex-1 h-14 bg-blue-600 text-white rounded-2xl flex items-center justify-center gap-3 text-[10px] font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-xl shadow-blue-600/20 active:scale-95"
+                >
+                  <Download size={18} /> Print Card
+                </button>
+              </div>
             </div>
-            <h3 className="text-xl font-bold text-zinc-900 text-center tracking-tight">{employee.full_name}</h3>
-            <p className="text-blue-600 text-xs font-black uppercase tracking-[0.2em] mt-2 mb-8 text-center">{employee.designation.position_name}</p>
-            <div className={`px-5 py-1.5 rounded-full text-[10px] font-black tracking-widest uppercase ${employee.is_active ? 'bg-emerald-400 text-white' : 'bg-rose-500 text-white'} shadow-sm`}>
-              {employee.is_active ? 'Active' : 'Inactive'}
-            </div>
-          </div>
-          <div className="flex-1 p-10 overflow-y-auto max-h-[85vh]">
-            <div className="mb-10"><h4 className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-4">Biography</h4><p className="text-sm text-zinc-600 leading-relaxed italic">{employee.bio || "Professional team member with expertise in their field. Committed to organization growth and excellence in performance."}</p></div>
-            <div className="grid grid-cols-2 gap-10">
-              <div><h4 className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-3">Email Address</h4><p className="text-sm font-bold text-zinc-800">{employee.email}</p></div>
-              <div><h4 className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-3">Phone Number</h4><p className="text-sm font-bold text-zinc-800">{employee.phone}</p></div>
-              <div><h4 className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-3">Department</h4><p className="text-sm font-bold text-zinc-800">{employee.department.dept_name}</p></div>
-              <div><h4 className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-3">Priority</h4><span className="text-[10px] font-black text-amber-600 bg-amber-50 px-2 py-1 rounded-md uppercase tracking-widest">{employee.priority}</span></div>
-            </div>
-            <div className="mt-12 flex gap-4">
-              <button className="flex-1 bg-zinc-900 text-white rounded-2xl py-4 text-sm font-black uppercase tracking-widest hover:bg-blue-600 transition-all active:scale-95 shadow-xl shadow-zinc-900/10">Edit Profile</button>
-              <button className="px-8 border-2 border-zinc-100 text-zinc-500 rounded-2xl py-4 text-sm font-black uppercase tracking-widest hover:bg-zinc-50 transition-all active:scale-95">Actions</button>
-            </div>
-          </div>
+          )}
         </div>
       </div>
     </div>
   );
 };
 
-// --- Main Page ---
-
-export default function EmployeesList() {
+export default function EmployeesPage() {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("All");
-  const [priorityFilter, setPriorityFilter] = useState("All");
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('All');
+  const [priorityFilter, setPriorityFilter] = useState('All');
+  const [entriesPerPage, setEntriesPerPage] = useState('10');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
+
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  useEffect(() => {
-    async function loadEmployees() {
-      try {
-        await new Promise(resolve => setTimeout(resolve, 800));
-        setEmployees([
-          { id: '1', employee_code: "EMP-001", full_name: "Sarah Jenkins", email: "sarah@example.com", phone: "+92-300-1234567", department: { dept_name: "Administration" }, designation: { position_name: "Manager" }, is_active: true, join_date: "12-Jan-2023", priority: 'High', gender: 'Female' },
-          { id: '2', employee_code: "EMP-002", full_name: "David Chen", email: "david@example.com", phone: "+92-321-7654321", department: { dept_name: "Engineering" }, designation: { position_name: "Lead Designer" }, is_active: true, join_date: "25-Mar-2022", priority: 'High', gender: 'Male' },
-          { id: '3', employee_code: "EMP-003", full_name: "Amelia Pond", email: "amy@example.com", phone: "+92-333-5555555", department: { dept_name: "HR" }, designation: { position_name: "Specialist" }, is_active: false, join_date: "05-Aug-2023", priority: 'Medium', gender: 'Female' },
-          { id: '4', employee_code: "EMP-004", full_name: "Rory Williams", email: "rory@example.com", phone: "+92-344-4444444", department: { dept_name: "Operations" }, designation: { position_name: "Coordinator" }, is_active: true, join_date: "15-Feb-2023", priority: 'Low', gender: 'Male' },
-          { id: '5', employee_code: "EMP-005", full_name: "Jessica Alba", email: "jessica@example.com", phone: "+92-300-9999999", department: { dept_name: "Marketing" }, designation: { position_name: "Director" }, is_active: true, join_date: "10-Nov-2021", priority: 'High', gender: 'Female' },
-          { id: '6', employee_code: "EMP-006", full_name: "Marcus Aurelius", email: "marcus@example.com", phone: "+92-301-8888888", department: { dept_name: "Strategy" }, designation: { position_name: "Consultant" }, is_active: false, join_date: "01-Jan-2024", priority: 'Medium', gender: 'Male' },
-          { id: '7', employee_code: "EMP-007", full_name: "Elena Gilbert", email: "elena@example.com", phone: "+92-302-7777777", department: { dept_name: "Legal" }, designation: { position_name: "Advocate" }, is_active: true, join_date: "12-Sep-2023", priority: 'Low', gender: 'Female' },
-          { id: '8', employee_code: "EMP-008", full_name: "Stefan Salvatore", email: "stefan@example.com", phone: "+92-303-6666666", department: { dept_name: "Security" }, designation: { position_name: "Officer" }, is_active: true, join_date: "30-Oct-2023", priority: 'High', gender: 'Male' },
-          { id: '9', employee_code: "EMP-009", full_name: "Bonnie Bennett", email: "bonnie@example.com", phone: "+92-304-5555555", department: { dept_name: "Innovation" }, designation: { position_name: "Lead Dev" }, is_active: true, join_date: "14-May-2023", priority: 'Medium', gender: 'Female' },
-          { id: '10', employee_code: "EMP-010", full_name: "Caroline Forbes", email: "caroline@example.com", phone: "+92-305-4444444", department: { dept_name: "Publicity" }, designation: { position_name: "Manager" }, is_active: false, join_date: "20-Dec-2023", priority: 'Low', gender: 'Female' },
-        ]);
-      } catch (err) {
-        console.error("Failed to load employees");
-      } finally {
-        setLoading(false);
+  async function loadData() {
+    try {
+      setLoading(true);
+      const res = await fetchWithAuth('/employees');
+      if (res.ok) {
+        const data = await res.json();
+        // Handle both Array response and { employees: Array } response
+        const employeeArray = Array.isArray(data) ? data : (data.employees || []);
+        setEmployees(employeeArray);
       }
+    } catch (err) {
+      console.error("Failed to load employees:", err);
+      setEmployees([]); // Fallback to empty array on error
+    } finally {
+      setLoading(false);
     }
-    loadEmployees();
-  }, []);
+  }
+
+  useEffect(() => { loadData(); }, []);
+
+  const filtered = Array.isArray(employees) ? employees.filter(e => {
+    const matchesSearch = (e.full_name || '').toLowerCase().includes(search.toLowerCase()) ||
+      (e.employee_code || '').toLowerCase().includes(search.toLowerCase());
+    const matchesStatus = statusFilter === 'All' || (statusFilter === 'Active' ? e.is_active : !e.is_active);
+    const matchesPriority = priorityFilter === 'All' || (e.priority === priorityFilter);
+    return matchesSearch && matchesStatus && matchesPriority;
+  }) : [];
 
   const stats = {
-    total: employees.length,
-    new: 15, // Fixed to match image
-    male: 85, // Fixed to match image
-    female: 20, // Fixed to match image
-  };
-
-  const filteredEmployees = employees.filter(emp => {
-    const matchesSearch = emp.full_name?.toLowerCase().includes(search.toLowerCase()) || 
-                         emp.employee_code?.toLowerCase().includes(search.toLowerCase());
-    const matchesStatus = statusFilter === 'All' || 
-                         (statusFilter === 'Active' && emp.is_active) || 
-                         (statusFilter === 'Inactive' && !emp.is_active);
-    const matchesPriority = priorityFilter === 'All' || emp.priority === priorityFilter;
-    return matchesSearch && matchesStatus && matchesPriority;
-  });
-
-  const handleOpenDetail = (emp: Employee) => {
-    setSelectedEmployee(emp);
-    setIsModalOpen(true);
+    total: Array.isArray(employees) ? employees.length : 0,
+    new: Array.isArray(employees) ? employees.filter(e => (new Date().getTime() - new Date(e.created_at).getTime()) < 30 * 24 * 60 * 60 * 1000).length : 0,
+    male: Array.isArray(employees) ? employees.filter(e => e.gender === 'Male').length : 0,
+    female: Array.isArray(employees) ? employees.filter(e => e.gender === 'Female').length : 0,
   };
 
   return (
     <ProtectedLayout>
-      <div className="p-6 lg:p-10 max-w-[1600px] mx-auto space-y-10 animate-in fade-in duration-700">
-        
+      <div className="p-4 sm:p-6 lg:p-10 max-w-[1600px] mx-auto space-y-10 animate-in fade-in duration-700">
+
         {/* Header Section */}
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 pb-2">
-          <div>
-            <h1 className="text-3xl font-black tracking-tighter text-zinc-900">Employee</h1>
-          </div>
+        <div>
+          <h1 className="text-4xl font-black tracking-tight text-zinc-900">Employee</h1>
         </div>
 
-        {/* Stats Grid - Horizontal Style */}
+        {/* Stats Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          <StatsCard title="Total Employee" count={stats.total} icon={Users} color="bg-indigo-600" bgColor="bg-indigo-50" />
-          <StatsCard title="New Employee" count={stats.new} icon={UserPlus} color="bg-amber-500" bgColor="bg-amber-50" />
-          <StatsCard title="Male" count={stats.male} icon={Globe} color="bg-blue-500" bgColor="bg-blue-50" />
-          <StatsCard title="Female" count={stats.female} icon={Briefcase} color="bg-rose-400" bgColor="bg-rose-50" />
+          <StatsCard title="Total Employee" count={stats.total} icon={Users} color="text-indigo-600" bgColor="bg-indigo-50" loading={loading} />
+          <StatsCard title="New Employee" count={stats.new} icon={UserPlus} color="text-amber-600" bgColor="bg-amber-50" loading={loading} />
+          <StatsCard title="Male" count={stats.male} icon={UserIcon} color="text-blue-600" bgColor="bg-blue-50" loading={loading} />
+          <StatsCard title="Female" count={stats.female} icon={UserIcon} color="text-rose-600" bgColor="bg-rose-50" loading={loading} />
         </div>
 
-        {/* Action Bar */}
-        <div className="flex flex-col xl:flex-row gap-6">
-          {/* Filters */}
-          <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="space-y-1.5">
-              <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Employee Name</p>
-              <div className="relative">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-300" />
-                <input
-                  type="text"
-                  placeholder="Search here..."
-                  className="w-full pl-11 pr-4 py-3.5 bg-white border border-zinc-100 rounded-2xl text-sm font-bold text-zinc-700 focus:ring-4 focus:ring-blue-500/5 outline-none transition shadow-sm"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                />
-              </div>
-            </div>
-            <div className="space-y-1.5">
-              <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Select Status</p>
-              <select 
-                className="w-full px-4 py-3.5 bg-white border border-zinc-100 rounded-2xl text-sm font-bold text-zinc-700 focus:ring-4 focus:ring-blue-500/5 outline-none cursor-pointer shadow-sm appearance-none"
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-              >
-                <option>All</option>
-                <option>Active</option>
-                <option>Inactive</option>
-              </select>
-            </div>
-            <div className="space-y-1.5">
-              <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Select Priority</p>
-              <div className="flex gap-4">
-                <select 
-                  className="flex-1 px-4 py-3.5 bg-white border border-zinc-100 rounded-2xl text-sm font-bold text-zinc-700 focus:ring-4 focus:ring-blue-500/5 outline-none cursor-pointer shadow-sm appearance-none"
-                  value={priorityFilter}
-                  onChange={(e) => setPriorityFilter(e.target.value)}
-                >
-                  <option>All</option>
-                  <option>High</option>
-                  <option>Medium</option>
-                  <option>Low</option>
-                </select>
-                <button className="h-12 w-12 bg-zinc-900 rounded-2xl flex items-center justify-center text-white hover:bg-zinc-800 transition-all shadow-xl shadow-zinc-900/10 active:scale-95">
-                  <Search size={20} strokeWidth={3} />
-                </button>
-              </div>
+        {/* Filter Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-end mt-12 bg-white/50 p-6 rounded-[2rem] border border-zinc-100 shadow-sm">
+          <div className="space-y-3">
+            <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest pl-1">Employee Name</label>
+            <div className="relative group">
+              <input
+                type="text"
+                placeholder="Search here..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full h-14 pl-6 pr-6 bg-white border border-zinc-100 rounded-2xl outline-none focus:border-zinc-900 focus:ring-4 focus:ring-zinc-900/5 transition-all text-sm font-bold"
+              />
             </div>
           </div>
-          
-          <div className="flex items-end pb-1 gap-4 self-center xl:self-end">
+
+          <div className="space-y-3">
+            <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest pl-1">Select Status</label>
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="w-full h-14 px-6 bg-white border border-zinc-100 rounded-2xl outline-none focus:border-zinc-900 transition-all text-sm font-bold appearance-none cursor-pointer"
+            >
+              <option value="All">All</option>
+              <option value="Active">Active</option>
+              <option value="Inactive">Inactive</option>
+            </select>
+          </div>
+
+          <div className="space-y-3">
+            <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest pl-1">Select Priority</label>
+            <select
+              value={priorityFilter}
+              onChange={(e) => setPriorityFilter(e.target.value)}
+              className="w-full h-14 px-6 bg-white border border-zinc-100 rounded-2xl outline-none focus:border-zinc-900 transition-all text-sm font-bold appearance-none cursor-pointer"
+            >
+              <option value="All">All</option>
+              <option value="High">High</option>
+              <option value="Medium">Medium</option>
+              <option value="Low">Low</option>
+            </select>
+          </div>
+
+          <div className="flex gap-3 h-14">
+            <button
+              className="h-full w-14 bg-zinc-900 text-white rounded-2xl flex items-center justify-center hover:bg-zinc-800 transition-all active:scale-95 shadow-lg shadow-zinc-900/10"
+            >
+              <Search size={20} />
+            </button>
             <Link
               href="/employees/new"
-              className="inline-flex items-center justify-center rounded-2xl bg-white border border-zinc-200 h-12 px-8 text-xs font-black text-zinc-900 hover:bg-zinc-50 transition-all active:scale-95 uppercase tracking-widest shadow-sm"
+              className="flex-1 h-full px-6 flex items-center justify-center gap-2 border border-zinc-200 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-50 transition-all active:scale-95"
             >
-              <Plus className="-ml-1 mr-2 h-4 w-4" strokeWidth={3} />
-              Add Employee
+              + Add Employee
             </Link>
           </div>
         </div>
 
-        {/* Grid/List Controls */}
-        <div className="flex items-center justify-between">
+        {/* Options Row */}
+        <div className="flex items-center justify-between mt-8">
           <div className="flex items-center gap-3">
-            <p className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Show Entries</p>
-            <select className="bg-white border border-zinc-100 rounded-xl px-3 py-2 text-xs font-bold text-zinc-600 outline-none shadow-sm cursor-pointer">
-              <option>10</option>
-              <option>25</option>
-              <option>50</option>
+            <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Show Entries</p>
+            <select
+              value={entriesPerPage}
+              onChange={(e) => setEntriesPerPage(e.target.value)}
+              className="h-10 px-4 bg-white border border-zinc-100 rounded-xl outline-none text-[10px] font-black uppercase cursor-pointer"
+            >
+              <option value="10">10</option>
+              <option value="25">25</option>
+              <option value="50">50</option>
             </select>
           </div>
-          <div className="flex items-center p-1.5 bg-white border border-zinc-100 rounded-2xl shadow-sm">
-            <button 
+          <div className="flex items-center p-1 bg-zinc-100 rounded-xl">
+            <button
               onClick={() => setViewMode('grid')}
-              className={`p-2.5 rounded-xl transition-all ${viewMode === 'grid' ? 'bg-blue-600 text-white shadow-xl shadow-blue-600/20' : 'text-zinc-400 hover:text-zinc-600'}`}
+              className={`h-10 w-10 flex items-center justify-center transition-all ${viewMode === 'grid' ? 'bg-white rounded-lg shadow-sm text-blue-600' : 'text-zinc-400 hover:text-zinc-900'}`}
             >
-              <LayoutGrid size={20} />
+              <LayoutGrid size={16} />
             </button>
-            <button 
+            <button
               onClick={() => setViewMode('list')}
-              className={`p-2.5 rounded-xl transition-all ${viewMode === 'list' ? 'bg-blue-600 text-white shadow-xl shadow-blue-600/20' : 'text-zinc-400 hover:text-zinc-600'}`}
+              className={`h-10 w-10 flex items-center justify-center transition-all ${viewMode === 'list' ? 'bg-white rounded-lg shadow-sm text-blue-600' : 'text-zinc-400 hover:text-zinc-900'}`}
             >
-              <ListIcon size={20} />
+              <ListIcon size={16} />
             </button>
           </div>
         </div>
 
-        {/* Content Area */}
-        <div className="relative">
-          {loading ? (
-            <div className="py-20 flex flex-col items-center justify-center text-zinc-400 space-y-4">
-              <div className="h-10 w-10 border-4 border-zinc-200 border-t-blue-600 rounded-full animate-spin" />
-              <p className="text-xs font-bold uppercase tracking-widest">Loading Records...</p>
-            </div>
-          ) : filteredEmployees.length === 0 ? (
-            <div className="py-20 text-center bg-white rounded-[3rem] border border-dashed border-zinc-200">
-              <p className="text-zinc-500 font-bold">No results found.</p>
-            </div>
-          ) : viewMode === 'grid' ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-8">
-              {filteredEmployees.map((person) => (
-                <EmployeeCard key={person.id} employee={person} onClick={() => handleOpenDetail(person)} />
-              ))}
-            </div>
-          ) : (
-            <EmployeeTable employees={filteredEmployees} onDetailClick={handleOpenDetail} />
-          )}
-        </div>
-
-        {/* Pagination Section */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-6 pt-6 border-t border-zinc-100">
-          <p className="text-[11px] font-black text-zinc-400 uppercase tracking-widest">
-            Showing <span className="text-zinc-900">1</span> to <span className="text-zinc-900">{filteredEmployees.length}</span> of <span className="text-zinc-900">{employees.length}</span> entries
-          </p>
-          <div className="flex items-center gap-2">
-            <button className="h-10 w-10 flex items-center justify-center rounded-xl bg-white border border-zinc-200 text-zinc-500 hover:bg-zinc-50 transition-colors">
-              <ChevronLeft size={16} />
-            </button>
-            <div className="flex items-center gap-1">
-              {[1, 2, 3].map(p => (
-                <button key={p} className={`h-10 w-10 flex items-center justify-center rounded-xl text-xs font-bold transition-all ${p === 1 ? 'bg-blue-600 text-white shadow-lg' : 'bg-white border border-zinc-100 text-zinc-500'}`}>
-                  {p}
-                </button>
-              ))}
-            </div>
-            <button className="h-10 w-10 flex items-center justify-center rounded-xl bg-white border border-zinc-200 text-zinc-500 hover:bg-zinc-50 transition-colors">
-              <ChevronRight size={16} />
-            </button>
+        {/* View Content */}
+        {viewMode === 'list' ? (
+          <EmployeeTable
+            employees={filtered.slice(0, parseInt(entriesPerPage))}
+            loading={loading}
+            onDetailClick={(emp) => {
+              setSelectedEmployee(emp);
+              setIsModalOpen(true);
+            }}
+          />
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-8 mt-8">
+            {loading ? (
+              [...Array(entriesPerPage === 'All' ? 10 : parseInt(entriesPerPage))].map((_, i) => (
+                <div key={i} className="bg-white rounded-[2rem] border border-zinc-100 p-8 shadow-sm h-[320px]">
+                  <Skeleton className="h-16 w-16 rounded-full mx-auto" />
+                  <Skeleton className="h-4 w-3/4 mx-auto mt-6" />
+                  <Skeleton className="h-3 w-1/2 mx-auto mt-2" />
+                  <div className="flex gap-2 mt-8">
+                    <Skeleton className="h-10 flex-1 rounded-lg" />
+                    <Skeleton className="h-10 flex-1 rounded-lg" />
+                  </div>
+                </div>
+              ))
+            ) : filtered.length === 0 ? (
+              <div className="col-span-full py-20 text-center bg-white rounded-[2rem] border border-zinc-100">
+                <p className="text-sm font-bold text-zinc-400 uppercase tracking-widest">No personnel records found</p>
+              </div>
+            ) : (
+              filtered.slice(0, entriesPerPage === 'All' ? filtered.length : parseInt(entriesPerPage)).map((emp) => (
+                <EmployeeCard
+                  key={emp.employee_id}
+                  employee={emp}
+                  onClick={() => {
+                    setSelectedEmployee(emp);
+                    setIsModalOpen(true);
+                  }}
+                />
+              ))
+            )}
           </div>
-        </div>
+        )}
+
       </div>
 
-      {/* Employee Detail Modal */}
-      <DetailModal 
-        employee={selectedEmployee} 
-        open={isModalOpen} 
-        onClose={() => setIsModalOpen(false)} 
+      <DetailModal
+        employee={selectedEmployee}
+        open={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
       />
+
     </ProtectedLayout>
   );
 }

@@ -20,7 +20,7 @@ api = NinjaAPI(
 # Register routers
 api.add_router("/auth", auth_router)
 api.add_router("/permissions", permissions_router)
-api.add_router("", employees_router)  # Employees at /api/employees
+api.add_router("/employees", employees_router)  # Employees at /api/employees
 
 urlpatterns = [
     path('auth-admin/', admin.site.urls),

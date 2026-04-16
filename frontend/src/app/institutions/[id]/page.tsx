@@ -24,7 +24,7 @@ export default function InstitutionDetails() {
   const router = useRouter();
   const params = useParams();
   const id = params?.id as string;
-  
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [institution, setInstitution] = useState<Institution | null>(null);
@@ -46,7 +46,7 @@ export default function InstitutionDetails() {
         setLoading(false);
       }
     }
-    
+
     if (id) {
       loadInstitution();
     }
@@ -54,7 +54,7 @@ export default function InstitutionDetails() {
 
   const handleDelete = async () => {
     if (!window.confirm('Are you sure you want to delete this institution?')) return;
-    
+
     try {
       const response = await fetchWithAuth(`/employees/institutions/${id}/`, { method: 'DELETE' });
       if (response.ok) {
@@ -105,7 +105,7 @@ export default function InstitutionDetails() {
   return (
     <ProtectedLayout>
       <div className="p-6 lg:p-10 max-w-4xl mx-auto space-y-8 animate-in fade-in duration-500">
-        
+
         {/* Header */}
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center space-x-4">

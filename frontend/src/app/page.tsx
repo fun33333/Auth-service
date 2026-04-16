@@ -1,396 +1,548 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
-import ProtectedLayout from '@/components/ProtectedLayout';
-import Link from 'next/link';
-import { 
-  Users, Building2, LayoutGrid, Calendar, TrendingUp, 
-  Plus, AlertTriangle, ArrowRight, UserPlus, 
-  UserMinus, Settings, Activity, FileText,
-  Clock, Briefcase, Landmark
-} from 'lucide-react';
+import React, { useEffect, useState } from "react";
+import ProtectedLayout from "@/components/ProtectedLayout";
+import { fetchWithAuth } from "@/utils/api";
+import {
+  Building2,
+  LayoutGrid,
+  Users,
+  CheckCircle2,
+  XCircle,
+  AlertTriangle,
+  TrendingUp,
+  Activity,
+  Settings,
+  UserPlus,
+  FolderPlus,
+  FilePlus,
+  ArrowRight,
+  FileWarning,
+  Clock,
+} from "lucide-react";
 
-// --- Types ---
-interface DashboardStats {
-  totalEmployees: number;
-  totalDepartments: number;
-  totalInstitutions: number;
-  activeCount: number;
-  inactiveCount: number;
-  deptDistribution: { name: string; count: number }[];
-  hiringTrend: { month: string; count: number }[];
-  recentActivity: any[];
+// ─── Types ────────────────────────────────────────────────────────────────────
+interface StreamEvent {
+  name: string;
+  action: string;
+  time: string;
+  icon: "user" | "dept" | "resign";
 }
 
-// --- Components ---
-
-const MetricCard = ({ title, value, subtext, icon: Icon, color, bgColor }: any) => (
-  <div className="bg-white p-6 rounded-[2rem] border border-zinc-100 shadow-sm hover:shadow-xl transition-all duration-300 group relative overflow-hidden">
-    <div className={`absolute top-6 right-6 p-3 rounded-2xl ${bgColor} ${color} group-hover:scale-110 transition-transform`}>
-      <Icon size={24} strokeWidth={2.5} />
-    </div>
-    <p className="text-zinc-400 text-xs font-bold uppercase tracking-widest mb-1">{title}</p>
-    <div className="flex items-baseline gap-2">
-      <h3 className="text-3xl font-black text-zinc-900 tracking-tighter leading-none">{value}</h3>
-      <span className="text-[10px] font-bold text-emerald-500">{subtext}</span>
-    </div>
-  </div>
-);
-
-// Simple SVG Bar Chart Component
-const SimpleBarChart = ({ data }: { data: { name: string; count: number }[] }) => {
-  const max = Math.max(...data.map(d => d.count)) || 1;
-  return (
-    <div className="space-y-4">
-      {data.map((d, i) => (
-        <div key={i} className="space-y-1.5">
-          <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-widest text-zinc-500">
-            <span>{d.name}</span>
-            <span className="text-zinc-900">{d.count}</span>
-          </div>
-          <div className="h-2 w-full bg-zinc-50 rounded-full overflow-hidden">
-            <div 
-              className="h-full bg-white rounded-full transition-all duration-1000 ease-out"
-              style={{ width: `${(d.count / max) * 100}%` }}
-            />
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-};
-
-// Simple SVG Line Chart Component
-const SimpleLineChart = ({ data }: { data: { month: string; count: number }[] }) => {
-  const max = Math.max(...data.map(d => d.count)) || 1;
-  const height = 100;
-  const width = 300;
-  const points = data.map((d, i) => {
-    const x = (i / (data.length - 1)) * width;
-    const y = height - (d.count / max) * height;
+// ─── Simple SVG Line Chart ────────────────────────────────────────────────────
+function LineChart({ data }: { data: number[] }) {
+  const W = 220,
+    H = 90;
+  const max = Math.max(...data);
+  const min = Math.min(...data);
+  const range = max - min || 1;
+  const pts = data.map((v, i) => {
+    const x = (i / (data.length - 1)) * (W - 20) + 10;
+    const y = H - 10 - ((v - min) / range) * (H - 20);
     return `${x},${y}`;
-  }).join(' ');
+  });
+  const polyline = pts.join(" ");
+  const area =
+    `M ${pts[0]} ` +
+    pts
+      .slice(1)
+      .map((p) => `L ${p}`)
+      .join(" ") +
+    ` L ${(data.length - 1 / (data.length - 1)) * (W - 20) + 10},${H - 10} L 10,${H - 10} Z`;
 
   return (
-    <div className="relative h-32 w-full mt-4">
-      <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full overflow-visible">
-        <polyline
-          fill="none"
-          stroke="#2563eb"
-          strokeWidth="3"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          points={points}
-          className="animate-in slide-in-from-left duration-1000"
-        />
-        {data.map((d, i) => (
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-full">
+      <defs>
+        <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#6366f1" stopOpacity="0.25" />
+          <stop offset="100%" stopColor="#6366f1" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <path d={area} fill="url(#chartGrad)" />
+      <polyline
+        points={polyline}
+        fill="none"
+        stroke="#6366f1"
+        strokeWidth="2"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
+      {pts.map((pt, i) => {
+        const [x, y] = pt.split(",");
+        return (
           <circle
             key={i}
-            cx={(i / (data.length - 1)) * width}
-            cy={height - (d.count / max) * height}
-            r="4"
+            cx={x}
+            cy={y}
+            r="3.5"
             fill="white"
-            stroke="#2563eb"
+            stroke="#6366f1"
             strokeWidth="2"
           />
-        ))}
-      </svg>
-      <div className="flex justify-between mt-2">
-        {data.map((d, i) => (
-          <span key={i} className="text-[10px] font-bold text-zinc-400 uppercase">{d.month}</span>
-        ))}
+        );
+      })}
+    </svg>
+  );
+}
+
+// ─── Stat Card ────────────────────────────────────────────────────────────────
+function StatCard({
+  title,
+  value,
+  sub,
+  icon: Icon,
+  loading,
+}: {
+  title: string;
+  value: string | number;
+  sub?: string;
+  icon: React.ElementType;
+  loading: boolean;
+}) {
+  return (
+    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 flex items-center justify-between hover:shadow-md transition-all duration-300">
+      <div>
+        <p className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 mb-1">
+          {title}
+        </p>
+        {loading ? (
+          <div className="h-8 w-16 bg-slate-100 rounded animate-pulse" />
+        ) : (
+          <h2 className="text-3xl font-black text-slate-900 leading-none">
+            {value}
+          </h2>
+        )}
+        {sub && !loading && (
+          <p className="text-[11px] text-emerald-600 font-semibold mt-1">
+            {sub}
+          </p>
+        )}
+      </div>
+      <div className="w-12 h-12 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400">
+        <Icon size={22} strokeWidth={1.5} />
       </div>
     </div>
   );
-};
+}
 
+// ─── System Status Card ───────────────────────────────────────────────────────
+function SystemStatusCard({
+  active,
+  inactive,
+}: {
+  active: number;
+  inactive: number;
+}) {
+  return (
+    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 hover:shadow-md transition-all duration-300">
+      <p className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 mb-3">
+        System Status
+      </p>
+      <div className="flex items-center gap-4 mb-3">
+        <span className="text-xs font-semibold text-slate-600">
+          ACTIVE &nbsp;
+          <span className="text-slate-900 font-black">{active}</span>
+        </span>
+        <span className="text-xs font-semibold text-slate-600">
+          INACTIVE &nbsp;
+          <span className="text-slate-900 font-black">{inactive}</span>
+        </span>
+        <span className="text-xs font-semibold text-slate-500">IS</span>
+      </div>
+      <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden mb-3">
+        <div
+          className="h-2 bg-emerald-400 rounded-full transition-all duration-700"
+          style={{
+            width: `${active + inactive > 0 ? (active / (active + inactive)) * 100 : 80}%`,
+          }}
+        />
+      </div>
+      <div className="flex items-center gap-1.5 text-[11px] text-emerald-600 font-semibold">
+        <CheckCircle2 size={13} />
+        ALL SYSTEMS OPERATIONAL
+      </div>
+    </div>
+  );
+}
+
+// ─── Org Mix Row ──────────────────────────────────────────────────────────────
+function OrgMixRow({ label, count }: { label: string; count: number }) {
+  return (
+    <div className="flex items-center justify-between py-2.5 border-b border-slate-50 last:border-0">
+      <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+        {label}
+      </span>
+      <span className="text-sm font-black text-slate-800">{count}</span>
+    </div>
+  );
+}
+
+// ─── Alert Item ───────────────────────────────────────────────────────────────
+function AlertItem({
+  color,
+  icon: Icon,
+  title,
+  sub,
+}: {
+  color: "red" | "amber";
+  icon: React.ElementType;
+  title: string;
+  sub: string;
+}) {
+  const palette = {
+    red: "bg-red-50 border-red-100 text-red-500",
+    amber: "bg-amber-50 border-amber-100 text-amber-500",
+  };
+  return (
+    <div
+      className={`rounded-xl border p-3.5 flex items-start gap-3 ${palette[color]}`}
+    >
+      <Icon size={18} className="mt-0.5 shrink-0" />
+      <div className="flex-1 min-w-0">
+        <p className="text-xs font-black uppercase tracking-wide">{title}</p>
+        <p className="text-[11px] mt-0.5 opacity-80 truncate">{sub}</p>
+      </div>
+      <ArrowRight size={14} className="mt-0.5 shrink-0 opacity-60" />
+    </div>
+  );
+}
+
+// ─── Stream Row ───────────────────────────────────────────────────────────────
+function StreamRow({ event }: { event: StreamEvent }) {
+  const iconMap = {
+    user: (
+      <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center">
+        <Users size={14} className="text-indigo-500" />
+      </div>
+    ),
+    dept: (
+      <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+        <LayoutGrid size={14} className="text-blue-500" />
+      </div>
+    ),
+    resign: (
+      <div className="w-8 h-8 rounded-full bg-rose-100 flex items-center justify-center">
+        <XCircle size={14} className="text-rose-500" />
+      </div>
+    ),
+  };
+  return (
+    <div className="flex items-center gap-3 py-2.5 border-b border-slate-50 last:border-0">
+      {iconMap[event.icon]}
+      <div className="flex-1 min-w-0">
+        <p className="text-xs font-black text-slate-700 uppercase tracking-wide">
+          {event.name}
+        </p>
+        <p className="text-[11px] text-slate-400">{event.action}</p>
+      </div>
+      <span className="text-[10px] text-slate-400 shrink-0">{event.time}</span>
+    </div>
+  );
+}
+
+// ─── Intelligence Hub Action ───────────────────────────────────────────────────
+function HubAction({
+  icon: Icon,
+  label,
+  sub,
+  bg,
+  href,
+}: {
+  icon: React.ElementType;
+  label: string;
+  sub: string;
+  bg: string;
+  href: string;
+}) {
+  return (
+    <a
+      href={href}
+      className="flex flex-col items-center text-center gap-2 hover:scale-105 transition-transform duration-200"
+    >
+      <div
+        className={`w-14 h-14 rounded-2xl flex items-center justify-center ${bg}`}
+      >
+        <Icon size={22} className="text-white" />
+      </div>
+      <p className="text-xs font-black text-slate-700 uppercase tracking-wide">
+        {label}
+      </p>
+      <p className="text-[10px] text-slate-400">{sub}</p>
+    </a>
+  );
+}
+
+// ─── Dashboard Page ────────────────────────────────────────────────────────────
 export default function Dashboard() {
-  const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({
+    employees: 0,
+    institutions: 0,
+    departments: 0,
+    designations: 0,
+  });
+
+  const [deptMix, setDeptMix] = useState<{ name: string; count: number }[]>([]);
+
+  // Simulated stream events (replace with real-time data if available)
+  const streamEvents: StreamEvent[] = [
+    { name: "James Smith", action: "Joined Engineering", time: "2 HOURS AGO", icon: "user" },
+    { name: "Sarah Doe", action: "Moved to Marketing", time: "3 HOURS AGO", icon: "dept" },
+    { name: "Mark Wilson", action: "Resigned from Sales", time: "1 DAY AGO", icon: "resign" },
+  ];
+
+  // Monthly hiring trend (mock sparkline data)
+  const monthlyTrend = [14, 22, 18, 30, 26, 40];
+  const months = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN"];
+
+  const today = new Date().toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  });
 
   useEffect(() => {
-    async function loadDashboard() {
+    async function loadData() {
       try {
-        await new Promise(resolve => setTimeout(resolve, 800));
+        setLoading(true);
+        const [empRes, instRes, deptRes, desigRes] = await Promise.all([
+          fetchWithAuth("/employees/"),
+          fetchWithAuth("/institutions/"),
+          fetchWithAuth("/departments/"),
+          fetchWithAuth("/designations/"),
+        ]);
+
+        const employees = empRes.ok ? await empRes.json() : [];
+        const institutions = instRes.ok ? await instRes.json() : [];
+        const departments = deptRes.ok ? await deptRes.json() : [];
+        const designations = desigRes.ok ? await desigRes.json() : [];
+
+        const empArr = Array.isArray(employees)
+          ? employees
+          : employees.employees || [];
+        const instArr = Array.isArray(institutions)
+          ? institutions
+          : institutions.institutions || [];
+        const deptArr = Array.isArray(departments)
+          ? departments
+          : departments.departments || [];
+        const desigArr = Array.isArray(designations)
+          ? designations
+          : designations.designations || [];
+
         setStats({
-          totalEmployees: 560,
-          totalDepartments: 12,
-          totalInstitutions: 4,
-          activeCount: 545,
-          inactiveCount: 15,
-          deptDistribution: [
+          employees: empArr.length,
+          institutions: instArr.length,
+          departments: deptArr.length,
+          designations: desigArr.length,
+        });
+
+        // Build org mix from departments
+        if (deptArr.length > 0) {
+          const mix = deptArr.slice(0, 5).map((d: any) => ({
+            name: d.name || d.department_name || "Department",
+            count: d.employee_count || Math.floor(Math.random() * 150 + 50),
+          }));
+          setDeptMix(mix);
+        } else {
+          setDeptMix([
             { name: "Engineering", count: 145 },
             { name: "Marketing", count: 85 },
-            { name: "Sales", count: 120 },
+            { name: "Sales", count: 170 },
             { name: "Administration", count: 110 },
             { name: "Strategy", count: 100 },
-          ],
-          hiringTrend: [
-            { month: "Jan", count: 12 },
-            { month: "Feb", count: 18 },
-            { month: "Mar", count: 15 },
-            { month: "Apr", count: 28 },
-            { month: "May", count: 22 },
-            { month: "Jun", count: 35 },
-          ],
-          recentActivity: [
-            { id: 1, type: 'join', user: 'James Smith', detail: 'joined Engineering', time: '2 hours ago' },
-            { id: 2, type: 'dept', user: 'Sarah Doe', detail: 'moved to Marketing', time: '5 hours ago' },
-            { id: 3, type: 'resign', user: 'Mark Wilson', detail: 'resigned from Sales', time: '1 day ago' },
-            { id: 4, type: 'join', user: 'Elena Gilbert', detail: 'joined Admin', time: '2 days ago' },
-          ]
-        });
+          ]);
+        }
+      } catch (err) {
+        console.error("Failed to load dashboard stats", err);
       } finally {
         setLoading(false);
       }
     }
-    loadDashboard();
+    loadData();
   }, []);
 
   return (
     <ProtectedLayout>
-      <div className="p-6 lg:p-10 max-w-[1600px] mx-auto space-y-10 animate-in fade-in duration-700">
-        
-        {/* Header Area */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+      <div className="p-5 lg:p-8 space-y-6 max-w-[1400px] mx-auto animate-in fade-in duration-500">
+
+        {/* Page Header */}
+        <div className="flex items-start justify-between">
           <div>
-            <h1 className="text-4xl font-black tracking-tight text-zinc-900 leading-none">Dashboard</h1>
-            <p className="mt-2 text-sm font-bold text-zinc-400 uppercase tracking-widest italic">Organizational Overview & Intelligence</p>
+            <h1 className="text-3xl font-black tracking-tight text-slate-900">
+              Dashboard
+            </h1>
+            <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 mt-1">
+              Organizational Overview &amp; Intelligence
+            </p>
           </div>
-          <div className="flex gap-3">
-            <div className="bg-white p-3 rounded-2xl border border-zinc-100 shadow-sm flex items-center gap-3">
-              <div className="h-8 w-8 bg-zinc-50 rounded-lg flex items-center justify-center text-zinc-400">
-                <Calendar size={18} />
-              </div>
-              <div>
-                <p className="text-[10px] font-black text-zinc-400 uppercase tracking-tighter">Current Date</p>
-                <p className="text-xs font-bold text-zinc-900">31 March, 2026</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Top Section - Key Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <MetricCard 
-            title="Total Institutions" 
-            value={stats?.totalInstitutions || 0} 
-            subtext="+0 this month"
-            icon={Landmark} 
-            color="text-indigo-600" 
-            bgColor="bg-indigo-50" 
-          />
-          <MetricCard 
-            title="Total Departments" 
-            value={stats?.totalDepartments || 0} 
-            subtext="+1 this week"
-            icon={LayoutGrid} 
-            color="text-blue-600" 
-            bgColor="bg-blue-50" 
-          />
-          <MetricCard 
-            title="Total Employees" 
-            value={stats?.totalEmployees || 0} 
-            subtext="+12% growth"
-            icon={Users} 
-            color="text-emerald-600" 
-            bgColor="bg-emerald-50" 
-          />
-          <div className="bg-white p-6 rounded-[2rem] border border-zinc-100 shadow-sm flex flex-col justify-between">
-            <div>
-              <p className="text-zinc-400 text-xs font-bold uppercase tracking-widest mb-3">System Status</p>
-              <div className="flex items-center gap-4">
-                <div className="flex-1 space-y-1">
-                  <div className="flex justify-between text-[10px] font-bold text-emerald-500 uppercase">
-                    <span>Active</span>
-                    <span>{stats?.activeCount}</span>
-                  </div>
-                  <div className="h-1.5 w-full bg-zinc-50 rounded-full overflow-hidden">
-                    <div className="h-full bg-emerald-500 w-[95%]" />
-                  </div>
-                </div>
-                <div className="flex-1 space-y-1">
-                  <div className="flex justify-between text-[10px] font-bold text-rose-500 uppercase">
-                    <span>Inactive</span>
-                    <span>{stats?.inactiveCount}</span>
-                  </div>
-                  <div className="h-1.5 w-full bg-zinc-50 rounded-full overflow-hidden">
-                    <div className="h-full bg-rose-500 w-[5%]" />
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="mt-4 flex gap-2 items-center text-[10px] font-black text-emerald-600 uppercase tracking-widest">
-              <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-              All Systems Operational
-            </div>
+          <div className="flex items-center gap-2 text-xs text-slate-500 bg-white border border-slate-100 rounded-xl px-4 py-2.5 shadow-sm">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mr-1">
+              Current Date
+            </span>
+            <span className="font-black text-slate-700">{today}</span>
           </div>
         </div>
 
-        {/* Main Grid View */}
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-          
-          {/* Charts Column */}
-          <div className="xl:col-span-2 space-y-8">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {/* Dept Distribution */}
-              <div className="bg-white p-8 rounded-[2.5rem] border border-zinc-100 shadow-sm">
-                <div className="flex items-center justify-between mb-8">
-                  <h3 className="text-lg font-black text-zinc-900 tracking-tight">Organization Mix</h3>
-                  <button className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Employees per Dept</button>
-                </div>
-                {stats ? <SimpleBarChart data={stats.deptDistribution} /> : <div className="h-40 bg-zinc-50 rounded-2xl animate-pulse" />}
-              </div>
+        {/* ── Row 1: Stat Cards + System Status ── */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatCard
+            title="Total Institutions"
+            value={stats.institutions}
+            sub="+0 this month"
+            icon={Building2}
+            loading={loading}
+          />
+          <StatCard
+            title="Total Departments"
+            value={stats.departments}
+            sub="1 this week"
+            icon={LayoutGrid}
+            loading={loading}
+          />
+          <StatCard
+            title="Total Employees"
+            value={stats.employees}
+            sub="+1.2% growth"
+            icon={Users}
+            loading={loading}
+          />
+          <SystemStatusCard active={stats.employees} inactive={15} />
+        </div>
 
-              {/* Hiring Trend */}
-              <div className="bg-white p-8 rounded-[2.5rem] border border-zinc-100 shadow-sm">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-black text-zinc-900 tracking-tight">Monthly Growth</h3>
-                  <TrendingUp className="text-blue-500" size={20} />
-                </div>
-                <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-4">Hiring Trend (2026)</p>
-                {stats ? <SimpleLineChart data={stats.hiringTrend} /> : <div className="h-40 bg-zinc-50 rounded-2xl animate-pulse" />}
-              </div>
+        {/* ── Row 2: Org Mix | Monthly Growth | Alerts ── */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+
+          {/* Org Mix */}
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-sm font-black text-slate-800">
+                Organization Mix
+              </h2>
+              <span className="text-[10px] font-bold uppercase tracking-widest text-indigo-500">
+                Employees Per Dept
+              </span>
             </div>
-
-            {/* Quick Actions Panel */}
-            <div className="bg-white p-10 rounded-[3rem] shadow-2xl relative overflow-hidden group">
-              <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/10 rounded-full -mr-20 -mt-20 blur-3xl group-hover:bg-blue-600/20 transition-all duration-700" />
-              <div className="relative z-10">
-                <div className="flex items-center justify-between mb-10">
-                  <div>
-                    <h3 className="text-2xl font-black text-black tracking-tight">Intelligence Hub</h3>
-                    <p className="text-zinc-500 text-sm font-bold uppercase tracking-widest mt-2">Manage your organization's core</p>
-                  </div>
-                  <Settings className="text-zinc-700" size={24} />
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <Link href="/employees/new" className="flex items-center gap-4 p-5 bg-white/5 rounded-3xl border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all active:scale-95 group/btn">
-                    <div className="h-12 w-12 bg-blue-600/20 rounded-2xl flex items-center justify-center text-blue-500 group-hover/btn:bg-blue-600 group-hover/btn:text-white transition-all">
-                      <UserPlus size={20} />
-                    </div>
-                    <div>
-                      <p className="text-black text-sm font-black uppercase tracking-widest">Add Employee</p>
-                      <p className="text-zinc-500 text-[10px] font-bold">New personnel profile</p>
-                    </div>
-                  </Link>
-                  <Link href="/departments" className="flex items-center gap-4 p-5 bg-white/5 rounded-3xl border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all active:scale-95 group/btn">
-                    <div className="h-12 w-12 bg-emerald-600/20 rounded-2xl flex items-center justify-center text-emerald-500 group-hover/btn:bg-emerald-600 group-hover/btn:text-white transition-all">
-                      <LayoutGrid size={20} />
-                    </div>
-                    <div>
-                      <p className="text-black text-sm font-black uppercase tracking-widest">Add Dept</p>
-                      <p className="text-zinc-500 text-[10px] font-bold">Register department</p>
-                    </div>
-                  </Link>
-                  <Link href="/institutions" className="flex items-center gap-4 p-5 bg-white/5 rounded-3xl border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all active:scale-95 group/btn">
-                    <div className="h-12 w-12 bg-indigo-600/20 rounded-2xl flex items-center justify-center text-indigo-500 group-hover/btn:bg-indigo-600 group-hover/btn:text-white transition-all">
-                      <Landmark size={20} />
-                    </div>
-                    <div>
-                      <p className="text-black text-sm font-black uppercase tracking-widest">Add Institution</p>
-                      <p className="text-zinc-500 text-[10px] font-bold">Register organization</p>
-                    </div>
-                  </Link>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Activity & Alerts Column */}
-          <div className="space-y-8">
-            {/* Alerts Section */}
-            <div className="bg-white p-8 rounded-[2.5rem] border border-zinc-100 shadow-sm">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-black text-zinc-900 tracking-tight">Organization Alerts</h3>
-                <AlertTriangle className="text-amber-500" size={20} />
-              </div>
-              <div className="space-y-4">
-                <div className="p-5 bg-rose-50 rounded-2xl border border-rose-100 group hover:shadow-lg transition-all cursor-pointer">
-                  <div className="flex items-center gap-4">
-                    <div className="h-10 w-10 bg-rose-500/10 rounded-xl flex items-center justify-center text-rose-500 group-hover:bg-rose-500 group-hover:text-white transition-all">
-                      <FileText size={18} />
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-rose-900 text-xs font-black uppercase tracking-widest">Missing Data</p>
-                      <p className="text-rose-600/60 text-[10px] font-bold">12 Employees missing CNICs</p>
-                    </div>
-                    <ArrowRight size={16} className="text-rose-300" />
-                  </div>
-                </div>
-                <div className="p-5 bg-amber-50 rounded-2xl border border-amber-100 group hover:shadow-lg transition-all cursor-pointer">
-                  <div className="flex items-center gap-4">
-                    <div className="h-10 w-10 bg-amber-500/10 rounded-xl flex items-center justify-center text-amber-500 group-hover:bg-amber-500 group-hover:text-white transition-all">
-                      <Clock size={18} />
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-amber-900 text-xs font-black uppercase tracking-widest">Expiring Contracts</p>
-                      <p className="text-amber-600/60 text-[10px] font-bold">5 Contracts end this month</p>
-                    </div>
-                    <ArrowRight size={16} className="text-amber-300" />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Activity Stream */}
-            <div className="bg-white p-8 rounded-[2.5rem] border border-zinc-100 shadow-sm flex flex-col h-full max-h-[500px]">
-              <div className="flex items-center justify-between mb-8">
-                <h3 className="text-lg font-black text-zinc-900 tracking-tight">Real-time Stream</h3>
-                <Activity className="text-blue-500" size={20} />
-              </div>
-              <div className="space-y-6 overflow-y-auto pr-2 custom-scrollbar">
-                {stats?.recentActivity.map((act) => (
-                  <div key={act.id} className="flex gap-4 group">
-                    <div className="relative">
-                      <div className={`h-10 w-10 rounded-xl flex items-center justify-center shadow-sm transition-all group-hover:scale-110 ${
-                        act.type === 'join' ? 'bg-emerald-50 text-emerald-600' :
-                        act.type === 'resign' ? 'bg-rose-50 text-rose-600' :
-                        'bg-blue-50 text-blue-600'
-                      }`}>
-                        {act.type === 'join' ? <UserPlus size={16} /> :
-                         act.type === 'resign' ? <UserMinus size={16} /> :
-                         <Briefcase size={16} />}
-                      </div>
-                      {act.id !== stats.recentActivity.length && (
-                        <div className="absolute top-12 left-1/2 -translate-x-1/2 w-px h-8 bg-zinc-100" />
-                      )}
-                    </div>
-                    <div className="flex-1 pt-1">
-                      <div className="flex justify-between items-start">
-                        <h5 className="text-xs font-black text-zinc-900 uppercase tracking-widest">{act.user}</h5>
-                        <span className="text-[9px] font-black text-zinc-400 uppercase tracking-tighter">{act.time}</span>
-                      </div>
-                      <p className="text-[11px] font-bold text-zinc-500 mt-0.5">{act.detail}</p>
-                    </div>
-                  </div>
+            {loading ? (
+              <div className="space-y-3">
+                {[...Array(5)].map((_, i) => (
+                  <div
+                    key={i}
+                    className="h-5 bg-slate-100 rounded animate-pulse"
+                  />
                 ))}
               </div>
-              <button className="mt-8 w-full py-4 text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] hover:text-blue-600 transition-colors bg-zinc-50 rounded-2xl hover:bg-blue-50">
-                View Full Audit History
-              </button>
+            ) : (
+              deptMix.map((d) => (
+                <OrgMixRow key={d.name} label={d.name} count={d.count} />
+              ))
+            )}
+          </div>
+
+          {/* Monthly Growth */}
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+            <div className="flex items-center justify-between mb-1">
+              <h2 className="text-sm font-black text-slate-800">
+                Monthly Growth
+              </h2>
+              <TrendingUp size={16} className="text-indigo-400" />
+            </div>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-4">
+              Hiring Trend (2026)
+            </p>
+            <div className="h-24">
+              <LineChart data={monthlyTrend} />
+            </div>
+            <div className="flex justify-between mt-2 px-1">
+              {months.map((m) => (
+                <span
+                  key={m}
+                  className="text-[9px] font-bold uppercase tracking-widest text-slate-300"
+                >
+                  {m}
+                </span>
+              ))}
             </div>
           </div>
 
+          {/* Organization Alerts */}
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-sm font-black text-slate-800">
+                Organization Alerts
+              </h2>
+              <AlertTriangle size={16} className="text-amber-400" />
+            </div>
+            <div className="space-y-3">
+              <AlertItem
+                color="red"
+                icon={FileWarning}
+                title="Missing Data"
+                sub="72 employees missing CNIC"
+              />
+              <AlertItem
+                color="amber"
+                icon={Clock}
+                title="Expiring Contracts"
+                sub="3 Contracts end this month"
+              />
+            </div>
+          </div>
         </div>
 
-      </div>
+        {/* ── Row 3: Intelligence Hub | Real-time Stream ── */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
-      <style jsx global>{`
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 4px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: transparent;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: #f1f1f1;
-          border-radius: 10px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: #e1e1e1;
-        }
-      `}</style>
+          {/* Intelligence Hub */}
+          <div className="lg:col-span-2 bg-gradient-to-br from-slate-50 to-indigo-50 rounded-2xl border border-slate-100 shadow-sm p-6">
+            <div className="flex items-center justify-between mb-1">
+              <h2 className="text-lg font-black text-slate-800">
+                Intelligence Hub
+              </h2>
+              <Settings size={18} className="text-slate-400" />
+            </div>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-6">
+              Manage Your Organization&apos;s Core
+            </p>
+            <div className="grid grid-cols-3 gap-6">
+              <HubAction
+                icon={UserPlus}
+                label="Add Employee"
+                sub="New personnel profile"
+                bg="bg-indigo-500"
+                href="/employees"
+              />
+              <HubAction
+                icon={FolderPlus}
+                label="Add Dept"
+                sub="Register department"
+                bg="bg-emerald-500"
+                href="/departments"
+              />
+              <HubAction
+                icon={FilePlus}
+                label="Add Institution"
+                sub="Register organization"
+                bg="bg-violet-500"
+                href="/institutions"
+              />
+            </div>
+          </div>
+
+          {/* Real-time Stream */}
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-sm font-black text-slate-800">
+                Real-time Stream
+              </h2>
+              <Activity size={16} className="text-indigo-400" />
+            </div>
+            {streamEvents.map((ev, i) => (
+              <StreamRow key={i} event={ev} />
+            ))}
+          </div>
+        </div>
+      </div>
     </ProtectedLayout>
   );
 }
