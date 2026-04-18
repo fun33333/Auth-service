@@ -723,6 +723,26 @@ def list_employees(
         }
 
 
+@router.get("/employees/by-user/{user_id}", response=dict)
+def get_employee_by_user_id(request, user_id: str):
+    """
+    Lightweight lookup by Employee.id (UUID) — used by HDMS ticket-service
+    to resolve requestor_id (which is the auth-service user UUID) to a name.
+    """
+    try:
+        employee = Employee.objects.get(id=user_id, is_deleted=False)
+        return {
+            'employee_id': employee.employee_id,
+            'employee_code': employee.employee_code,
+            'full_name': employee.full_name,
+        }
+    except Employee.DoesNotExist:
+        return 404, {'error': f'Employee with user ID {user_id} not found'}
+    except Exception as e:
+        logger.error(f"Error getting employee by user_id {user_id}: {str(e)}", exc_info=True)
+        return 400, {'error': str(e)}
+
+
 @router.get("/employees/{employee_id}", response=dict)
 def get_employee(request, employee_id: str):
     """
