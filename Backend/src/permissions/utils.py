@@ -6,7 +6,7 @@ Used by authentication APIs and middleware to verify:
 - What is employee's role in HDMS?
 - What permissions does employee have?
 """
-from permissions.models import ServiceAccess, HdmsRole
+from permissions.models import ServiceAccess, HdmsRole, VmsRole
 
 
 def has_service_access(employee, service_name):
@@ -100,6 +100,16 @@ def get_sis_role(employee):
     }
 
 
+def get_vms_role(employee):
+    """Get employee's VMS role if they have VMS access."""
+    try:
+        access = ServiceAccess.objects.get(employee=employee, service='vms', is_active=True, is_deleted=False)
+        vms_role = VmsRole.objects.get(service_access=access, is_deleted=False)
+        return {'role_type': vms_role.role_type}
+    except (ServiceAccess.DoesNotExist, VmsRole.DoesNotExist):
+        return None
+
+
 def get_employee_permissions(employee, service_name):
     """
     Get complete permissions info for employee in a service.
@@ -126,20 +136,27 @@ def get_employee_permissions(employee, service_name):
         'full_name': employee.full_name
     }
     
-    # Add service-specific role info
     if service_name == 'hdms':
         hdms_role = get_hdms_role(employee)
         if hdms_role:
             result['hdms_role'] = hdms_role
         else:
-            result['has_access'] = False  # Has access but no role assigned!
+            result['has_access'] = False
             result['error'] = 'HDMS access granted but no role assigned'
-    
+
     elif service_name == 'sis':
         sis_role = get_sis_role(employee)
         if sis_role:
             result['sis_role'] = sis_role
-    
+
+    elif service_name == 'vms':
+        vms_role = get_vms_role(employee)
+        if vms_role:
+            result['vms_role'] = vms_role
+        else:
+            result['has_access'] = False
+            result['error'] = 'VMS access granted but no role assigned'
+
     return result
 
 

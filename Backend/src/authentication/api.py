@@ -15,7 +15,7 @@ from ninja.security import HttpBearer
 from datetime import datetime, timedelta
 from django.utils import timezone
 from employees.models import Employee
-from permissions.models import ServiceAccess, HdmsRole
+from permissions.models import ServiceAccess, HdmsRole, VmsRole
 from .models import UserCredentials, RefreshToken, BlacklistedToken
 from .superadmin_models import SuperAdmin
 from .jwt_utils import (
@@ -463,6 +463,90 @@ def login_hdms(request: HttpRequest, payload: HdmsLoginRequest):
                 "can_close_tickets": hdms_role.can_close_tickets,
                 "can_manage_users": hdms_role.can_manage_users
             }
+        }
+    }
+
+
+# ================== VMS Login Endpoint ==================
+
+class VmsLoginResponse(Schema):
+    access_token: str
+    refresh_token: str
+    expires_in: int
+    user: dict
+
+
+@router.post("/login-vms", response={200: VmsLoginResponse, 401: HdmsErrorResponse, 403: HdmsErrorResponse, 423: HdmsErrorResponse})
+def login_vms(request: HttpRequest, payload: HdmsLoginRequest):
+    """
+    Login to VMS with service access + role validation.
+
+    Validates employee credentials and VMS service access.
+    Returns JWT with vms_role included.
+    """
+    try:
+        employee = Employee.objects.get(
+            employee_code=payload.employee_code,
+            is_active=True,
+            is_deleted=False
+        )
+    except Employee.DoesNotExist:
+        return 401, {"error": "invalid_credentials", "detail": "Employee code not found or account inactive"}
+
+    try:
+        credentials = UserCredentials.objects.get(employee=employee, is_deleted=False)
+    except UserCredentials.DoesNotExist:
+        return 401, {"error": "invalid_credentials", "detail": "No credentials found for this employee"}
+
+    if credentials.is_locked():
+        return 423, {"error": "account_locked", "detail": f"Too many failed attempts. Try again after {credentials.locked_until}"}
+
+    if not credentials.check_password(payload.password):
+        credentials.record_failed_login()
+        return 401, {"error": "invalid_credentials", "detail": "Incorrect password"}
+
+    try:
+        service_access = ServiceAccess.objects.get(
+            employee=employee,
+            service='vms',
+            is_active=True,
+            is_deleted=False
+        )
+    except ServiceAccess.DoesNotExist:
+        return 403, {"error": "no_vms_access", "detail": "You don't have VMS access. Contact admin."}
+
+    try:
+        vms_role = service_access.vms_role
+    except VmsRole.DoesNotExist:
+        return 403, {"error": "no_vms_role", "detail": "No VMS role assigned. Contact admin."}
+
+    client_ip = request.META.get('REMOTE_ADDR')
+    user_agent = request.META.get('HTTP_USER_AGENT', '')
+    credentials.record_successful_login(ip_address=client_ip)
+
+    access_token = generate_access_token(employee, role=vms_role.role_type)
+    refresh_token_str = generate_refresh_token(employee)
+
+    RefreshToken.objects.create(
+        employee=employee,
+        token=refresh_token_str,
+        expires_at=timezone.now() + timedelta(days=7),
+        device_info=user_agent[:255],
+        ip_address=client_ip
+    )
+
+    return 200, {
+        "access_token": access_token,
+        "refresh_token": refresh_token_str,
+        "expires_in": 3600,
+        "user": {
+            "id": str(employee.id),
+            "employee_id": employee.employee_id,
+            "employee_code": employee.employee_code,
+            "name": employee.full_name,
+            "email": employee.email or "",
+            "department": employee.department.dept_name if employee.department else "",
+            "vms_role": vms_role.role_type,
         }
     }
 

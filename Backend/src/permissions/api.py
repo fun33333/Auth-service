@@ -9,7 +9,7 @@ Endpoints:
 """
 from pydantic import BaseModel
 import re
-from permissions.models import ServiceAccess, HdmsRole
+from permissions.models import ServiceAccess, HdmsRole, VmsRole, Service
 from authentication.models import UserCredentials
 from employees.models import Employee
 from django.http import HttpRequest
@@ -105,8 +105,7 @@ def check_service_access(request: HttpRequest, service: str):
     """
     employee = request.auth
     
-    # Validate service name
-    valid_services = ['sis', 'hdms', 'finance', 'hr', 'procurement']
+    valid_services = list(Service.objects.filter(is_active=True).values_list('code', flat=True))
     if service not in valid_services:
         return 401, {
             "error": "Invalid service",
@@ -122,6 +121,8 @@ def check_service_access(request: HttpRequest, service: str):
             role_info = perms['hdms_role']
         elif service == 'sis' and 'sis_role' in perms:
             role_info = perms['sis_role']
+        elif service == 'vms' and 'vms_role' in perms:
+            role_info = perms['vms_role']
     
     return 200, {
         "has_access": perms.get('has_access', False),
@@ -436,3 +437,203 @@ def list_hdms_users(
         "results": users,
         "count": len(users)
     }
+
+
+# ================== VMS Endpoints ==================
+
+class GrantVmsAccessSchema(BaseModel):
+    employee_id: str
+    password: str
+    role: str  # admin, receptionist, security_staff
+    change_password: bool = True
+
+
+@router.post("/grant-vms-access", response={201: dict, 200: dict, 400: dict})
+def grant_vms_access(request, payload: GrantVmsAccessSchema):
+    """
+    Grant VMS access to an employee with a role.
+
+    Creates UserCredentials (if not exists), ServiceAccess for VMS, and VmsRole.
+    """
+    password = payload.password
+    if len(password) < 6:
+        return 400, {"error": "Password must be at least 6 characters"}
+    if not re.search(r'[A-Z]', password):
+        return 400, {"error": "Password must contain at least one uppercase letter"}
+    if not re.search(r'[a-z]', password):
+        return 400, {"error": "Password must contain at least one lowercase letter"}
+    if not re.match(r'^[A-Za-z0-9]+$', password):
+        return 400, {"error": "Password must be alphanumeric only"}
+
+    valid_roles = ['admin', 'receptionist', 'security_staff']
+    if payload.role not in valid_roles:
+        return 400, {"error": f"Role must be one of: {', '.join(valid_roles)}"}
+
+    try:
+        employee = Employee.objects.get(employee_id=payload.employee_id, is_deleted=False)
+    except Employee.DoesNotExist:
+        return 400, {"error": f"Employee '{payload.employee_id}' not found"}
+
+    is_new_user = False
+    existing_access = False
+
+    try:
+        service_access = ServiceAccess.objects.get(employee=employee, service='vms')
+        existing_access = True
+
+        if hasattr(service_access, 'vms_role'):
+            vms_role = service_access.vms_role
+            if vms_role.role_type != payload.role:
+                vms_role.role_type = payload.role
+                vms_role.save()
+
+        if not service_access.is_active:
+            service_access.is_active = True
+            service_access.save()
+
+    except ServiceAccess.DoesNotExist:
+        service_access = ServiceAccess.objects.create(
+            employee=employee,
+            service='vms',
+            is_active=True
+        )
+        VmsRole.objects.create(service_access=service_access, role_type=payload.role)
+        is_new_user = True
+
+    try:
+        credentials = UserCredentials.objects.get(employee=employee)
+        if payload.change_password:
+            credentials.set_password(password)
+            credentials.save()
+    except UserCredentials.DoesNotExist:
+        credentials = UserCredentials.objects.create(employee=employee)
+        credentials.set_password(password)
+        credentials.save()
+        is_new_user = True
+
+    if existing_access:
+        msg = f"VMS access updated for {employee.full_name}. Role: {payload.role}."
+        if payload.change_password:
+            msg += " Password changed."
+        return 200, {
+            "message": msg,
+            "employee_id": employee.employee_id,
+            "employee_code": employee.employee_code,
+            "role": payload.role,
+            "is_new_user": False,
+        }
+    return 201, {
+        "message": f"VMS access granted to {employee.full_name} as {payload.role}.",
+        "employee_id": employee.employee_id,
+        "employee_code": employee.employee_code,
+        "role": payload.role,
+        "is_new_user": True,
+    }
+
+
+@router.get("/vms-access/{employee_id}", response={200: dict, 404: dict})
+def check_employee_vms_access(request, employee_id: str):
+    """Check if an employee has VMS access and their current role."""
+    try:
+        employee = Employee.objects.get(employee_id=employee_id, is_deleted=False)
+    except Employee.DoesNotExist:
+        return 404, {"error": f"Employee '{employee_id}' not found"}
+
+    try:
+        service_access = ServiceAccess.objects.get(employee=employee, service='vms', is_active=True)
+        role = service_access.vms_role.role_type if hasattr(service_access, 'vms_role') else None
+        return 200, {
+            "has_access": True,
+            "role": role,
+            "employee_id": employee.employee_id,
+            "employee_code": employee.employee_code,
+            "full_name": employee.full_name,
+        }
+    except ServiceAccess.DoesNotExist:
+        return 200, {
+            "has_access": False,
+            "role": None,
+            "employee_id": employee.employee_id,
+            "employee_code": employee.employee_code,
+            "full_name": employee.full_name,
+        }
+
+
+@router.get("/vms-role", response={200: dict, 401: dict}, auth=AuthBearer())
+def get_vms_role_info(request: HttpRequest):
+    """Get VMS role for the authenticated employee."""
+    employee = request.auth
+    try:
+        service_access = ServiceAccess.objects.get(employee=employee, service='vms', is_active=True)
+        role_type = service_access.vms_role.role_type if hasattr(service_access, 'vms_role') else None
+        return 200, {"has_access": True, "role_type": role_type}
+    except ServiceAccess.DoesNotExist:
+        return 200, {"has_access": False, "role_type": None}
+
+
+@router.get("/vms-users", response={200: dict})
+def list_vms_users(
+    request,
+    search: str = None,
+    role: str = None,
+    department: str = None,
+    status: str = None,
+):
+    """List all employees with VMS access."""
+    service_accesses = ServiceAccess.objects.filter(service='vms').select_related('employee')
+
+    if status == 'active':
+        service_accesses = service_accesses.filter(is_active=True)
+    elif status == 'inactive':
+        service_accesses = service_accesses.filter(is_active=False)
+
+    users = []
+    for sa in service_accesses:
+        employee = sa.employee
+        if employee.is_deleted:
+            continue
+
+        role_type = None
+        try:
+            if hasattr(sa, 'vms_role'):
+                role_type = sa.vms_role.role_type
+        except Exception:
+            pass
+
+        if role and role_type != role:
+            continue
+
+        if department and employee.department:
+            if employee.department.dept_code != department:
+                continue
+
+        if search:
+            search_lower = search.lower()
+            if not any([
+                search_lower in employee.full_name.lower(),
+                employee.personal_email and search_lower in employee.personal_email.lower(),
+                search_lower in employee.employee_code.lower(),
+            ]):
+                continue
+
+        last_login = None
+        try:
+            if hasattr(employee, 'credentials') and employee.credentials and employee.credentials.last_login:
+                last_login = employee.credentials.last_login.isoformat()
+        except Exception:
+            pass
+
+        users.append({
+            "id": str(employee.id),
+            "employee_code": employee.employee_code,
+            "name": employee.full_name,
+            "email": employee.email,
+            "role": role_type,
+            "department": employee.department.dept_name if employee.department else None,
+            "department_code": employee.department.dept_code if employee.department else None,
+            "status": 'active' if sa.is_active else 'inactive',
+            "last_login": last_login,
+            "join_date": sa.granted_at.isoformat() if sa.granted_at else None,
+        })
+
+    return 200, {"results": users, "count": len(users)}

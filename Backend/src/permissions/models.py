@@ -2,9 +2,12 @@
 Permissions models for service access control.
 
 Controls:
-- Which employees/superadmins can access which services (SIS/HDMS/Future)
+- Which employees/superadmins can access which services
 - HDMS-specific role assignments (Moderator/Assignee/Requestor)
+- VMS-specific role assignments (Admin/Receptionist/Security Staff)
 - SIS uses designation as role automatically
+
+Adding a new service: insert a row into Service table — no code change needed.
 """
 import uuid
 from django.db import models
@@ -13,23 +16,42 @@ from employees.models import Employee
 from employees.utils import SoftDeleteModel
 
 
+class Service(models.Model):
+    """
+    Registry of all ERP services. Add new services here without code changes.
+
+    To add a new service:
+        Service.objects.create(code='finance', name='Finance Management')
+    """
+    code = models.CharField(max_length=20, unique=True, help_text="Short code used in code (e.g. 'hdms', 'vms')")
+    name = models.CharField(max_length=100, help_text="Human-readable name")
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        db_table = "permissions_service"
+        ordering = ['code']
+
+    def __str__(self):
+        return f"{self.code} — {self.name}"
+
+
 class ServiceAccess(SoftDeleteModel):
     """
     Tracks which employees/superadmins have access to which services.
-    
+
     Flow:
     1. Employee/SuperAdmin created → No service access by default
     2. Admin grants SIS access → Can login to SIS
     3. Admin grants HDMS access → Must also assign HdmsRole
-    
+    4. Admin grants VMS access → Must also assign VmsRole
+
     Example:
     - Ahmed (Teacher) → SIS Access ✓ → Logs in as Teacher (from designation)
     - Ahmed (Teacher) → HDMS Access ✓ + Moderator role → Logs in as Moderator
     - SuperAdmin → All services → Full access
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    
-    # Link to either Employee OR SuperAdmin (one must be set)
+
     employee = models.ForeignKey(
         Employee,
         on_delete=models.CASCADE,
@@ -38,7 +60,7 @@ class ServiceAccess(SoftDeleteModel):
         blank=True,
         help_text="Employee who has access (if employee)"
     )
-    
+
     superadmin = models.ForeignKey(
         'authentication.SuperAdmin',
         on_delete=models.CASCADE,
@@ -47,18 +69,10 @@ class ServiceAccess(SoftDeleteModel):
         blank=True,
         help_text="SuperAdmin who has access (if superadmin)"
     )
-    
-    SERVICE_CHOICES = [
-        ('sis', 'School Information System (SIS)'),
-        ('hdms', 'Help Desk Management System (HDMS)'),
-        ('finance', 'Finance Management (Future)'),
-        ('hr', 'HR Management (Future)'),
-        ('procurement', 'Procurement (Future)'),
-    ]
+
     service = models.CharField(
         max_length=20,
-        choices=SERVICE_CHOICES,
-        help_text="Which service this access is for"
+        help_text="Service code — must match an active Service.code (e.g. 'hdms', 'vms')"
     )
     
     is_active = models.BooleanField(
@@ -113,19 +127,17 @@ class ServiceAccess(SoftDeleteModel):
         ]
     
     def clean(self):
-        """Ensure exactly one of employee or superadmin is set"""
         if not self.employee and not self.superadmin:
             raise ValidationError("Must link to either an Employee or SuperAdmin")
         if self.employee and self.superadmin:
             raise ValidationError("Cannot link to both Employee and SuperAdmin")
-    
+        if self.service and not Service.objects.filter(code=self.service, is_active=True).exists():
+            raise ValidationError(f"Service '{self.service}' does not exist or is inactive.")
+
     def __str__(self):
         status = "Active" if self.is_active else "Inactive"
-        if self.employee:
-            return f"{self.employee.full_name} → {self.get_service_display()} ({status})"
-        elif self.superadmin:
-            return f"{self.superadmin.full_name} → {self.get_service_display()} ({status})"
-        return f"ServiceAccess #{self.id}"
+        name = self.employee.full_name if self.employee else (self.superadmin.full_name if self.superadmin else "?")
+        return f"{name} → {self.service} ({status})"
     
     def revoke(self, revoked_by_employee):
         """Revoke this service access"""
@@ -222,7 +234,7 @@ class HdmsRole(SoftDeleteModel):
         db_table = "permissions_hdms_role"
     
     def __str__(self):
-        return f"{self.service_access.employee.full_name} → HDMS {self.get_role_type_display()}"
+        return f"{self.service_access.employee.full_name} → HDMS {self.role_type}"
     
     def clean(self):
         """Validate that service_access is for HDMS"""
@@ -258,6 +270,54 @@ class HdmsRole(SoftDeleteModel):
             self.can_manage_users = False
         
         super().save(*args, **kwargs)
+
+
+class VmsRole(SoftDeleteModel):
+    """
+    VMS-specific role assignments.
+
+    Roles:
+    - admin: Full VMS access, manage users and settings
+    - receptionist: Check-in/out visitors, manage visits
+    - security_staff: View and verify visitor badges, basic check-out
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    service_access = models.OneToOneField(
+        ServiceAccess,
+        on_delete=models.CASCADE,
+        related_name='vms_role',
+        help_text="VMS service access this role is for"
+    )
+
+    ROLE_CHOICES = [
+        ('admin', 'Administrator'),
+        ('receptionist', 'Receptionist'),
+        ('security_staff', 'Security Staff'),
+    ]
+    role_type = models.CharField(max_length=20, choices=ROLE_CHOICES)
+
+    assigned_at = models.DateTimeField(auto_now_add=True)
+
+    assigned_by = models.ForeignKey(
+        Employee,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='assigned_vms_roles',
+    )
+
+    class Meta:
+        verbose_name = "VMS Role"
+        verbose_name_plural = "VMS Roles"
+        db_table = "permissions_vms_role"
+
+    def __str__(self):
+        return f"{self.service_access.employee.full_name} → VMS {self.role_type}"
+
+    def clean(self):
+        if self.service_access and self.service_access.service != 'vms':
+            raise ValidationError('VmsRole can only be assigned to VMS service access.')
 
 
 class PermissionAudit(models.Model):
