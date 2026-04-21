@@ -85,10 +85,10 @@ export default function EditEmployeeForm() {
       try {
         setFetchingMeta(true);
         const [instRes, deptRes, orgRes, empRes] = await Promise.all([
-          fetchWithAuth('/institutions'),
-          fetchWithAuth('/departments'),
-          fetchWithAuth('/organizations'),
-          fetchWithAuth(`/employees/${id}`)
+          fetchWithAuth('/employees/institutions'),
+          fetchWithAuth('/employees/departments'),
+          fetchWithAuth('/employees/organizations'),
+          fetchWithAuth(`/employees/employees/${id}`)
         ]);
 
         if (instRes.ok) setInstitutions(await instRes.json());
@@ -131,11 +131,11 @@ export default function EditEmployeeForm() {
                let branches: Branch[] = [];
                let designations: Designation[] = [];
                if (asgn.institutionCode) {
-                 const bRes = await fetchWithAuth(`/branches?institution_code=${asgn.institutionCode}`);
+                 const bRes = await fetchWithAuth(`/employees/branches?institution_code=${asgn.institutionCode}`);
                  if (bRes.ok) branches = await bRes.json();
                }
                if (asgn.departmentCode) {
-                 const dRes = await fetchWithAuth(`/designations?department_code=${asgn.departmentCode}`);
+                 const dRes = await fetchWithAuth(`/employees/designations?department_code=${asgn.departmentCode}`);
                  if (dRes.ok) designations = await dRes.json();
                }
 
@@ -186,7 +186,7 @@ export default function EditEmployeeForm() {
     if (name === 'institutionCode') {
        newAsgns[index].branchCode = '';
        if (finalVal) {
-          const res = await fetchWithAuth(`/branches?institution_code=${finalVal}`);
+          const res = await fetchWithAuth(`/employees/branches?institution_code=${finalVal}`);
           if (res.ok) newAsgns[index].branches = await res.json();
        } else {
           newAsgns[index].branches = [];
@@ -195,7 +195,7 @@ export default function EditEmployeeForm() {
     if (name === 'departmentCode') {
        newAsgns[index].designationCode = '';
        if (finalVal) {
-          const res = await fetchWithAuth(`/designations?department_code=${finalVal}`);
+          const res = await fetchWithAuth(`employees/designations?department_code=${finalVal}`);
           if (res.ok) newAsgns[index].designations = await res.json();
        } else {
           newAsgns[index].designations = [];
@@ -254,7 +254,7 @@ export default function EditEmployeeForm() {
         experience: experience.filter(e => e.employer) 
       };
       
-      const response = await fetchWithAuth(`/employees/${id}`, {
+      const response = await fetchWithAuth(`employees/employees/${id}`, {
         method: 'PUT',
         body: JSON.stringify(payload)
       });

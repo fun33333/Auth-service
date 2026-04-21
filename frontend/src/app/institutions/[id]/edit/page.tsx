@@ -108,7 +108,7 @@ export default function EditInstitutionForm() {
 
       if (response.ok) {
         // Success - redirect to institutions list
-        router.push('/institutions');
+        router.push('/employees/institutions');
       } else {
         const errorData = await response.json();
         setError(errorData.error || 'Failed to update institution');

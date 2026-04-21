@@ -58,7 +58,7 @@ export default function InstitutionDetails() {
     try {
       const response = await fetchWithAuth(`/employees/institutions/${id}/`, { method: 'DELETE' });
       if (response.ok) {
-        router.push('/institutions');
+        router.push('/employees/institutions');
       } else {
         alert('Failed to delete institution');
       }
@@ -223,3 +223,5 @@ export default function InstitutionDetails() {
     </ProtectedLayout>
   );
 }
+
+

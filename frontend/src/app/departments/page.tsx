@@ -151,11 +151,20 @@ export default function DepartmentsPage() {
 
   async function handleSave(data: any) {
     try {
+      const cleanPayload = {
+  dept_name: data.dept_name?.trim(),
+  dept_code: data.dept_code?.trim(),
+  institution_code: data.institution_code || null,
+  description: data.description?.trim() || null,
+};
       if (editTarget) {
         const res = await fetchWithAuth(`/employees/departments/${editTarget.dept_code}`, {
           method: 'PUT',
-          body: JSON.stringify({ dept_name: data.dept_name, description: data.description, institution_code: data.institution_code })
-        });
+          body: JSON.stringify({
+            dept_name: data.dept_name?.trim(),
+            description: data.description?.trim() || null,
+            institution_code: data.institution_code || null,
+          })        });
         if (res.ok) loadData();
         else {
           const err = await res.json();
@@ -164,7 +173,7 @@ export default function DepartmentsPage() {
       } else {
         const res = await fetchWithAuth('/employees/departments', {
           method: 'POST',
-          body: JSON.stringify(data)
+          body: JSON.stringify(cleanPayload),
         });
         if (res.ok) loadData();
         else {
@@ -216,17 +225,17 @@ export default function DepartmentsPage() {
         institutions={institutions}
       />
 
-      <div className="p-4 sm:p-6 lg:p-10 max-w-[1600px] mx-auto space-y-12 animate-in fade-in duration-1000">
+      <div className="p-4 sm:p-6 lg:p-10 max-w-400 mx-auto space-y-12 animate-in fade-in duration-1000">
         
         {/* Header Section */}
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-8 border-b border-zinc-100 pb-12">
           <div className="space-y-4">
-            <h1 className="text-5xl sm:text-6xl font-black tracking-tighter text-zinc-900 leading-none lowercase">departments registry</h1>
+            <h1 className="text-4xl sm:text-4xl font-black tracking-tighter text-zinc-900 leading-none">Departments</h1>
             <p className="text-[11px] font-black text-zinc-400 uppercase tracking-[0.5em] italic opacity-60">organizational units & functional segments</p>
           </div>
           <div className="flex flex-wrap gap-4 w-full lg:w-auto">
              <button id="add-department-btn" onClick={() => { setEditTarget(null); setModalOpen(true); }}
-               className="flex-1 lg:flex-none h-16 px-10 bg-zinc-900 text-white rounded-[2rem] flex items-center justify-center gap-3 text-[10px] font-black uppercase tracking-widest hover:bg-blue-600 transition-all shadow-2xl shadow-zinc-900/10 active:scale-95"
+               className="flex-1 lg:flex-none h-16 px-10 bg-zinc-900 text-white rounded-4xl flex items-center justify-center gap-3 text-[10px] font-black uppercase tracking-widest hover:bg-blue-600 transition-all shadow-2xl shadow-zinc-900/10 active:scale-95"
              >
                <Plus size={20} strokeWidth={3} /> Add Department
              </button>
@@ -289,7 +298,7 @@ export default function DepartmentsPage() {
                   <div className={`absolute top-0 left-0 right-0 h-2 ${DEPT_COLORS[idx % DEPT_COLORS.length].split(" ")[0]}`} />
                   
                   <div className="relative mb-6">
-                    <div className={`w-20 h-20 rounded-[2rem] flex items-center justify-center font-black text-xl shadow-inner group-hover:scale-110 transition-transform duration-500 ${DEPT_COLORS[idx % DEPT_COLORS.length]}`}>
+                    <div className={`w-20 h-20 rounded-4xl flex items-center justify-center font-black text-xl shadow-inner group-hover:scale-110 transition-transform duration-500 ${DEPT_COLORS[idx % DEPT_COLORS.length]}`}>
                         {d.dept_name?.charAt(0)}
                     </div>
                   </div>

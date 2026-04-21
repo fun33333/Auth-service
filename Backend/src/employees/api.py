@@ -180,84 +180,187 @@ class DesignationUpdateSchema(BaseModel):
 from authentication.api import AuthBearer
 
 
+
+
+
+# ========================================
+# ORGANIZATION API (READ ONLY)
+# ========================================
+
+@router.get("/organizations", response=List[dict])
+def list_organizations(request):
+    """
+    ONLY READ-ONLY (Fixed Master Org)
+    """
+    return [
+        {
+            "id": str(org.id),
+            "name": org.name,
+            "org_code": org.org_code
+        }
+        for org in Organization.objects.filter(is_deleted=False)
+    ]
+
+# ========================================
+# INSTITUTION SCHEMAS
+# ========================================
+
+
 @router.get("/institutions", response=List[InstitutionSchema])
 def list_institutions(request):
     """Get all active institutions"""
-    return Institution.objects.filter(is_deleted=False)
+    institutions = Institution.objects.filter(is_deleted=False)
+
+    return [
+        {
+            "id": str(inst.id),
+            "inst_id": str(inst.inst_id),
+            "inst_code": inst.inst_code,
+            "name": inst.name,
+            "inst_type": inst.inst_type,
+            "address": inst.address,
+            "city": inst.city,
+            "contact_number": inst.contact_number,
+            "extra_data": inst.extra_data,
+            "created_at": inst.created_at.isoformat() if inst.created_at else None,
+            "updated_at": inst.updated_at.isoformat() if inst.updated_at else None,
+        }
+        for inst in institutions
+    ]
 
 
 @router.post("/institutions", response={201: InstitutionSchema, 400: ErrorResponseSchema})
 def create_institution(request, payload: dict):
     """Create a new institution"""
     try:
-        org = Organization.objects.first()
+        org_code = payload.get("organization_code")
+        if org_code:
+            org = Organization.objects.filter(org_code=org_code).first()
+        else:
+            org = Organization.objects.first()
+
+        if not org:
+            return 400, {"error": "Organization not found"}
+
         inst = Institution.objects.create(
             organization=org,
-            inst_code=payload['inst_code'],
-            name=payload['name'],
-            inst_type=payload.get('inst_type', 'educational'),
-            address=payload.get('address'),
-            city=payload.get('city'),
-            contact_number=payload.get('contact_number')
+            inst_code=payload.get("inst_code"),
+            name=payload.get("name"),
+            inst_type=payload.get("inst_type", "educational"),
+            address=payload.get("address"),
+            city=payload.get("city"),
+            contact_number=payload.get("contact_number")
         )
-        return 201, inst
+
+        return 201, {
+            "id": str(inst.id),
+            "inst_id": str(inst.inst_id),
+            "inst_code": inst.inst_code,
+            "name": inst.name,
+            "inst_type": inst.inst_type,
+            "address": inst.address,
+            "city": inst.city,
+            "contact_number": inst.contact_number,
+            "extra_data": inst.extra_data,
+            "created_at": inst.created_at.isoformat() if inst.created_at else None,
+            "updated_at": inst.updated_at.isoformat() if inst.updated_at else None,
+        }
+
     except Exception as e:
         return 400, {"error": str(e)}
 
 
-@router.get("/institutions/{institution_id}", response=InstitutionSchema)
+@router.get(
+    "/institutions/{institution_id}",
+    response={200: InstitutionSchema, 404: ErrorResponseSchema}
+)
 def get_institution(request, institution_id: str):
-    """Get a specific institution by ID"""
-    try:
-        inst = Institution.objects.get(id=institution_id, is_deleted=False)
-        return inst
-    except Institution.DoesNotExist:
+    """Get single institution"""
+    inst = Institution.objects.filter(
+        id=institution_id,
+        is_deleted=False
+    ).first()
+
+    if not inst:
         return 404, {"error": "Institution not found"}
-    except Exception as e:
-        return 400, {"error": str(e)}
+
+    return 200, {
+        "id": str(inst.id),
+        "inst_id": str(inst.inst_id),
+        "inst_code": inst.inst_code,
+        "name": inst.name,
+        "inst_type": inst.inst_type,
+        "address": inst.address,
+        "city": inst.city,
+        "contact_number": inst.contact_number,
+        "extra_data": inst.extra_data,
+        "created_at": inst.created_at.isoformat() if inst.created_at else None,
+        "updated_at": inst.updated_at.isoformat() if inst.updated_at else None,
+    }
 
 
-@router.put("/institutions/{institution_id}", response=InstitutionSchema)
+@router.put(
+    "/institutions/{institution_id}",
+    response={200: InstitutionSchema, 404: ErrorResponseSchema}
+)
 def update_institution(request, institution_id: str, payload: dict):
-    """Update an institution"""
-    try:
-        inst = Institution.objects.get(id=institution_id, is_deleted=False)
-        
-        # Update fields
-        if 'inst_code' in payload:
-            inst.inst_code = payload['inst_code']
-        if 'name' in payload:
-            inst.name = payload['name']
-        if 'inst_type' in payload:
-            inst.inst_type = payload['inst_type']
-        if 'address' in payload:
-            inst.address = payload['address']
-        if 'city' in payload:
-            inst.city = payload['city']
-        if 'contact_number' in payload:
-            inst.contact_number = payload['contact_number']
-        
-        inst.save()
-        return inst
-    except Institution.DoesNotExist:
+    """Update institution"""
+    inst = Institution.objects.filter(
+        id=institution_id,
+        is_deleted=False
+    ).first()
+
+    if not inst:
         return 404, {"error": "Institution not found"}
-    except Exception as e:
-        return 400, {"error": str(e)}
+
+    inst.inst_code = payload.get("inst_code", inst.inst_code)
+    inst.name = payload.get("name", inst.name)
+    inst.inst_type = payload.get("inst_type", inst.inst_type)
+    inst.address = payload.get("address", inst.address)
+    inst.city = payload.get("city", inst.city)
+    inst.contact_number = payload.get("contact_number", inst.contact_number)
+
+    org_code = payload.get("organization_code")
+    if org_code:
+        org = Organization.objects.filter(org_code=org_code).first()
+        if org:
+            inst.organization = org
+
+    inst.save()
+
+    return 200, {
+        "id": str(inst.id),
+        "inst_id": str(inst.inst_id),
+        "inst_code": inst.inst_code,
+        "name": inst.name,
+        "inst_type": inst.inst_type,
+        "address": inst.address,
+        "city": inst.city,
+        "contact_number": inst.contact_number,
+        "extra_data": inst.extra_data,
+        "created_at": inst.created_at.isoformat() if inst.created_at else None,
+        "updated_at": inst.updated_at.isoformat() if inst.updated_at else None,
+    }
 
 
-@router.delete("/institutions/{institution_id}", response={204: dict, 400: ErrorResponseSchema})
+@router.delete(
+    "/institutions/{institution_id}",
+    response={200: dict, 404: ErrorResponseSchema}
+)
 def delete_institution(request, institution_id: str):
-    """Delete an institution (soft delete)"""
-    try:
-        inst = Institution.objects.get(id=institution_id, is_deleted=False)
-        inst.is_deleted = True
-        inst.save()
-        return 204, {}
-    except Institution.DoesNotExist:
-        return 404, {"error": "Institution not found"}
-    except Exception as e:
-        return 400, {"error": str(e)}
+    """Soft delete institution"""
+    inst = Institution.objects.filter(
+        id=institution_id,
+        is_deleted=False
+    ).first()
 
+    if not inst:
+        return 404, {"error": "Institution not found"}
+
+    inst.is_deleted = True
+    inst.save()
+
+    return 200, {"message": "Institution deleted successfully"}
 
 @router.get("/branches", response=List[BranchSchema])
 def list_branches(request, institution_code: str = None):
@@ -360,7 +463,7 @@ def create_department(request, payload: DepartmentCreateSchema):
             institution=inst,
             dept_code=payload.dept_code.upper(),
             dept_name=payload.dept_name,
-            description=payload.description
+            description=payload.description or None
         )
         return 201, {
             "message": "Department created successfully",
@@ -612,8 +715,8 @@ def delete_designation(request, designation_id: str):
     try:
         designation = Designation.objects.get(id=designation_id)
         
-        # Check for active employees
-        active_employees = designation.employees.filter(is_deleted=False).count()
+        # Check for active employees via assignments
+        active_employees = designation.assignments.filter(is_deleted=False).count()
         if active_employees > 0:
             return 400, {"error": f"Cannot delete designation with {active_employees} active employees"}
         

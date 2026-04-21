@@ -19,6 +19,8 @@ import {
   ArrowRight,
   FileWarning,
   Clock,
+  Briefcase,
+  GitBranch,
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -26,7 +28,8 @@ interface StreamEvent {
   name: string;
   action: string;
   time: string;
-  icon: "user" | "dept" | "resign";
+  icon: "create" | "update" | "delete" | "system";
+  type: string;
 }
 
 // ─── Simple SVG Line Chart ────────────────────────────────────────────────────
@@ -100,7 +103,7 @@ function StatCard({
   loading: boolean;
 }) {
   return (
-    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 flex items-center justify-between hover:shadow-md transition-all duration-300">
+    <div className="bg-white rounded-[2rem] border border-slate-100 shadow-xl shadow-slate-200/40 p-6 flex items-center justify-between hover:shadow-2xl hover:shadow-indigo-500/10 hover:-translate-y-1 transition-all duration-300 group">
       <div>
         <p className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 mb-1">
           {title}
@@ -134,7 +137,7 @@ function SystemStatusCard({
   inactive: number;
 }) {
   return (
-    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 hover:shadow-md transition-all duration-300">
+    <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/40 p-6 hover:shadow-2xl hover:shadow-indigo-500/10 hover:-translate-y-1 transition-all duration-300">
       <p className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 mb-3">
         System Status
       </p>
@@ -210,32 +213,40 @@ function AlertItem({
 // ─── Stream Row ───────────────────────────────────────────────────────────────
 function StreamRow({ event }: { event: StreamEvent }) {
   const iconMap = {
-    user: (
-      <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center">
-        <Users size={14} className="text-indigo-500" />
+    create: (
+      <div className="w-9 h-9 rounded-xl bg-emerald-50 flex items-center justify-center border border-emerald-100">
+        <FolderPlus size={16} className="text-emerald-500" />
       </div>
     ),
-    dept: (
-      <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
-        <LayoutGrid size={14} className="text-blue-500" />
+    update: (
+      <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center border border-blue-100">
+        <Edit2 size={16} className="text-blue-500" />
       </div>
     ),
-    resign: (
-      <div className="w-8 h-8 rounded-full bg-rose-100 flex items-center justify-center">
-        <XCircle size={14} className="text-rose-500" />
+    delete: (
+      <div className="w-9 h-9 rounded-xl bg-rose-50 flex items-center justify-center border border-rose-100">
+        <XCircle size={16} className="text-rose-500" />
+      </div>
+    ),
+    system: (
+      <div className="w-9 h-9 rounded-xl bg-slate-50 flex items-center justify-center border border-slate-100">
+        <Activity size={16} className="text-slate-400" />
       </div>
     ),
   };
   return (
-    <div className="flex items-center gap-3 py-2.5 border-b border-slate-50 last:border-0">
-      {iconMap[event.icon]}
+    <div className="flex items-center gap-4 py-3.5 border-b border-slate-50 last:border-0 group hover:bg-slate-50/50 px-2 rounded-xl transition-colors">
+      {iconMap[event.icon] || iconMap.system}
       <div className="flex-1 min-w-0">
-        <p className="text-xs font-black text-slate-700 uppercase tracking-wide">
-          {event.name}
-        </p>
-        <p className="text-[11px] text-slate-400">{event.action}</p>
+        <div className="flex items-center gap-2">
+          <p className="text-[11px] font-black text-slate-800 uppercase tracking-tight">
+            {event.name}
+          </p>
+          <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest bg-slate-100 px-2 py-0.5 rounded-full">{event.type}</span>
+        </div>
+        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{event.action}</p>
       </div>
-      <span className="text-[10px] text-slate-400 shrink-0">{event.time}</span>
+      <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest shrink-0">{event.time}</span>
     </div>
   );
 }
@@ -257,17 +268,19 @@ function HubAction({
   return (
     <a
       href={href}
-      className="flex flex-col items-center text-center gap-2 hover:scale-105 transition-transform duration-200"
+      className="flex flex-col items-center text-center gap-3 p-4 bg-white/50 border border-slate-100/50 rounded-3xl hover:bg-white hover:shadow-2xl hover:shadow-indigo-500/5 hover:-translate-y-1 transition-all duration-300 group"
     >
       <div
-        className={`w-14 h-14 rounded-2xl flex items-center justify-center ${bg}`}
+        className={`w-16 h-16 rounded-[1.5rem] flex items-center justify-center ${bg} shadow-lg shadow-current/20 transition-transform group-hover:scale-110`}
       >
-        <Icon size={22} className="text-white" />
+        <Icon size={24} className="text-white" strokeWidth={2.5} />
       </div>
-      <p className="text-xs font-black text-slate-700 uppercase tracking-wide">
-        {label}
-      </p>
-      <p className="text-[10px] text-slate-400">{sub}</p>
+      <div className="space-y-0.5">
+        <p className="text-[11px] font-black text-slate-900 uppercase tracking-[0.15em]">
+          {label}
+        </p>
+        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{sub}</p>
+      </div>
     </a>
   );
 }
@@ -280,16 +293,10 @@ export default function Dashboard() {
     institutions: 0,
     departments: 0,
     designations: 0,
+    branches: 0,
   });
 
-  const [deptMix, setDeptMix] = useState<{ name: string; count: number }[]>([]);
-
-  // Simulated stream events (replace with real-time data if available)
-  const streamEvents: StreamEvent[] = [
-    { name: "James Smith", action: "Joined Engineering", time: "2 HOURS AGO", icon: "user" },
-    { name: "Sarah Doe", action: "Moved to Marketing", time: "3 HOURS AGO", icon: "dept" },
-    { name: "Mark Wilson", action: "Resigned from Sales", time: "1 DAY AGO", icon: "resign" },
-  ];
+  const [streamEvents, setStreamEvents] = useState<StreamEvent[]>([]);
 
   // Monthly hiring trend (mock sparkline data)
   const monthlyTrend = [14, 22, 18, 30, 26, 40];
@@ -305,45 +312,66 @@ export default function Dashboard() {
     async function loadData() {
       try {
         setLoading(true);
-        const [empRes, instRes, deptRes, desigRes] = await Promise.all([
-          fetchWithAuth("/employees/"),
-          fetchWithAuth("/institutions/"),
-          fetchWithAuth("/departments/"),
-          fetchWithAuth("/designations/"),
+        const [empRes, instRes, deptRes, desigRes, branchRes, auditRes] = await Promise.all([
+          fetchWithAuth("/employees/employees"),
+          fetchWithAuth("/employees/institutions"),
+          fetchWithAuth("/employees/departments"),
+          fetchWithAuth("/employees/designations"),
+          fetchWithAuth("/employees/branches"),
+          fetchWithAuth("/audit/logs?limit=8"),
         ]);
 
         const employees = empRes.ok ? await empRes.json() : [];
         const institutions = instRes.ok ? await instRes.json() : [];
         const departments = deptRes.ok ? await deptRes.json() : [];
         const designations = desigRes.ok ? await desigRes.json() : [];
+        const branches = branchRes.ok ? await branchRes.json() : [];
+        const auditLogs = auditRes.ok ? await auditRes.json() : [];
 
-        const empArr = Array.isArray(employees)
-          ? employees
-          : employees.employees || [];
-        const instArr = Array.isArray(institutions)
-          ? institutions
-          : institutions.institutions || [];
-        const deptArr = Array.isArray(departments)
-          ? departments
-          : departments.departments || [];
-        const desigArr = Array.isArray(designations)
-          ? designations
-          : designations.designations || [];
+        const empArr = Array.isArray(employees) ? employees : employees.employees || [];
+        const instArr = Array.isArray(institutions) ? institutions : institutions.institutions || [];
+        const deptArr = Array.isArray(departments) ? departments : departments.departments || [];
+        const desigArr = Array.isArray(designations) ? designations : designations.designations || [];
+        const branchArr = Array.isArray(branches) ? branches : [];
 
         setStats({
           employees: empArr.length,
           institutions: instArr.length,
           departments: deptArr.length,
           designations: desigArr.length,
+          branches: branchArr.length,
         });
 
-        // Build org mix from departments
+        // Map audit logs to stream events
+        const events: StreamEvent[] = auditLogs.map((log: any) => {
+          const timestamp = new Date(log.timestamp);
+          const now = new Date();
+          const diffMin = Math.floor((now.getTime() - timestamp.getTime()) / 60000);
+          
+          let timeMsg = "Just now";
+          if (diffMin > 0) {
+            if (diffMin < 60) timeMsg = `${diffMin}M AGO`;
+            else if (diffMin < 1440) timeMsg = `${Math.floor(diffMin / 60)}H AGO`;
+            else timeMsg = `${Math.floor(diffMin / 1440)}D AGO`;
+          }
+
+          return {
+            name: log.changed_by,
+            action: `${log.action} ${log.content_type}`,
+            time: timeMsg,
+            icon: log.action.toLowerCase() === 'created' ? 'create' : (log.action.toLowerCase() === 'deleted' ? 'delete' : 'update'),
+            type: log.content_type
+          };
+        });
+        setStreamEvents(events);
+
+        // Build org mix from departments with employee count
         if (deptArr.length > 0) {
           const mix = deptArr.slice(0, 5).map((d: any) => ({
-            name: d.name || d.department_name || "Department",
-            count: d.employee_count || Math.floor(Math.random() * 150 + 50),
+            name: d.dept_name || "Department",
+            count: d.employee_count || 0,
           }));
-          setDeptMix(mix);
+          setDeptMix(mix.sort((a: any, b: any) => b.count - a.count));
         } else {
           setDeptMix([
             { name: "Engineering", count: 145 },
@@ -373,7 +401,7 @@ export default function Dashboard() {
               Dashboard
             </h1>
             <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 mt-1">
-              Organizational Overview &amp; Intelligence
+              Workforce Structure & Analytics
             </p>
           </div>
           <div className="flex items-center gap-2 text-xs text-slate-500 bg-white border border-slate-100 rounded-xl px-4 py-2.5 shadow-sm">
@@ -385,7 +413,7 @@ export default function Dashboard() {
         </div>
 
         {/* ── Row 1: Stat Cards + System Status ── */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
           <StatCard
             title="Total Institutions"
             value={stats.institutions}
@@ -394,70 +422,72 @@ export default function Dashboard() {
             loading={loading}
           />
           <StatCard
-            title="Total Departments"
+            title="Active Units"
             value={stats.departments}
-            sub="1 this week"
+            sub="Functional Hubs"
             icon={LayoutGrid}
             loading={loading}
           />
           <StatCard
-            title="Total Employees"
+            title="Total Workforce"
             value={stats.employees}
             sub="+1.2% growth"
             icon={Users}
             loading={loading}
           />
-          <SystemStatusCard active={stats.employees} inactive={15} />
+          <SystemStatusCard active={stats.employees} inactive={stats.branches} />
         </div>
 
         {/* ── Row 2: Org Mix | Monthly Growth | Alerts ── */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
           {/* Org Mix */}
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-sm font-black text-slate-800">
+          <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/40 p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-sm font-black text-slate-800 uppercase tracking-tighter">
                 Organization Mix
               </h2>
-              <span className="text-[10px] font-bold uppercase tracking-widest text-indigo-500">
-                Employees Per Dept
+              <span className="text-[10px] font-black uppercase tracking-widest text-indigo-500 bg-indigo-50 px-3 py-1 rounded-full">
+                Personnel Hubs
               </span>
             </div>
             {loading ? (
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {[...Array(5)].map((_, i) => (
                   <div
                     key={i}
-                    className="h-5 bg-slate-100 rounded animate-pulse"
+                    className="h-6 bg-slate-50 rounded-xl animate-pulse"
                   />
                 ))}
               </div>
             ) : (
-              deptMix.map((d) => (
-                <OrgMixRow key={d.name} label={d.name} count={d.count} />
-              ))
+              <div className="space-y-1">
+                {deptMix.map((d, index) => (
+                  <OrgMixRow key={index} label={d.name} count={d.count} />
+                ))}
+              </div>
             )}
           </div>
 
           {/* Monthly Growth */}
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+          <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/40 p-6">
             <div className="flex items-center justify-between mb-1">
-              <h2 className="text-sm font-black text-slate-800">
+              <h2 className="text-sm font-black text-slate-800 uppercase tracking-tighter">
                 Monthly Growth
               </h2>
-              <TrendingUp size={16} className="text-indigo-400" />
+              <TrendingUp size={18} className="text-indigo-400" />
             </div>
-            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-4">
-              Hiring Trend (2026)
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-6 opacity-60">
+              Hiring Trend & Forecast
             </p>
-            <div className="h-24">
+            <div className="h-28">
               <LineChart data={monthlyTrend} />
             </div>
-            <div className="flex justify-between mt-2 px-1">
+            <div className="flex justify-between mt-4 px-2">
               {months.map((m) => (
                 <span
                   key={m}
-                  className="text-[9px] font-bold uppercase tracking-widest text-slate-300"
+                  className="text-[9px] font-black uppercase tracking-widest text-slate-300"
                 >
                   {m}
                 </span>
@@ -466,14 +496,14 @@ export default function Dashboard() {
           </div>
 
           {/* Organization Alerts */}
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-sm font-black text-slate-800">
+          <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/40 p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-sm font-black text-slate-800 uppercase tracking-tighter">
                 Organization Alerts
               </h2>
-              <AlertTriangle size={16} className="text-amber-400" />
+              <AlertTriangle size={18} className="text-amber-500 shadow-lg shadow-amber-200" />
             </div>
-            <div className="space-y-3">
+            <div className="space-y-4">
               <AlertItem
                 color="red"
                 icon={FileWarning}
@@ -494,52 +524,89 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
           {/* Intelligence Hub */}
-          <div className="lg:col-span-2 bg-gradient-to-br from-slate-50 to-indigo-50 rounded-2xl border border-slate-100 shadow-sm p-6">
-            <div className="flex items-center justify-between mb-1">
-              <h2 className="text-lg font-black text-slate-800">
+          <div className="lg:col-span-2 bg-gradient-to-br from-slate-50 to-indigo-50 rounded-[3rem] border border-slate-100 shadow-xl shadow-slate-200/40 p-8">
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="text-2xl font-black text-slate-900 tracking-tighter uppercase">
                 Intelligence Hub
               </h2>
-              <Settings size={18} className="text-slate-400" />
+              <Settings size={22} className="text-slate-300 hover:rotate-90 transition-transform cursor-pointer" />
             </div>
-            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-6">
-              Manage Your Organization&apos;s Core
+            <p className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-400 mb-8 opacity-60 italic">
+              Strategic Control & Monitoring
             </p>
-            <div className="grid grid-cols-3 gap-6">
+            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4 sm:gap-6">
               <HubAction
                 icon={UserPlus}
-                label="Add Employee"
-                sub="New personnel profile"
-                bg="bg-indigo-500"
+                label="Personnel"
+                sub="Workforce"
+                bg="bg-zinc-900"
                 href="/employees"
               />
               <HubAction
                 icon={FolderPlus}
-                label="Add Dept"
-                sub="Register department"
-                bg="bg-emerald-500"
+                label="Units"
+                sub="Departments"
+                bg="bg-indigo-600"
                 href="/departments"
               />
               <HubAction
                 icon={FilePlus}
-                label="Add Institution"
-                sub="Register organization"
-                bg="bg-violet-500"
+                label="Entities"
+                sub="Institutions"
+                bg="bg-emerald-600"
                 href="/institutions"
+              />
+              <HubAction
+                icon={Briefcase}
+                label="Roles"
+                sub="Designation"
+                bg="bg-amber-500"
+                href="/designations"
+              />
+              <HubAction
+                icon={GitBranch}
+                label="Branches"
+                sub="Stations"
+                bg="bg-rose-500"
+                href="/institutions?view=branches"
               />
             </div>
           </div>
 
           {/* Real-time Stream */}
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-sm font-black text-slate-800">
-                Real-time Stream
+          <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/40 p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-sm font-black text-slate-800 uppercase tracking-tighter">
+                System Stream
               </h2>
-              <Activity size={16} className="text-indigo-400" />
+              <div className="relative">
+                <Activity size={18} className="text-indigo-500" />
+                <span className="absolute -top-1 -right-1 w-2 h-2 bg-rose-500 rounded-full animate-ping" />
+              </div>
             </div>
-            {streamEvents.map((ev, i) => (
-              <StreamRow key={i} event={ev} />
-            ))}
+            {loading ? (
+              <div className="space-y-4">
+                 {[...Array(6)].map((_, i) => (
+                    <div key={i} className="flex gap-4 p-2">
+                       <div className="w-9 h-9 bg-slate-50 rounded-xl animate-pulse" />
+                       <div className="flex-1 space-y-2 py-1">
+                          <div className="h-3 w-1/2 bg-slate-50 rounded animate-pulse" />
+                          <div className="h-2 w-1/3 bg-slate-50 rounded animate-pulse" />
+                       </div>
+                    </div>
+                 ))}
+              </div>
+            ) : streamEvents.length === 0 ? (
+              <div className="py-12 text-center">
+                 <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">No activities detected</p>
+              </div>
+            ) : (
+              <div className="space-y-1">
+                {streamEvents.map((ev, i) => (
+                  <StreamRow key={i} event={ev} />
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>

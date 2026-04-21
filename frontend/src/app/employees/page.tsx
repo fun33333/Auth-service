@@ -285,7 +285,7 @@ export default function EmployeesPage() {
   async function loadData() {
     try {
       setLoading(true);
-      const res = await fetchWithAuth('/employees');
+      const res = await fetchWithAuth('/employees/employees');
       if (res.ok) {
         const data = await res.json();
         // Handle both Array response and { employees: Array } response
