@@ -34,7 +34,6 @@ export default function ProtectedLayout({
   const navLinks = [
     { name: "Dashboard", icon: LayoutDashboard, href: "/" },
     { name: "Institutions", icon: Building2, href: "/institutions" },
-    { name: "Branches", icon: GitBranch, href: "/branches" },
     { name: "Departments", icon: LayoutGrid, href: "/departments" },
     { name: "Designations", icon: Briefcase, href: "/designations" },
     { name: "Employees", icon: Users, href: "/employees" },

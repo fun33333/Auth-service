@@ -369,6 +369,7 @@ class Designation(SoftDeleteModel):
     
     position_name = models.CharField(max_length=100, help_text="e.g., Teacher, Surgeon, Manager")
     position_code = models.CharField(max_length=10, help_text="Short code for ID generation (e.g., T, D, M)")
+    description = models.TextField(blank=True, null=True)
     
     # 🆕 DYNAMIC SCHEMA
     # Defines what extra data is required for this specific designation

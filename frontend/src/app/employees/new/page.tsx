@@ -101,9 +101,9 @@ export default function NewEmployeeForm() {
       try {
         setFetchingMeta(true);
         const [instRes, deptRes, orgRes] = await Promise.all([
-          fetchWithAuth('/institutions'),
-          fetchWithAuth('/departments'),
-          fetchWithAuth('/organizations')
+          fetchWithAuth('/employees/institutions'),
+          fetchWithAuth('/employees/departments'),
+          fetchWithAuth('/employees/organizations')
         ]);
         if (instRes.ok) setInstitutions(await instRes.json());
         if (deptRes.ok) setDepartments(await deptRes.json());
@@ -140,7 +140,7 @@ export default function NewEmployeeForm() {
       setAssignments(newAsgns);
       return;
     }
-    const res = await fetchWithAuth(`/designations?department_code=${deptCode}`);
+    const res = await fetchWithAuth(`/employees/designations?department_code=${deptCode}`);
     if (res.ok) {
       const data = await res.json();
       const newAsgns = [...assignments];
@@ -222,14 +222,14 @@ export default function NewEmployeeForm() {
         experience: experience.filter(e => e.employer) 
       };
       
-      const response = await fetchWithAuth('/employees', {
+      const response = await fetchWithAuth('/employees/employees', {
         method: 'POST',
         body: JSON.stringify(payload)
       });
 
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Failed to create employee");
-      router.push('/employees');
+      router.push('/employees/employees');
     } catch (err: any) {
       setError(err.message || "An unexpected error occurred");
       window.scrollTo({ top: 0 }); 

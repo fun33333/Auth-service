@@ -1,16 +1,34 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import ProtectedLayout from "@/components/ProtectedLayout";
-import InstitutionCard from "@/components/InstitutionCard";
-import { fetchWithAuth } from "@/utils/api";
-import {
-  Plus, Search, ArrowLeft,
-  X, GitBranch, MapPin, Phone, Mail,
-  Edit2, Trash2, Building2
-} from "lucide-react";
+/**
+ * STRATEGIC INSTITUTIONS REGISTRY (UNIFIED)
+ * --------------------------------------------------------------------------
+ * Consolidated module for Institutions and Branch Deployment.
+ * This version incorporates the full standalone branch logic, stats, and 
+ * metadata fields into a unified operational hub.
+ * --------------------------------------------------------------------------
+ */
 
-// ── Types ───────────────────────────────────────────────────────────────────
+import React, { useState, useEffect } from "react";
+import ProtectedLayout from "@/components/ProtectedLayout";
+import { 
+  Building2, Plus, Search, MapPin, GitBranch, ArrowLeft, 
+  X, Shield, Activity, Globe, Edit2, Trash2, ArrowRight,
+  Database, UserCheck, Phone, Mail, CheckCircle2, XCircle
+} from "lucide-react";
+import { useSearchParams } from "next/navigation";
+import { fetchWithAuth } from "@/utils/api";
+import { Suspense } from "react";
+
+// ==========================================================================
+// 1. TYPES & INTERFACES
+// ==========================================================================
+
+type Organization = {
+  id: string;
+  name: string;
+  org_code: string;
+};
 
 type Institution = {
   id: string;
@@ -22,13 +40,6 @@ type Institution = {
   city: string;
   contact_number: string;
   organization_code?: string;
-  legacy_campus_id?: string;
-};
-
-type Organization = {
-  id: string;
-  name: string;
-  org_code: string;
 };
 
 type Branch = {
@@ -41,16 +52,99 @@ type Branch = {
   city: string;
   contact_number: string;
   email: string;
-  branch_head_name: string;
+  branch_head_name?: string;
 };
 
-// ── Skeleton (Small helper) ────────────────────────────────────────────────
+// ==========================================================================
+// 2. SHARED UI FRAGMENTS
+// ==========================================================================
 
-const Skeleton = ({ className, height, width }: any) => (
-  <div className={`animate-pulse bg-zinc-100 rounded-xl ${className}`} style={{ height, width }} />
-);
+function Skeleton({ className, width, height }: { className?: string; width?: string | number; height?: string | number }) {
+  return <div className={`animate-pulse bg-zinc-100 rounded-md ${className}`} style={{ width, height }} />;
+}
 
-// ── Modals ──────────────────────────────────────────────────────────────────
+/**
+ * EntityCard - High-density card for Institution Index
+ */
+function EntityCard({ 
+  institution, 
+  branchCount = 0,
+  onEdit, 
+  onDelete, 
+  onViewBranches 
+}: {
+  institution: Institution;
+  branchCount?: number;
+  onEdit: (inst: Institution) => void;
+  onDelete: (id: string) => void;
+  onViewBranches: (inst: Institution) => void;
+}) {
+  return (
+    <div className="bg-white rounded-[1.5rem] border border-zinc-100 shadow-sm overflow-hidden group hover:shadow-2xl hover:shadow-[#BDA6CE]/20 transition-all duration-500 relative flex flex-col hover:-translate-y-1 p-1">
+      <div className="bg-zinc-50/50 rounded-[1.3rem] p-4 flex-1 flex flex-col group-hover:bg-white transition-colors duration-500">
+        <div className="flex items-start justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-zinc-900 flex items-center justify-center text-white shadow-lg group-hover:bg-[#BDA6CE] transition-all shrink-0">
+               <Building2 size={18} strokeWidth={2.5} />
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 mb-0.5">
+                <span className="text-[8px] font-black text-[#BDA6CE] uppercase tracking-widest">{institution.inst_code}</span>
+                <span className="h-0.5 w-0.5 rounded-full bg-zinc-200" />
+                <span className="text-[8px] font-black text-emerald-500 uppercase tracking-widest">operational</span>
+              </div>
+              <h3 className="text-[13px] font-black text-zinc-900 tracking-tight group-hover:text-[#BDA6CE] transition-colors uppercase leading-tight truncate max-w-[150px]">
+                {institution.name}
+              </h3>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all duration-500">
+            <button onClick={() => onEdit(institution)} className="h-7 w-7 flex items-center justify-center bg-white text-zinc-400 rounded-lg hover:bg-zinc-900 hover:text-white transition-all active:scale-95 border border-zinc-100 shadow-sm">
+              <Edit2 size={10} strokeWidth={2.5} />
+            </button>
+            <button onClick={() => onDelete(institution.id)} className="h-7 w-7 flex items-center justify-center bg-white text-zinc-400 rounded-lg hover:bg-rose-500 hover:text-white transition-all active:scale-95 border border-zinc-100 shadow-sm">
+              <Trash2 size={10} strokeWidth={2.5} />
+            </button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2 mb-4 pt-4 border-t border-zinc-100">
+           <div className="space-y-0.5">
+              <p className="text-[7px] font-black text-zinc-400 uppercase tracking-widest leading-none">Sector</p>
+              <div className="flex items-center gap-1.5 pt-1">
+                <Shield size={8} className="text-[#BDA6CE]" />
+                <p className="text-[9px] font-black text-zinc-900 uppercase truncate">{institution.inst_type || 'Educational'}</p>
+              </div>
+           </div>
+           <div className="space-y-0.5">
+              <p className="text-[7px] font-black text-zinc-400 uppercase tracking-widest leading-none">Base</p>
+              <div className="flex items-center gap-1.5 pt-1">
+                <MapPin size={8} className="text-zinc-400" />
+                <p className="text-[9px] font-black text-zinc-900 uppercase truncate">{institution.city || 'Central'}</p>
+              </div>
+           </div>
+        </div>
+
+        <div className="mt-auto pt-2">
+          <button 
+            onClick={() => onViewBranches(institution)}
+            className="w-full bg-zinc-900 text-white rounded-xl py-2.5 text-[9px] font-black uppercase tracking-[0.2em] hover:bg-[#BDA6CE] transition-all active:scale-95 flex items-center justify-center gap-2 shadow-xl shadow-zinc-900/10 group/btn"
+          >
+            <GitBranch size={15} strokeWidth={2.5} /> 
+            Deployment Registry
+            <span className="ml-1 bg-white/20 px-1.5 py-0.5 rounded-md text-[8px]">{branchCount}</span>
+            <ArrowRight size={12} className="ml-auto opacity-40 group-hover/btn:translate-x-1 transition-transform" />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ==========================================================================
+// 3. MODAL SYSTEMS
+// ==========================================================================
 
 function InstitutionModal({ open, onClose, onSave, initial, organizations }: {
   open: boolean; onClose: () => void;
@@ -62,70 +156,68 @@ function InstitutionModal({ open, onClose, onSave, initial, organizations }: {
     inst_code: initial?.inst_code ?? '',
     inst_type: initial?.inst_type ?? 'educational',
     organization_code: initial?.organization_code ?? '',
-    legacy_campus_id: initial?.legacy_campus_id ?? '',
     city: initial?.city ?? '',
     address: initial?.address ?? '',
     contact_number: initial?.contact_number ?? '',
   });
 
   useEffect(() => {
-    setForm({
-      name: initial?.name ?? '',
-      inst_code: initial?.inst_code ?? '',
-      inst_type: initial?.inst_type ?? 'educational',
-      organization_code: initial?.organization_code ?? (organizations[0]?.org_code || ''),
-      legacy_campus_id: initial?.legacy_campus_id ?? '',
-      city: initial?.city ?? '',
-      address: initial?.address ?? '',
-      contact_number: initial?.contact_number ?? '',
-    });
+    if (open) {
+      setForm({
+        name: initial?.name ?? '',
+        inst_code: initial?.inst_code ?? '',
+        inst_type: initial?.inst_type ?? 'educational',
+        organization_code: initial?.organization_code ?? (organizations[0]?.org_code || ''),
+        city: initial?.city ?? '',
+        address: initial?.address ?? '',
+        contact_number: initial?.contact_number ?? '',
+      });
+    }
   }, [initial, open, organizations]);
 
   if (!open) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-      <div className="bg-white rounded-[3rem] shadow-2xl w-full max-w-xl border border-zinc-100 animate-in zoom-in-95 duration-200 overflow-hidden">
-        <div className="flex items-center justify-between px-10 py-8 border-b border-zinc-50">
+      <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-xl border border-zinc-100 animate-in zoom-in-95 duration-200 overflow-hidden">
+        <div className="px-8 py-6 border-b border-zinc-50 flex items-center justify-between">
           <div>
-            <h2 className="text-3xl font-black text-zinc-900 tracking-tighter uppercase">{initial ? "Edit Entity" : "Register Entity"}</h2>
-            <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mt-1 italic">Registry Profile Management</p>
+            <h2 className="text-xl font-black text-zinc-900 tracking-tighter uppercase">{initial ? 'Update Entity' : 'Establish Registry'}</h2>
+            <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mt-0.5">Core Institutional Record</p>
           </div>
-          <button onClick={onClose} className="p-3 text-zinc-400 hover:text-zinc-900 rounded-2xl hover:bg-zinc-50 transition-all"><X size={24} /></button>
+          <button onClick={onClose} className="p-2 text-zinc-300 hover:text-zinc-900 transition-all"><X size={20} /></button>
         </div>
-        <div className="px-10 py-10 grid grid-cols-1 sm:grid-cols-2 gap-6">
+        <div className="p-8 grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-[70vh] overflow-y-auto">
           <div className="col-span-2">
-            <label className="block text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2">Institution Name</label>
-            <input type="text" placeholder="e.g. Al-Khidmat Foundation" value={form.name} onChange={e => setForm(p=>({...p, name: e.target.value}))}
-              className="w-full px-6 py-4 bg-zinc-50 border border-transparent focus:border-zinc-200 focus:bg-white rounded-2xl text-xs font-black uppercase tracking-widest outline-none transition-all" />
+            <label className="block text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1.5 ml-1">Entity Full Name</label>
+            <input type="text" placeholder="e.g. Al-Khidmat Foundation" value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))}
+              className="w-full px-5 py-3.5 bg-zinc-50 border border-transparent focus:border-[#BDA6CE] focus:bg-white rounded-xl text-[10px] uppercase font-black tracking-widest outline-none transition-all placeholder:normal-case placeholder:font-normal" />
           </div>
           <div>
-            <label className="block text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2">Registry Code</label>
-            <input type="text" placeholder="AKS-01" value={form.inst_code} onChange={e => setForm(p=>({...p, inst_code: e.target.value}))}
-              className="w-full px-6 py-4 bg-zinc-50 border border-transparent focus:border-zinc-200 focus:bg-white rounded-2xl text-xs font-black uppercase tracking-widest outline-none transition-all" />
+            <label className="block text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1.5 ml-1">Assigned Code</label>
+            <input type="text" placeholder="AKS-01" value={form.inst_code} onChange={e => setForm(p => ({ ...p, inst_code: e.target.value }))}
+              className="w-full px-5 py-3.5 bg-zinc-50 border border-transparent focus:border-[#BDA6CE] focus:bg-white rounded-xl text-[10px] uppercase font-black tracking-widest outline-none transition-all placeholder:normal-case placeholder:font-normal" />
           </div>
           <div>
-            <label className="block text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2">Entity Type</label>
-            <select value={form.inst_type} onChange={e => setForm(p=>({...p, inst_type: e.target.value}))}
-              className="w-full px-6 py-4 bg-zinc-50 border border-transparent focus:border-zinc-200 focus:bg-white rounded-2xl text-xs font-black uppercase tracking-widest outline-none transition-all">
+            <label className="block text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1.5 ml-1">Classification</label>
+            <select value={form.inst_type} onChange={e => setForm(p => ({ ...p, inst_type: e.target.value }))}
+              className="w-full px-5 py-3.5 bg-zinc-50 border border-transparent focus:border-[#BDA6CE] focus:bg-white rounded-xl text-[10px] uppercase font-black tracking-widest outline-none transition-all appearance-none">
               <option value="educational">Educational</option>
               <option value="healthcare">Healthcare</option>
               <option value="social_welfare">Social Welfare</option>
             </select>
           </div>
           <div className="col-span-2">
-            <label className="block text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2">Parent Organization</label>
-            <select value={form.organization_code} onChange={e => setForm(p=>({...p, organization_code: e.target.value}))}
-              className="w-full px-6 py-4 bg-zinc-50 border border-transparent focus:border-zinc-200 focus:bg-white rounded-2xl text-xs font-black uppercase tracking-widest outline-none transition-all">
-              {organizations.map(org => (
-                <option key={org.id} value={org.org_code}>{org.name}</option>
-              ))}
+            <label className="block text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1.5 ml-1">Parent Command</label>
+            <select value={form.organization_code} onChange={e => setForm(p => ({ ...p, organization_code: e.target.value }))}
+              className="w-full px-5 py-3.5 bg-zinc-50 border border-transparent focus:border-[#BDA6CE] focus:bg-white rounded-xl text-[10px] uppercase font-black tracking-widest outline-none transition-all appearance-none">
+              {organizations.map(org => <option key={org.id} value={org.org_code}>{org.name}</option>)}
             </select>
           </div>
-          <div className="col-span-2 pt-6 border-t border-zinc-50 flex justify-end gap-3">
-            <button onClick={onClose} className="px-8 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest hover:text-zinc-900 transition-all">Cancel</button>
-            <button onClick={() => onSave(form)} className="px-10 py-5 bg-zinc-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-600 transition-all active:scale-95 shadow-2xl">
-              {initial ? "Confirm Update" : "Establish Registry"}
+          <div className="col-span-2 pt-6 flex justify-end gap-2">
+            <button onClick={onClose} className="px-6 py-3 text-[9px] font-black text-zinc-400 uppercase tracking-widest">Cancel</button>
+            <button onClick={() => onSave(form)} className="px-8 py-3.5 bg-zinc-900 text-white rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-[#BDA6CE] transition-all active:scale-95 shadow-xl">
+              {initial ? 'Finalize Changes' : 'Execute Registration'}
             </button>
           </div>
         </div>
@@ -136,67 +228,98 @@ function InstitutionModal({ open, onClose, onSave, initial, organizations }: {
 
 function BranchModal({ open, onClose, onSave, initial, institutionCode }: {
   open: boolean; onClose: () => void;
-  onSave: (d: any) => void; initial?: Branch | null; institutionCode: string;
+  onSave: (d: any) => void; initial?: Branch | null;
+  institutionCode: string;
 }) {
   const [form, setForm] = useState({
     branch_name: initial?.branch_name ?? '',
     branch_code: initial?.branch_code ?? '',
+    institution_code: institutionCode,
+    status: initial?.status ?? 'active',
     city: initial?.city ?? '',
     address: initial?.address ?? '',
-    email: initial?.email ?? '',
     contact_number: initial?.contact_number ?? '',
+    email: initial?.email ?? '',
     branch_head_name: initial?.branch_head_name ?? '',
-    status: initial?.status ?? 'active',
   });
 
   useEffect(() => {
-    setForm({
-      branch_name: initial?.branch_name ?? '',
-      branch_code: initial?.branch_code ?? '',
-      city: initial?.city ?? '',
-      address: initial?.address ?? '',
-      email: initial?.email ?? '',
-      contact_number: initial?.contact_number ?? '',
-      branch_head_name: initial?.branch_head_name ?? '',
-      status: initial?.status ?? 'active',
-    });
-  }, [initial, open]);
+    if (open) {
+      setForm({
+        branch_name: initial?.branch_name ?? '',
+        branch_code: initial?.branch_code ?? '',
+        institution_code: institutionCode,
+        status: initial?.status ?? 'active',
+        city: initial?.city ?? '',
+        address: initial?.address ?? '',
+        contact_number: initial?.contact_number ?? '',
+        email: initial?.email ?? '',
+        branch_head_name: initial?.branch_head_name ?? '',
+      });
+    }
+  }, [initial, open, institutionCode]);
 
   if (!open) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-      <div className="bg-white rounded-[3rem] shadow-2xl w-full max-w-xl border border-zinc-100 animate-in zoom-in-95 duration-200 overflow-hidden">
-        <div className="flex items-center justify-between px-10 py-8 border-b border-zinc-50">
+      <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-xl border border-zinc-100 animate-in zoom-in-95 duration-200 overflow-hidden">
+        <div className="px-8 py-6 border-b border-zinc-50 flex items-center justify-between">
           <div>
-            <h2 className="text-3xl font-black text-zinc-900 tracking-tighter uppercase">{initial ? "Modify Deployment" : "Deploy Branch"}</h2>
-            <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mt-1 italic">Tactical Location Management</p>
+            <h2 className="text-xl font-black text-zinc-900 tracking-tighter uppercase">{initial ? 'Update Station' : 'Deploy Operational Unit'}</h2>
+            <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mt-0.5">Full Deployment Registry</p>
           </div>
-          <button onClick={onClose} className="p-3 text-zinc-400 hover:text-zinc-900 rounded-2xl hover:bg-zinc-50 transition-all"><X size={24} /></button>
+          <button onClick={onClose} className="p-2 text-zinc-300 hover:text-zinc-900 transition-all"><X size={20} /></button>
         </div>
-        <div className="px-10 py-10 grid grid-cols-1 sm:grid-cols-2 gap-6">
+        <div className="p-8 grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-[70vh] overflow-y-auto">
           <div className="col-span-2">
-            <label className="block text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2">Branch Name</label>
-            <input type="text" placeholder="e.g. Sector-01 HQ" value={form.branch_name} onChange={e => setForm(p=>({...p, branch_name: e.target.value}))}
-              className="w-full px-6 py-4 bg-zinc-50 border border-transparent focus:border-zinc-200 focus:bg-white rounded-2xl text-xs font-black uppercase tracking-widest outline-none transition-all" />
+            <label className="block text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1.5 ml-1">Unit Display Name</label>
+            <input type="text" placeholder="e.g. Area Command Hub" value={form.branch_name} onChange={e => setForm(p => ({ ...p, branch_name: e.target.value }))}
+              className="w-full px-5 py-3.5 bg-zinc-50 border border-transparent focus:border-[#BDA6CE] focus:bg-white rounded-xl text-[10px] uppercase font-black tracking-widest outline-none transition-all placeholder:normal-case placeholder:font-normal" />
           </div>
           <div>
-            <label className="block text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2">Station Code</label>
-            <input type="text" placeholder="BR-01" value={form.branch_code} onChange={e => setForm(p=>({...p, branch_code: e.target.value}))}
-              className="w-full px-6 py-4 bg-zinc-50 border border-transparent focus:border-zinc-200 focus:bg-white rounded-2xl text-xs font-black uppercase tracking-widest outline-none transition-all" />
+            <label className="block text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1.5 ml-1">Unit Code</label>
+            <input type="text" placeholder="UNIT-ISL-01" value={form.branch_code} onChange={e => setForm(p => ({ ...p, branch_code: e.target.value }))}
+              className="w-full px-5 py-3.5 bg-zinc-50 border border-transparent focus:border-[#BDA6CE] focus:bg-white rounded-xl text-[10px] uppercase font-black tracking-widest outline-none transition-all placeholder:normal-case placeholder:font-normal" />
           </div>
-           <div>
-            <label className="block text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2">Operational Status</label>
-            <select value={form.status} onChange={e => setForm(p=>({...p, status: e.target.value}))}
-              className="w-full px-6 py-4 bg-zinc-50 border border-transparent focus:border-zinc-200 focus:bg-white rounded-2xl text-xs font-black uppercase tracking-widest outline-none transition-all">
-              <option value="active">Active</option><option value="inactive">Inactive</option>
+          <div>
+            <label className="block text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1.5 ml-1">Deployment Status</label>
+            <select value={form.status} onChange={e => setForm(p => ({ ...p, status: e.target.value }))}
+              className="w-full px-5 py-3.5 bg-zinc-50 border border-transparent focus:border-[#BDA6CE] focus:bg-white rounded-xl text-[10px] uppercase font-black tracking-widest outline-none transition-all appearance-none">
+              <option value="active">Active</option>
+              <option value="standby">Standby</option>
+              <option value="offline">Offline</option>
             </select>
           </div>
-          <div className="col-span-2 pt-6 border-t border-zinc-50 flex justify-end gap-3">
-            <button onClick={onClose} className="px-8 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest hover:text-zinc-900 transition-all">Cancel</button>
-            <button onClick={() => onSave({ ...form, institution_code: institutionCode })} 
-              className="px-10 py-5 bg-zinc-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-600 transition-all active:scale-95 shadow-2xl">
-              {initial ? "Confirm Update" : "Initialize Deployment"}
+          <div className="col-span-2">
+            <label className="block text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1.5 ml-1">Branch Head / CO</label>
+            <input type="text" placeholder="e.g. Dr. Salman Khan" value={form.branch_head_name} onChange={e => setForm(p => ({ ...p, branch_head_name: e.target.value }))}
+              className="w-full px-5 py-3.5 bg-zinc-50 border border-transparent focus:border-[#BDA6CE] focus:bg-white rounded-xl text-[10px] uppercase font-black tracking-widest outline-none transition-all placeholder:normal-case placeholder:font-normal" />
+          </div>
+          <div>
+            <label className="block text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1.5 ml-1">Contact Phone</label>
+            <input type="text" placeholder="+92-XXX-XXXXXXX" value={form.contact_number} onChange={e => setForm(p => ({ ...p, contact_number: e.target.value }))}
+              className="w-full px-5 py-3.5 bg-zinc-50 border border-transparent focus:border-[#BDA6CE] focus:bg-white rounded-xl text-[10px] uppercase font-black tracking-widest outline-none transition-all" />
+          </div>
+          <div>
+            <label className="block text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1.5 ml-1">Deployment Email</label>
+            <input type="text" placeholder="unit@inst.pk" value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))}
+              className="w-full px-5 py-3.5 bg-zinc-50 border border-transparent focus:border-[#BDA6CE] focus:bg-white rounded-xl text-[10px] lowercase font-black outline-none transition-all" />
+          </div>
+          <div className="col-span-2">
+            <label className="block text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1.5 ml-1">Station City</label>
+            <input type="text" placeholder="e.g. Islamabad" value={form.city} onChange={e => setForm(p => ({ ...p, city: e.target.value }))}
+              className="w-full px-5 py-3.5 bg-zinc-50 border border-transparent focus:border-[#BDA6CE] focus:bg-white rounded-xl text-[10px] uppercase font-black tracking-widest outline-none transition-all placeholder:normal-case placeholder:font-normal" />
+          </div>
+          <div className="col-span-2">
+            <label className="block text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1.5 ml-1">Full Physical Address</label>
+            <input type="text" placeholder="Plot 123, Sector G-10..." value={form.address} onChange={e => setForm(p => ({ ...p, address: e.target.value }))}
+              className="w-full px-5 py-3.5 bg-zinc-50 border border-transparent focus:border-[#BDA6CE] focus:bg-white rounded-xl text-[10px] uppercase font-black tracking-widest outline-none transition-all placeholder:normal-case placeholder:font-normal" />
+          </div>
+          <div className="col-span-2 pt-6 flex justify-end gap-2">
+            <button onClick={onClose} className="px-6 py-3 text-[9px] font-black text-zinc-400 uppercase tracking-widest">Cancel</button>
+            <button onClick={() => onSave(form)} className="px-8 py-3.5 bg-zinc-900 text-white rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-[#BDA6CE] transition-all active:scale-95 shadow-xl">
+              {initial ? 'Apply Command' : 'Initialize Deployment'}
             </button>
           </div>
         </div>
@@ -205,303 +328,319 @@ function BranchModal({ open, onClose, onSave, initial, institutionCode }: {
   );
 }
 
-// ── Main Page ───────────────────────────────────────────────────────────────
+// ==========================================================================
+// 4. MAIN REGISTRY COMPONENT
+// ==========================================================================
 
-export default function InstitutionsPage() {
+function InstitutionsPage() {
+  const [view, setView] = useState<"list" | "branches">("list");
+  const [selectedInst, setSelectedInst] = useState<Institution | null>(null);
+  
   const [institutions, setInstitutions] = useState<Institution[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   
-  const [view, setView] = useState<"list" | "branches">("list");
-  const [selectedInst, setSelectedInst] = useState<Institution | null>(null);
+  const [totalUnits, setTotalUnits] = useState(0);
+  const [reachCities, setReachCities] = useState(0);
+
   const [instModal, setInstModal] = useState(false);
-  const [editInstTarget, setEditInstTarget] = useState<Institution | null>(null);
   const [branchModal, setBranchModal] = useState(false);
-  const [editBranchTarget, setEditBranchTarget] = useState<Branch | null>(null);
+  const [editInst, setEditInst] = useState<Institution | null>(null);
+  const [editBranch, setEditBranch] = useState<Branch | null>(null);
 
   async function loadInitialData() {
     try {
       setLoading(true);
-      const [instRes, orgRes] = await Promise.all([
-        fetchWithAuth("/institutions"),
-        fetchWithAuth("/organizations")
+      const [instRes, orgRes, branchRes] = await Promise.all([
+        fetchWithAuth("/employees/institutions"),
+        fetchWithAuth("/employees/organizations"),
+        fetchWithAuth("/employees/branches")
       ]);
-      
+
       if (instRes.ok) {
         const data = await instRes.json();
-        setInstitutions(Array.isArray(data) ? data : (data.institutions || []));
+        const list = Array.isArray(data) ? data : (data.institutions || []);
+        setInstitutions(list);
+        setReachCities(new Set(list.map((i: any) => i.city).filter(Boolean)).size);
       }
-      
+
       if (orgRes.ok) {
         const data = await orgRes.json();
         setOrganizations(Array.isArray(data) ? data : (data.organizations || []));
       }
-    } catch (err) {
-      console.error("Initial load failed:", err);
-      setInstitutions([]);
-      setOrganizations([]);
-    } finally {
-      setLoading(false);
-    }
-  }
 
-  async function loadInstitutions() {
-    try {
-      const res = await fetchWithAuth("/institutions");
-      if (res.ok) {
-        const data = await res.json();
-        setInstitutions(Array.isArray(data) ? data : (data.institutions || []));
+      if (branchRes.ok) {
+        const data = await branchRes.json();
+        const list = Array.isArray(data) ? data : (data.branches || []);
+        setBranches(list);
+        setTotalUnits(list.length);
       }
     } catch (err) {
-      console.error("Reload failed:", err);
-    }
-  }
-
-  async function loadBranches(instCode: string) {
-    try {
-      setLoading(true);
-      const res = await fetchWithAuth(`/branches?institution_code=${instCode}`);
-      if (res.ok) setBranches(await res.json());
-    } catch (err) {
-      console.error(err);
+      console.error("Registry load failure:", err);
     } finally {
       setLoading(false);
     }
   }
+
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const v = searchParams.get("view");
+    if (v === "branches") {
+      setView("branches");
+      setSelectedInst(null); // Show all branches
+    }
+  }, [searchParams]);
 
   useEffect(() => { loadInitialData(); }, []);
 
-  async function handleSaveInstitution(data: any) {
-    const url = editInstTarget ? `/institutions/${editInstTarget.id}` : "/institutions";
-    const method = editInstTarget ? "PUT" : "POST";
+  async function handleInstitutionSave(data: any) {
+    const method = editInst ? "PUT" : "POST";
+    const url = editInst ? `/employees/institutions/${editInst.id}` : "/employees/institutions";
     const res = await fetchWithAuth(url, { method, body: JSON.stringify(data) });
-    if (res.ok) {
-      setInstModal(false);
-      setEditInstTarget(null);
-      loadInstitutions();
-    }
+    if (res.ok) { setInstModal(false); await loadInitialData(); }
   }
 
-  async function handleDeleteInstitution(id: string) {
-    if (!confirm("Remove this entity?")) return;
-    const res = await fetchWithAuth(`/institutions/${id}`, { method: "DELETE" });
-    if (res.ok) loadInstitutions();
-  }
-
-  async function handleSaveBranch(data: any) {
-    const url = editBranchTarget ? `/branches/${editBranchTarget.branch_id}` : "/branches";
-    const method = editBranchTarget ? "PUT" : "POST";
+  async function handleBranchSave(data: any) {
+    const method = editBranch ? "PUT" : "POST";
+    const url = editBranch ? `/employees/branches/${editBranch.branch_id}` : "/employees/branches";
     const res = await fetchWithAuth(url, { method, body: JSON.stringify(data) });
-    if (res.ok) {
-      setBranchModal(false);
-      setEditBranchTarget(null);
-      if (selectedInst) loadBranches(selectedInst.inst_code);
-    }
+    if (res.ok) { setBranchModal(false); await loadInitialData(); }
   }
 
-  async function handleDeleteBranch(id: string) {
-    if (!confirm("Dissolve this branch?")) return;
-    const res = await fetchWithAuth(`/branches/${id}`, { method: "DELETE" });
-    if (res.ok && selectedInst) loadBranches(selectedInst.inst_code);
+  async function deleteEntity(id: string) {
+    if (!confirm("Confirm dissolution?")) return;
+    const res = await fetchWithAuth(`/employees/institutions/${id}`, { method: "DELETE" });
+    if (res.ok) await loadInitialData();
   }
 
-  const filtered = institutions.filter(i => 
-    i.name.toLowerCase().includes(search.toLowerCase()) || 
-    i.inst_code.toLowerCase().includes(search.toLowerCase())
+  async function deleteUnit(id: string) {
+    if (!confirm("Confirm decommissioning?")) return;
+    const res = await fetchWithAuth(`/employees/branches/${id}`, { method: "DELETE" });
+    if (res.ok) await loadInitialData();
+  }
+
+  const filtered = institutions.filter(inst => 
+    inst.name.toLowerCase().includes(search.toLowerCase()) || 
+    inst.inst_code.toLowerCase().includes(search.toLowerCase())
   );
+
+  const selectedBranches = branches.filter(b => b.institution_code === selectedInst?.inst_code);
+  const activeUnits = selectedBranches.filter(b => b.status === "active").length;
+  const offlineUnits = selectedBranches.filter(b => b.status === "offline").length;
 
   return (
     <ProtectedLayout>
-      <InstitutionModal 
-        open={instModal} 
-        onClose={() => { setInstModal(false); setEditInstTarget(null); }} 
-        onSave={handleSaveInstitution} 
-        initial={editInstTarget}
-        organizations={organizations}
-      />
-      {selectedInst && (
-        <BranchModal 
-          open={branchModal} 
-          onClose={() => { setBranchModal(false); setEditBranchTarget(null); }} 
-          onSave={handleSaveBranch} 
-          initial={editBranchTarget} 
-          institutionCode={selectedInst.inst_code} 
-        />
-      )}
+      <InstitutionModal open={instModal} onClose={() => setInstModal(false)} onSave={handleInstitutionSave} initial={editInst} organizations={organizations} />
+      <BranchModal open={branchModal} onClose={() => setBranchModal(false)} onSave={handleBranchSave} initial={editBranch} institutionCode={selectedInst?.inst_code || ''} />
 
-      <div className="p-3 sm:p-4 lg:p-6 max-w-350 mx-auto space-y-6 animate-in fade-in duration-1000">
-        
-        {view === "list" && (
+      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+        <div className="absolute top-[-5%] left-[-5%] w-[40%] h-[40%] bg-[#BDA6CE]/5 blur-[120px] rounded-full" />
+        <div className="absolute bottom-[10%] right-[-5%] w-[30%] h-[30%] bg-blue-500/5 blur-[100px] rounded-full" />
+      </div>
+
+      <div className="relative z-10 p-4 sm:p-6 lg:p-10 max-w-[1600px] mx-auto space-y-8">
+        {view === "list" ? (
           <>
-            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-4 border-b border-zinc-100 pb-5 sm:pb-6">
-              <div className="space-y-1.5 sm:space-y-2">
-                <h1 className="text-2xl sm:text-3xl font-black tracking-tighter text-zinc-900 leading-none lowercase">institutions registry</h1>
-                <p className="text-[9px] sm:text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em] sm:tracking-[0.4em] italic opacity-60">centralized entity management & control</p>
+            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+              <div className="space-y-1">
+                <div className="flex items-center gap-3">
+                  <div className="h-1.5 w-8 bg-[#BDA6CE] rounded-full" />
+                  <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.4em]">Institutional Assets</p>
+                </div>
+                <h1 className="text-4xl font-black text-zinc-900 tracking-tighter  leading-none">Institutions</h1>
               </div>
-              <div className="flex flex-wrap gap-3 w-full lg:w-auto mt-2 lg:mt-0">
-                 <button onClick={() => { setEditInstTarget(null); setInstModal(true); }}
-                   className="flex-1 lg:flex-none h-10 sm:h-11 px-6 bg-zinc-900 text-white rounded-xl flex items-center justify-center gap-1.5 sm:gap-2 text-[9px] font-black uppercase tracking-widest hover:bg-blue-600 transition-all shadow-md shadow-zinc-900/10 active:scale-95"
-                 >
-                   <Plus size={14} strokeWidth={3} /> Add Institution
-                 </button>
+
+              <div className="flex flex-wrap gap-4 w-full lg:w-auto">
+                <div className="flex-1 lg:w-96 relative group">
+                  <Search className="absolute left-5 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-300 group-focus-within:text-[#BDA6CE] transition-colors" />
+                  <input type="text" placeholder="FILTER REGISTRY..." value={search} onChange={e => setSearch(e.target.value)}
+                    className="w-full pl-12 pr-6 py-4 bg-white border border-zinc-100 focus:border-[#BDA6CE]/40 rounded-2xl text-[10px] font-black uppercase tracking-widest outline-none transition-all shadow-sm" />
+                </div>
+                <button onClick={() => { setEditInst(null); setInstModal(true); }} className="h-14 px-8 bg-zinc-900 text-white rounded-2xl flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest hover:bg-[#BDA6CE] transition-all shadow-xl active:scale-95">
+                  <Plus size={16} strokeWidth={3} /> Add Institution
+                </button>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
-              <div className="bg-white p-4 sm:p-5 rounded-2xl border border-zinc-100 shadow-sm hover:shadow-md transition-all duration-300 group relative overflow-hidden">
-                <div className="absolute top-3 right-3 p-2.5 rounded-lg bg-zinc-900 text-white group-hover:scale-105 transition-transform">
-                  <Building2 size={16} strokeWidth={2.5} />
-                </div>
-                <div className="relative z-10">
-                  <p className="text-[8px] sm:text-[9px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Total Entities</p>
-                  {loading ? <Skeleton width="40%" height={24} /> : (
-                    <div className="flex items-baseline gap-1.5">
-                      <h3 className="text-xl sm:text-2xl font-black text-zinc-900 tracking-tighter leading-none">{institutions.length}</h3>
-                      <span className="text-[8px] font-bold text-emerald-500 uppercase tracking-widest">Live</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-              <div className="bg-white p-4 sm:p-5 rounded-2xl border border-zinc-100 shadow-sm hover:shadow-md transition-all duration-300 group relative overflow-hidden">
-                <div className="absolute top-3 right-3 p-2.5 rounded-lg bg-blue-600 text-white group-hover:scale-105 transition-transform">
-                  <GitBranch size={16} strokeWidth={2.5} />
-                </div>
-                <div className="relative z-10">
-                  <p className="text-[8px] sm:text-[9px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Global Deployments</p>
-                  <div className="flex items-baseline gap-1.5">
-                    <h3 className="text-xl sm:text-2xl font-black text-zinc-900 tracking-tighter leading-none">...</h3>
-                    <span className="text-[8px] font-bold text-blue-500 uppercase tracking-widest">Active</span>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {[
+                { label: 'Total Entities', val: institutions.length, icon: Building2 },
+                { label: 'Total Units', val: totalUnits, icon: GitBranch },
+                { label: 'Strategic Reach', val: `${reachCities} CITIES`, icon: Database }
+              ].map((stat, i) => (
+                <div key={i} className="bg-white p-6 rounded-[2rem] border border-zinc-100 shadow-sm flex items-center gap-6 group hover:shadow-xl transition-all">
+                  <div className="h-14 w-14 rounded-2xl bg-zinc-50 flex items-center justify-center text-zinc-900 group-hover:bg-[#BDA6CE] group-hover:text-white transition-all">
+                    <stat.icon size={28} />
+                  </div>
+                  <div>
+                    <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1">{stat.label}</p>
+                    <h3 className="text-3xl font-black text-zinc-900 tracking-tighter leading-none">{stat.val}</h3>
                   </div>
                 </div>
-              </div>
+              ))}
             </div>
 
-            <div className="bg-white p-3 sm:p-4 rounded-2xl border border-zinc-100 shadow-md shadow-zinc-200/20 flex flex-col xl:flex-row gap-4 items-center">
-              <div className="flex-1 w-full relative group">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-300 group-focus-within:text-zinc-900 transition-colors" />
-                <input
-                  type="text"
-                  placeholder="search central registry..."
-                  className="w-full pl-10 pr-4 py-2.5 sm:py-3 bg-zinc-50/50 border border-transparent focus:border-zinc-200 focus:bg-white rounded-xl text-[10px] font-black text-zinc-900 uppercase tracking-widest outline-none transition-all placeholder:text-zinc-400 placeholder:normal-case shadow-inner"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                />
-              </div>
-            </div>
-
-            <div className="relative pb-20">
-              {loading && filtered.length === 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {[1, 2, 3, 4].map(i => <Skeleton key={i} height={200} className="rounded-3xl" />)}
-                </div>
-              ) : filtered.length === 0 ? (
-                <div className="py-20 text-center bg-white rounded-3xl border border-dashed border-zinc-200 shadow-lg shadow-zinc-200/20 flex flex-col items-center justify-center">
-                  <div className="h-16 w-16 bg-zinc-50 rounded-full flex items-center justify-center text-zinc-300 mb-4"><Building2 size={32} /></div>
-                  <h4 className="text-lg font-black text-zinc-900 uppercase tracking-tighter">No Entities Matches</h4>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {filtered.map(inst => (
-                    <InstitutionCard key={inst.id} institution={inst} 
-                      onEdit={setEditInstTarget} onDelete={handleDeleteInstitution} 
-                      onViewBranches={(i) => { setSelectedInst(i); setView("branches"); loadBranches(i.inst_code); }} />
-                  ))}
-                </div>
-              )}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {loading ? [1, 2, 3, 4].map(i => <Skeleton key={i} height={160} className="rounded-[2rem]" />) : 
+                filtered.map(inst => (
+                  <EntityCard key={inst.id} institution={inst} branchCount={branches.filter(b => b.institution_code === inst.inst_code).length}
+                    onEdit={(i) => { setEditInst(i); setInstModal(true); }} onDelete={deleteEntity} onViewBranches={(i) => { setSelectedInst(i); setView("branches"); }} />
+                ))
+              }
             </div>
           </>
-        )}
-
-        {view === "branches" && selectedInst && (
-          <div className="space-y-8 animate-in slide-in-from-right-12 duration-700">
-              <button onClick={() => setView("list")} 
-                className="flex items-center gap-3 text-zinc-400 hover:text-zinc-900 font-black tracking-widest uppercase text-[10px] transition-all group"
-              >
-                <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
-                Return to Registry Index
+        ) : (
+          <div className="space-y-10 animate-in slide-in-from-right-8 duration-500">
+            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-6">
+              <div className="space-y-4">
+                <button onClick={() => setView("list")} className="flex items-center gap-3 text-zinc-400 hover:text-zinc-900 text-[10px] font-black uppercase tracking-[0.3em] transition-all group">
+                  <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" /> Back To catalog
+                </button>
+                <div className="flex items-center gap-6">
+                  <div className="h-20 w-20 rounded-3xl bg-zinc-900 flex items-center justify-center text-white shadow-2xl shadow-zinc-900/40">
+                    <Building2 size={40} />
+                  </div>
+                    <div className="space-y-1">
+                    <div className="flex items-center gap-3">
+                       <span className="text-[10px] font-black text-[#BDA6CE] uppercase tracking-widest bg-[#BDA6CE]/10 px-3 py-1 rounded-full border border-[#BDA6CE]/20">{selectedInst ? selectedInst.inst_type : 'Consolidated'}</span>
+                       <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">{selectedInst ? `ID: ${selectedInst.inst_code}` : 'All Units'}</span>
+                    </div>
+                    <h1 className="text-5xl font-black text-zinc-900 tracking-tighter uppercase leading-tight">
+                      {selectedInst ? selectedInst.name : "Global Deployment"}
+                    </h1>
+                  </div>
+                </div>
+              </div>
+              <button onClick={() => { setEditBranch(null); setBranchModal(true); }} className="h-16 px-10 bg-zinc-900 text-white rounded-[1.5rem] flex items-center gap-3 text-[11px] font-black uppercase tracking-widest hover:bg-[#BDA6CE] transition-all shadow-2xl active:scale-95">
+                <Plus size={20} /> Initialize New Unit
               </button>
+            </div>
 
-              <div className="bg-zinc-900 rounded-3xl p-8 sm:p-10 shadow-2xl relative overflow-hidden group">
-                <div className="absolute top-0 right-0 p-8 text-white/5 pointer-events-none group-hover:scale-110 transition-transform duration-1000">
-                  <Building2 size={160} strokeWidth={1} />
-                </div>
-                <div className="relative z-10 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-8">
-                  <div className="flex items-center gap-6">
-                    <div className="h-16 w-16 rounded-2xl bg-white flex items-center justify-center text-zinc-900 shadow-xl">
-                        <Building2 size={32} strokeWidth={2.5} />
-                    </div>
-                    <div className="space-y-2">
-                       <div className="flex flex-wrap items-center gap-3">
-                          <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tighter uppercase leading-none">{selectedInst.name}</h1>
-                       </div>
-                       <p className="text-zinc-400 text-[10px] font-black uppercase tracking-widest">{selectedInst.inst_code} | {selectedInst.city}</p>
-                    </div>
+            {/* Tactical Deployment Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {[
+                  { label: 'Operational Units', val: selectedBranches.length, icon: GitBranch, sub: 'Total Base' },
+                  { label: 'Active Signals', val: activeUnits, icon: CheckCircle2, sub: 'Online' },
+                  { label: 'Strategic Standby', val: offlineUnits, icon: XCircle, sub: 'Offline' }
+                ].map((s, i) => (
+                  <div key={i} className="bg-white p-6 rounded-[2rem] border border-zinc-100 shadow-sm flex items-center gap-6 group hover:shadow-xl transition-all">
+                     <div className="h-12 w-12 rounded-xl bg-zinc-50 flex items-center justify-center text-zinc-400 group-hover:bg-[#BDA6CE] group-hover:text-white transition-all">
+                        <s.icon size={24} />
+                     </div>
+                     <div>
+                        <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1">{s.label}</p>
+                        <h3 className="text-2xl font-black text-zinc-900 tracking-tighter leading-none">{s.val} <span className="text-[10px] text-zinc-300 ml-1">{s.sub}</span></h3>
+                     </div>
                   </div>
-                  <button onClick={() => { setEditBranchTarget(null); setBranchModal(true); }}
-                    className="w-full xl:w-auto h-12 px-8 bg-white text-zinc-900 rounded-2xl flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest hover:bg-blue-600 hover:text-white transition-all active:scale-95 shadow-xl"
-                  >
-                    <Plus size={16} strokeWidth={3} /> Deploy Branch
-                  </button>
-                </div>
-              </div>
+                ))}
+            </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {loading ? (
-                  [1, 2].map(i => <Skeleton key={i} height={180} className="rounded-3xl" />)
-                ) : branches.length === 0 ? (
-                  <div className="lg:col-span-2 py-20 text-center bg-white rounded-3xl border border-dashed border-zinc-200 shadow-lg shadow-zinc-200/20 flex flex-col items-center justify-center">
-                    <div className="h-16 w-16 bg-zinc-50 rounded-full flex items-center justify-center text-zinc-300 mb-5"><GitBranch size={32} /></div>
-                    <h4 className="text-lg font-black text-zinc-900 uppercase tracking-tighter">No Deployment Branches</h4>
-                  </div>
-                ) : (
-                  branches.map(b => (
-                    <div key={b.branch_id} className="bg-white rounded-4xl p-6 border border-zinc-100 shadow-sm hover:shadow-2xl hover:shadow-zinc-300/30 transition-all group relative overflow-hidden flex flex-col">
-                      <div className="flex items-start justify-between relative z-10 mb-6">
-                        <div className="flex items-center gap-4">
-                          <div className="h-12 w-12 rounded-xl bg-zinc-900 flex items-center justify-center text-white shadow-lg group-hover:bg-blue-600 transition-colors">
-                            <GitBranch size={20} className="shrink-0" />
-                          </div>
-                          <div>
-                            <h3 className="text-lg font-black text-zinc-900 group-hover:text-blue-600 transition-colors tracking-tight uppercase leading-none line-clamp-1">{b.branch_name}</h3>
-                            <span className="text-[10px] font-black text-zinc-400 tracking-widest uppercase">{b.branch_code}</span>
-                          </div>
-                        </div>
-                        <div className="flex gap-1.5 opacity-0 group-hover:opacity-100 transition-all">
-                          <button onClick={() => { setEditBranchTarget(b); setBranchModal(true); }} className="h-8 w-8 flex items-center justify-center bg-zinc-50 text-zinc-400 rounded-lg hover:bg-zinc-900 hover:text-white transition-all active:scale-95 border border-zinc-200 hover:border-zinc-900">
-                            <Edit2 size={14} />
-                          </button>
-                          <button onClick={() => handleDeleteBranch(b.branch_id)} className="h-8 w-8 flex items-center justify-center bg-zinc-50 text-zinc-400 rounded-lg hover:bg-rose-600 hover:text-white transition-all active:scale-95 border border-zinc-200 hover:border-rose-600">
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                      </div>
-                      
-                      <div className="grid grid-cols-2 gap-3 mb-6 pt-5 border-t border-zinc-50 flex-1">
-                         <div className="bg-zinc-50 rounded-xl p-3.5 border border-zinc-100/50 flex flex-col justify-center">
-                            <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Station City</p>
-                            <p className="text-[11px] font-black text-zinc-900 uppercase truncate">{b.city || 'Central'}</p>
-                         </div>
-                         <div className="bg-zinc-50 rounded-xl p-3.5 border border-zinc-100/50 flex flex-col justify-center">
-                            <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Station Head</p>
-                            <p className="text-[11px] font-black text-blue-600 uppercase truncate">{b.branch_head_name || 'Unassigned'}</p>
-                         </div>
-                      </div>
-                      
-                      <div className="pt-5 border-t border-zinc-50 flex items-center justify-between gap-4 text-[9px] font-bold text-zinc-400 uppercase tracking-widest mt-auto">
-                        <span className="flex items-center gap-2"><Mail size={10} className="opacity-40" /><span className="lowercase font-black tracking-normal">{b.email || '—'}</span></span>
-                        <span className={`px-2 py-0.5 rounded-md border ${b.status === 'active' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-zinc-100 text-zinc-500 border-zinc-200'}`}>
-                          {b.status} unit
-                        </span>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
+            {/* Tactical Deployment Data Table (Refactored to Row Layout) */}
+            <div className="bg-white rounded-[2.5rem] border border-zinc-100 overflow-hidden shadow-2xl shadow-zinc-200/20">
+               <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-zinc-100 text-left">
+                     <thead>
+                        <tr className="bg-zinc-50/50">
+                           <th className="py-6 px-8 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Operational Unit</th>
+                           <th className="py-6 px-8 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Deployment Base</th>
+                           <th className="py-6 px-8 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Command Node</th>
+                           <th className="py-6 px-8 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Status</th>
+                           <th className="py-6 px-8 text-[10px] font-black text-zinc-400 uppercase tracking-widest text-right">Actions</th>
+                        </tr>
+                     </thead>
+                     <tbody className="divide-y divide-zinc-50">
+                        {loading ? [...Array(3)].map((_, i) => (
+                           <tr key={i}>
+                              <td colSpan={5} className="p-8">
+                                 <Skeleton height={20} className="w-full opacity-50" />
+                              </td>
+                           </tr>
+                        )) : (selectedInst ? selectedBranches : branches).length === 0 ? (
+                           <tr>
+                              <td colSpan={5} className="py-24 text-center">
+                                 <GitBranch size={48} className="mx-auto text-zinc-100 mb-4" />
+                                 <p className="text-[11px] font-black text-zinc-300 uppercase tracking-widest">No units found in the registry.</p>
+                              </td>
+                           </tr>
+                        ) : (selectedInst ? selectedBranches : branches).map(b => (
+                           <tr key={b.branch_id} className="hover:bg-zinc-50/50 transition-all group">
+                              <td className="py-6 px-8">
+                                 <div className="flex items-center gap-4">
+                                    <div className="h-12 w-12 rounded-2xl bg-zinc-900 flex items-center justify-center text-white shadow-lg group-hover:bg-[#BDA6CE] transition-all shrink-0">
+                                       <GitBranch size={20} />
+                                    </div>
+                                    <div>
+                                       <h5 className="text-[13px] font-black text-zinc-900 uppercase tracking-tight leading-tight">{b.branch_name}</h5>
+                                       <div className="flex items-center gap-2 mt-0.5">
+                                          <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">{b.branch_code}</p>
+                                          {!selectedInst && (
+                                             <>
+                                                <span className="h-0.5 w-0.5 rounded-full bg-zinc-200" />
+                                                <p className="text-[9px] font-black text-[#BDA6CE] uppercase tracking-widest">{b.institution_code}</p>
+                                             </>
+                                          )}
+                                       </div>
+                                    </div>
+                                 </div>
+                              </td>
+                              <td className="py-6 px-8">
+                                 <div className="flex items-center gap-3">
+                                    <MapPin size={14} className="text-[#BDA6CE]" />
+                                    <div>
+                                       <p className="text-[11px] font-black text-zinc-900 uppercase">{b.city || 'Central'}</p>
+                                       <p className="text-[9px] font-bold text-zinc-400 uppercase truncate max-w-[150px]">{b.address}</p>
+                                    </div>
+                                 </div>
+                              </td>
+                              <td className="py-6 px-8">
+                                 <div className="space-y-1">
+                                    <div className="flex items-center gap-2">
+                                       <Phone size={10} className="text-zinc-300" />
+                                       <span className="text-[10px] font-black text-zinc-600">{b.contact_number || '--'}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                       <Mail size={10} className="text-zinc-300" />
+                                       <span className="text-[10px] font-black text-zinc-400 lowercase">{b.email || 'no-email@reg.pk'}</span>
+                                    </div>
+                                 </div>
+                              </td>
+                              <td className="py-6 px-8">
+                                 <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full border text-[8px] font-black uppercase tracking-widest ${b.status === 'active' ? 'bg-emerald-50 border-emerald-100 text-emerald-600' : 'bg-rose-50 border-rose-100 text-rose-500'}`}>
+                                    <span className={`h-1.5 w-1.5 rounded-full ${b.status === 'active' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-rose-500 animate-pulse'}`} />
+                                    {b.status}
+                                 </span>
+                              </td>
+                              <td className="py-6 px-8 text-right">
+                                 <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300">
+                                    <button onClick={() => { setEditBranch(b); setBranchModal(true); }} className="h-9 w-9 flex items-center justify-center bg-white text-zinc-400 rounded-xl hover:bg-zinc-900 hover:text-white transition-all border border-zinc-100 shadow-sm">
+                                       <Edit2 size={12} />
+                                    </button>
+                                    <button onClick={() => deleteUnit(b.branch_id)} className="h-9 w-9 flex items-center justify-center bg-white text-zinc-400 rounded-xl hover:bg-rose-500 hover:text-white transition-all border border-zinc-100 shadow-sm">
+                                       <Trash2 size={12} />
+                                    </button>
+                                 </div>
+                              </td>
+                           </tr>
+                        ))}
+                     </tbody>
+                  </table>
+               </div>
+            </div>
           </div>
         )}
       </div>
     </ProtectedLayout>
+  );
+}
+
+// Wrap in Suspense for useSearchParams
+export default function SuspendedInstitutionsPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-zinc-50 animate-pulse" />}>
+      <InstitutionsPage />
+    </Suspense>
   );
 }
