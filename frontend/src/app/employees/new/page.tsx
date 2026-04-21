@@ -1,544 +1,480 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
-import ProtectedLayout from '@/components/ProtectedLayout';
-import { fetchWithAuth } from '@/utils/api';
-import { useRouter } from 'next/navigation';
-import { 
-  ArrowLeft, User, Mail, Phone, MapPin, 
-  Briefcase, GraduationCap, ShieldAlert,
-  Building, Calendar, Plus, Trash2, CheckCircle2, 
-  Database, Activity, ChevronRight, Landmark, CreditCard,
-  UserCheck, History, Laptop, FileText, HeartPulse, Globe,
-  ShieldCheck, CheckSquare, Layers, ChevronLeft
-} from 'lucide-react';
-import Link from 'next/link';
-import Skeleton from '@/components/Skeleton';
+import React, { useEffect, useState } from "react";
+import { useForm, useFieldArray, Controller } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import {
+  ArrowLeft, User, Mail, Briefcase, GraduationCap,
+  Plus, Trash2, Check, ChevronRight, ChevronLeft, Loader2,
+} from "lucide-react";
+import ProtectedLayout from "@/components/ProtectedLayout";
+import { fetchWithAuth } from "@/utils/api";
 
-// --- Types ---
-interface Institution { inst_code: string; name: string; }
-interface Branch { branch_code: string; branch_name: string; institution_code: string; }
-interface Department { dept_code: string; dept_name: string; }
-interface Designation { position_code: string; position_name: string; }
-interface Organization { org_code: string; name: string; }
+// ----- Validators (mirror backend) -----
+const CNIC_RE = /^\d{5}-?\d{7}-?\d{1}$/;
+const PK_PHONE_RE = /^(\+92|92|0|0092)?3\d{2}-?\d{7}$/;
 
-interface AssignmentRow {
-  institutionCode: string;
-  branchCode: string;
-  departmentCode: string;
-  designationCode: string;
-  joiningDate: string;
-  shift: string;
-  isPrimary: boolean;
-  isActive: boolean;
-  // UI Helpers
-  branches: Branch[];
-  designations: Designation[];
-}
+const educationSchema = z.object({
+  degree: z.string().trim().min(1, "Degree required"),
+  institute: z.string().trim().min(1, "Institute required"),
+  passingYear: z.string().regex(/^\d{4}$/, "Year must be 4 digits"),
+});
 
-export default function NewEmployeeForm() {
+const experienceSchema = z.object({
+  employer: z.string().trim().min(1, "Employer required"),
+  jobTitle: z.string().trim().min(1, "Job title required"),
+  startDate: z.string().min(1, "Start date required"),
+  endDate: z.string().optional().default(""),
+  responsibilities: z.string().optional().default(""),
+});
+
+const schema = z.object({
+  // Step 1 — Identity
+  fullName: z.string().trim().min(2, "Name too short").max(100),
+  cnic: z.string().regex(CNIC_RE, "Format: XXXXX-XXXXXXX-X"),
+  dob: z.string().optional().default(""),
+  gender: z.enum(["male", "female", "other"]),
+  maritalStatus: z.enum(["single", "married", "divorced", "widowed"]).optional(),
+  nationality: z.string().default("Pakistani"),
+  religion: z.string().optional().default(""),
+
+  // Step 2 — Contact
+  personalEmail: z.string().email("Invalid email"),
+  mobile: z.string().regex(PK_PHONE_RE, "Invalid PK mobile (03XX-XXXXXXX)"),
+  orgEmail: z.string().email("Invalid email").or(z.literal("")).optional(),
+  orgPhone: z.string().regex(PK_PHONE_RE, "Invalid PK mobile").or(z.literal("")).optional(),
+  emergencyName: z.string().optional().default(""),
+  emergencyPhone: z.string().regex(PK_PHONE_RE, "Invalid PK mobile").or(z.literal("")).optional(),
+  residentialAddress: z.string().trim().min(3, "Address required"),
+  permanentAddress: z.string().optional().default(""),
+  city: z.string().optional().default(""),
+  state: z.string().optional().default(""),
+
+  // Step 3 — Placement
+  organizationCode: z.string().default("IAK"),
+  institutionCode: z.string().optional().default(""),
+  branchCode: z.string().optional().default(""),
+  departmentCode: z.string().min(1, "Department required"),
+  designationCode: z.string().min(1, "Designation required"),
+  joiningDate: z.string().min(1, "Joining date required"),
+  shift: z.enum(["general", "morning", "evening", "night"]).default("general"),
+
+  // Bank
+  bankName: z.string().optional().default(""),
+  accountNumber: z.string().optional().default(""),
+
+  // Step 4 — History (optional arrays)
+  education: z.array(educationSchema).optional().default([]),
+  experience: z.array(experienceSchema).optional().default([]),
+});
+
+type FormInput = z.input<typeof schema>;
+type FormOutput = z.output<typeof schema>;
+
+type Opt = { value: string; label: string };
+type Institution = { inst_code: string; name: string };
+type Branch = { branch_code: string; branch_name: string };
+type Department = { dept_code: string; dept_name: string };
+type Designation = { position_code: string; position_name: string };
+
+const STEPS = [
+  { id: 1, label: "Identity", icon: User },
+  { id: 2, label: "Contact", icon: Mail },
+  { id: 3, label: "Placement", icon: Briefcase },
+  { id: 4, label: "History", icon: GraduationCap },
+];
+
+const FIELDS_PER_STEP: Record<number, (keyof FormInput)[]> = {
+  1: ["fullName", "cnic", "dob", "gender", "maritalStatus", "nationality", "religion"],
+  2: ["personalEmail", "mobile", "orgEmail", "orgPhone", "emergencyName", "emergencyPhone", "residentialAddress", "permanentAddress", "city", "state"],
+  3: ["institutionCode", "branchCode", "departmentCode", "designationCode", "joiningDate", "shift", "bankName", "accountNumber"],
+  4: ["education", "experience"],
+};
+
+export default function NewEmployeePage() {
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
-  const [fetchingMeta, setFetchingMeta] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [currentStep, setCurrentStep] = useState(1);
-  
-  // Metadata Lists (Global)
+  const [step, setStep] = useState(1);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [institutions, setInstitutions] = useState<Institution[]>([]);
+  const [branches, setBranches] = useState<Branch[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
-  const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const [designations, setDesignations] = useState<Designation[]>([]);
 
-  const [formData, setFormData] = useState({
-    // Personal Identity
-    fullName: '',
-    cnic: '',
-    dob: '',
-    gender: 'male',
-    maritalStatus: 'single',
-    nationality: 'Pakistani',
-    religion: '',
-    
-    // Contact Info
-    personalEmail: '',
-    mobile: '',
-    orgEmail: '',
-    orgPhone: '',
-    
-    // Address Details
-    residentialAddress: '',
-    permanentAddress: '',
-    city: '',
-    state: '',
-    
-    // System Metadata
-    organizationCode: 'IAK',
-    isActive: true,
-    
-    // Bank Information
-    bankName: '',
-    accountNumber: '',
-    
-    // Security & Compliance
-    emergencyName: '',
-    emergencyPhone: '',
-    resumeUrl: '',
+  const form = useForm<FormInput, any, FormOutput>({
+    resolver: zodResolver(schema),
+    mode: "onBlur",
+    defaultValues: {
+      fullName: "", cnic: "", dob: "", gender: "male", maritalStatus: "single",
+      nationality: "Pakistani", religion: "",
+      personalEmail: "", mobile: "", orgEmail: "", orgPhone: "",
+      emergencyName: "", emergencyPhone: "",
+      residentialAddress: "", permanentAddress: "", city: "", state: "",
+      organizationCode: "IAK", institutionCode: "", branchCode: "",
+      departmentCode: "", designationCode: "",
+      joiningDate: new Date().toISOString().slice(0, 10),
+      shift: "general", bankName: "", accountNumber: "",
+      education: [], experience: [],
+    },
   });
 
-  // Dynamic Lists
-  const [assignments, setAssignments] = useState<AssignmentRow[]>([
-    { 
-      institutionCode: '', branchCode: '', departmentCode: '', designationCode: '', 
-      joiningDate: new Date().toISOString().split('T')[0], shift: 'general', 
-      isPrimary: true, isActive: true, branches: [], designations: [] 
-    }
-  ]);
-  const [education, setEducation] = useState([{ degree: '', institute: '', passingYear: '', grade: '' }]);
-  const [experience, setExperience] = useState([{ employer: '', jobTitle: '', startDate: '', endDate: '', responsibilities: '' }]);
+  const { register, handleSubmit, trigger, watch, control, setError, formState: { errors, isSubmitting } } = form;
 
-  // Fetch initial metadata
+  const eduArr = useFieldArray({ control, name: "education" });
+  const expArr = useFieldArray({ control, name: "experience" });
+
+  const instCode = watch("institutionCode");
+  const deptCode = watch("departmentCode");
+
+  // Load institutions + departments once
   useEffect(() => {
-    async function loadInitialMeta() {
-      try {
-        setFetchingMeta(true);
-        const [instRes, deptRes, orgRes] = await Promise.all([
-          fetchWithAuth('/employees/institutions'),
-          fetchWithAuth('/employees/departments'),
-          fetchWithAuth('/employees/organizations')
-        ]);
-        if (instRes.ok) setInstitutions(await instRes.json());
-        if (deptRes.ok) setDepartments(await deptRes.json());
-        if (orgRes.ok) setOrganizations(await orgRes.json());
-      } catch (err) {
-        console.error("Failed to load initial metadata:", err);
-      } finally {
-        setFetchingMeta(false);
-      }
-    }
-    loadInitialMeta();
+    (async () => {
+      const [iRes, dRes] = await Promise.all([
+        fetchWithAuth("/employees/institutions"),
+        fetchWithAuth("/employees/departments"),
+      ]);
+      if (iRes.ok) setInstitutions(await iRes.json());
+      if (dRes.ok) setDepartments(await dRes.json());
+    })();
   }, []);
 
-  const refreshBranchesForRow = async (index: number, instCode: string) => {
-    if (!instCode) {
-      const newAsgns = [...assignments];
-      newAsgns[index].branches = [];
-      setAssignments(newAsgns);
-      return;
-    }
-    const res = await fetchWithAuth(`/branches?institution_code=${instCode}`);
-    if (res.ok) {
-      const data = await res.json();
-      const newAsgns = [...assignments];
-      newAsgns[index].branches = data;
-      setAssignments(newAsgns);
-    }
+  // Branches depend on institution
+  useEffect(() => {
+    if (!instCode) { setBranches([]); return; }
+    (async () => {
+      const r = await fetchWithAuth(`/employees/branches?institution_code=${instCode}`);
+      if (r.ok) setBranches(await r.json());
+    })();
+  }, [instCode]);
+
+  // Designations depend on department
+  useEffect(() => {
+    if (!deptCode) { setDesignations([]); return; }
+    (async () => {
+      const r = await fetchWithAuth(`/employees/designations?department_code=${deptCode}`);
+      if (r.ok) setDesignations(await r.json());
+    })();
+  }, [deptCode]);
+
+  const next = async () => {
+    const ok = await trigger(FIELDS_PER_STEP[step] as any);
+    if (ok) setStep((s) => Math.min(4, s + 1));
   };
+  const prev = () => setStep((s) => Math.max(1, s - 1));
 
-  const refreshDesignationsForRow = async (index: number, deptCode: string) => {
-    if (!deptCode) {
-      const newAsgns = [...assignments];
-      newAsgns[index].designations = [];
-      setAssignments(newAsgns);
-      return;
-    }
-    const res = await fetchWithAuth(`/employees/designations?department_code=${deptCode}`);
-    if (res.ok) {
-      const data = await res.json();
-      const newAsgns = [...assignments];
-      newAsgns[index].designations = data;
-      setAssignments(newAsgns);
-    }
-  };
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    const { name, value, type } = e.target;
-    const val = type === 'checkbox' ? (e.target as HTMLInputElement).checked : value;
-    setFormData(prev => ({ ...prev, [name]: val }));
-  };
-
-  const handleAssignmentChange = (index: number, e: any) => {
-    const { name, value, type, checked } = e.target;
-    const finalVal = type === 'checkbox' ? checked : value;
-    const newAsgns = [...assignments];
-    (newAsgns[index] as any)[name] = finalVal;
-
-    if (name === 'institutionCode') {
-       newAsgns[index].branchCode = '';
-       refreshBranchesForRow(index, finalVal);
-    }
-    if (name === 'departmentCode') {
-       newAsgns[index].designationCode = '';
-       refreshDesignationsForRow(index, finalVal);
-    }
-
-    setAssignments(newAsgns);
-  };
-
-  const addAssignmentRow = () => {
-    setAssignments([...assignments, { 
-      institutionCode: '', branchCode: '', departmentCode: '', designationCode: '', 
-      joiningDate: new Date().toISOString().split('T')[0], shift: 'general', 
-      isPrimary: false, isActive: true, branches: [], designations: [] 
-    }]);
-  };
-
-  const removeAssignmentRow = (index: number) => {
-    if (assignments.length > 1) {
-      setAssignments(assignments.filter((_, i) => i !== index));
-    }
-  };
-
-  const addEduRow = () => setEducation([...education, { degree: '', institute: '', passingYear: '', grade: '' }]);
-  const removeEduRow = (index: number) => setEducation(education.filter((_, i) => i !== index));
-  const handleEduChange = (index: number, e: any) => {
-    const newEdu = [...education];
-    newEdu[index] = { ...newEdu[index], [e.target.name]: e.target.value };
-    setEducation(newEdu);
-  };
-
-  const addExpRow = () => setExperience([...experience, { employer: '', jobTitle: '', startDate: '', endDate: '', responsibilities: '' }]);
-  const removeExpRow = (index: number) => setExperience(experience.filter((_, i) => i !== index));
-  const handleExpChange = (index: number, e: any) => {
-    const newExp = [...experience];
-    newExp[index] = { ...newExp[index], [e.target.name]: e.target.value };
-    setExperience(newExp);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (currentStep < 4) {
-      setCurrentStep(currentStep + 1);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-
+  const onSubmit = async (values: FormOutput) => {
+    setSubmitError(null);
     try {
-      const payload = { 
-        ...formData, 
-        assignments: assignments.map(({ branches, designations, ...rest }) => rest), 
-        education: education.filter(e => e.degree), 
-        experience: experience.filter(e => e.employer) 
-      };
-      
-      const response = await fetchWithAuth('/employees/employees', {
-        method: 'POST',
-        body: JSON.stringify(payload)
+      const res = await fetchWithAuth("/employees/employees", {
+        method: "POST",
+        body: JSON.stringify(values),
       });
-
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "Failed to create employee");
-      router.push('/employees/employees');
-    } catch (err: any) {
-      setError(err.message || "An unexpected error occurred");
-      window.scrollTo({ top: 0 }); 
-    } finally {
-      setLoading(false);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        if (data.field_errors) {
+          for (const [field, msgs] of Object.entries(data.field_errors)) {
+            const text = Array.isArray(msgs) ? msgs.map(String).join(", ") : String(msgs);
+            setError(field as any, { message: text });
+          }
+          setSubmitError("Please fix the highlighted fields.");
+          return;
+        }
+        // Ninja/Pydantic default shape: { detail: [{type, loc, msg}, ...] }
+        if (Array.isArray(data?.detail)) {
+          setSubmitError(data.detail.map((d: any) => d?.msg || JSON.stringify(d)).join("; "));
+          return;
+        }
+        setSubmitError(
+          typeof data?.error === "string" ? data.error :
+          typeof data?.detail === "string" ? data.detail :
+          `Request failed (${res.status})`
+        );
+        return;
+      }
+      router.push("/employees");
+    } catch (e: any) {
+      setSubmitError(e.message || "Network error");
     }
   };
-
-  const SectionHeader = ({ title, icon: Icon, subtitle }: { title: string, icon: any, subtitle?: string }) => (
-    <div className="flex items-center gap-4 mb-10">
-       <div className="h-12 w-12 bg-zinc-900 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-zinc-900/10"><Icon size={24} /></div>
-       <div>
-          <h3 className="text-xl font-black text-zinc-900 leading-none lowercase tracking-tight">{title}</h3>
-          {subtitle && <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mt-2 bg-zinc-50 px-3 py-1 rounded-full border border-zinc-100 inline-block">{subtitle}</p>}
-       </div>
-    </div>
-  );
-
-  const StepIndicator = () => {
-    const steps = [
-      { id: 1, label: 'Identity', icon: UserCheck },
-      { id: 2, label: 'Contact', icon: Mail },
-      { id: 3, label: 'Placement', icon: Briefcase },
-      { id: 4, label: 'History', icon: History }
-    ];
-
-    return (
-      <div className="flex items-center justify-between mb-12 px-2 relative">
-        <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-0.5 bg-zinc-100 -z-10" />
-        {steps.map((s, idx) => {
-          const Icon = s.icon;
-          const isActive = currentStep === s.id;
-          const isCompleted = currentStep > s.id;
-
-          return (
-            <div key={s.id} className="flex flex-col items-center gap-3 bg-zinc-50 sm:bg-transparent px-2">
-              <div className={`h-12 w-12 rounded-2xl flex items-center justify-center transition-all duration-500 border-2 ${
-                isActive ? 'bg-zinc-900 text-white border-zinc-900 scale-110 shadow-2xl shadow-zinc-900/20' : 
-                isCompleted ? 'bg-zinc-900 text-white border-zinc-900' : 'bg-white text-zinc-300 border-zinc-100'
-              }`}>
-                {isCompleted ? <CheckCircle2 size={20} /> : <Icon size={20} />}
-              </div>
-              <span className={`text-[10px] font-black uppercase tracking-widest ${isActive ? 'text-zinc-900' : 'text-zinc-400'}`}>
-                {s.label}
-              </span>
-            </div>
-          );
-        })}
-      </div>
-    );
-  };
-
-  if (fetchingMeta) return (
-    <ProtectedLayout>
-      <div className="p-10 max-w-5xl mx-auto space-y-12 animate-pulse">
-         <Skeleton height={100} className="rounded-[2.5rem]" />
-         <Skeleton height={500} className="rounded-[3rem]" />
-      </div>
-    </ProtectedLayout>
-  );
 
   return (
     <ProtectedLayout>
-      <div className="p-4 sm:p-6 lg:p-10 max-w-4xl mx-auto space-y-10 pb-60">
-        
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-6">
-            <Link href="/employees" className="h-14 w-14 bg-white border border-zinc-100 rounded-2xl flex items-center justify-center text-zinc-400 hover:text-zinc-900 transition-all shadow-sm hover:shadow-xl active:scale-90">
-              <ArrowLeft size={22} />
-            </Link>
-            <div>
-              <h1 className="text-3xl font-black text-zinc-900 tracking-tighter leading-none lowercase">enroll associate</h1>
-              <p className="mt-2 text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em] opacity-60">protocol sequential.v2</p>
-            </div>
-          </div>
-          <div className="hidden sm:flex items-center gap-2 bg-zinc-900 px-5 py-2.5 rounded-full text-white">
-             <div className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-             <span className="text-[10px] font-black uppercase tracking-[0.2em]">Step {currentStep} op_seq</span>
-          </div>
+      <div className="max-w-4xl mx-auto px-6 py-8">
+        <div className="flex items-center justify-between mb-8">
+          <Link href="/employees" className="inline-flex items-center gap-2 text-sm text-slate-600 hover:text-slate-900">
+            <ArrowLeft size={16} /> Back to employees
+          </Link>
         </div>
 
-        {error && (
-          <div className="bg-rose-50 border border-rose-100 p-6 rounded-3xl flex items-center gap-4 text-rose-600 animate-in fade-in slide-in-from-top-2">
-            <ShieldAlert size={20} />
-            <p className="text-[11px] font-black uppercase tracking-widest">{error}</p>
+        <h1 className="text-2xl font-semibold text-slate-900">Add new employee</h1>
+        <p className="text-sm text-slate-500 mt-1">Fill all required fields. Step {step} of 4.</p>
+
+        {/* Stepper */}
+        <ol className="flex items-center gap-2 mt-6 mb-8">
+          {STEPS.map((s, i) => {
+            const Icon = s.icon;
+            const active = step === s.id;
+            const done = step > s.id;
+            return (
+              <li key={s.id} className="flex items-center flex-1">
+                <div className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm ${
+                  active ? "bg-slate-900 text-white border-slate-900" :
+                  done ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
+                  "bg-white text-slate-500 border-slate-200"
+                }`}>
+                  {done ? <Check size={14} /> : <Icon size={14} />}
+                  <span className="font-medium">{s.label}</span>
+                </div>
+                {i < STEPS.length - 1 && <div className="flex-1 h-px bg-slate-200 mx-2" />}
+              </li>
+            );
+          })}
+        </ol>
+
+        {submitError && (
+          <div className="mb-6 p-3 rounded-lg bg-rose-50 border border-rose-200 text-sm text-rose-700">
+            {submitError}
           </div>
         )}
 
-        <StepIndicator />
-
-        <form onSubmit={handleSubmit} className="relative">
-          
-          <div className="bg-white p-8 sm:p-12 rounded-[3rem] border border-zinc-100 shadow-2xl shadow-zinc-200/40 min-h-[500px] flex flex-col">
-            
-            {/* STEP 1: IDENTITY */}
-            {currentStep === 1 && (
-              <div className="space-y-10 animate-in fade-in slide-in-from-right-4 duration-500">
-                <SectionHeader title="personal identity" icon={UserCheck} subtitle="Registry biological data" />
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">full name</label>
-                    <input required name="fullName" value={formData.fullName} onChange={handleChange} className="input-premium" placeholder="e.g. john doe" />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">cnic identification</label>
-                    <input required name="cnic" value={formData.cnic} onChange={handleChange} className="input-premium" placeholder="xxxxx-xxxxxxx-x" />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">date of birth</label>
-                    <input required type="date" name="dob" value={formData.dob} onChange={handleChange} className="input-premium" />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">biometric gender</label>
-                    <select name="gender" value={formData.gender} onChange={handleChange} className="select-premium">
-                        <option value="male">male</option>
-                        <option value="female">female</option>
-                        <option value="other">other</option>
-                    </select>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">marital registration</label>
-                    <select name="maritalStatus" value={formData.maritalStatus} onChange={handleChange} className="select-premium">
-                        <option value="single">single</option>
-                        <option value="married">married</option>
-                        <option value="divorced">divorced</option>
-                    </select>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">religion / belief</label>
-                    <input name="religion" value={formData.religion} onChange={handleChange} className="input-premium" placeholder="e.g. islam" />
-                  </div>
-                </div>
+        <form onSubmit={handleSubmit(onSubmit)} className="bg-white border border-slate-200 rounded-xl p-6 space-y-5">
+          {step === 1 && (
+            <>
+              <Field label="Full name *" error={errors.fullName?.message}>
+                <input {...register("fullName")} className={inputCls(errors.fullName)} placeholder="Ahmed Ali" />
+              </Field>
+              <div className="grid grid-cols-2 gap-4">
+                <Field label="CNIC *" error={errors.cnic?.message}>
+                  <input {...register("cnic")} className={inputCls(errors.cnic)} placeholder="42101-1234567-8" />
+                </Field>
+                <Field label="Date of birth" error={errors.dob?.message}>
+                  <input type="date" {...register("dob")} className={inputCls(errors.dob)} />
+                </Field>
               </div>
-            )}
+              <div className="grid grid-cols-2 gap-4">
+                <Field label="Gender *" error={errors.gender?.message}>
+                  <select {...register("gender")} className={inputCls(errors.gender)}>
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                    <option value="other">Other</option>
+                  </select>
+                </Field>
+                <Field label="Marital status" error={errors.maritalStatus?.message}>
+                  <select {...register("maritalStatus")} className={inputCls(errors.maritalStatus)}>
+                    <option value="single">Single</option>
+                    <option value="married">Married</option>
+                    <option value="divorced">Divorced</option>
+                    <option value="widowed">Widowed</option>
+                  </select>
+                </Field>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <Field label="Nationality" error={errors.nationality?.message}>
+                  <input {...register("nationality")} className={inputCls(errors.nationality)} />
+                </Field>
+                <Field label="Religion" error={errors.religion?.message}>
+                  <input {...register("religion")} className={inputCls(errors.religion)} />
+                </Field>
+              </div>
+            </>
+          )}
 
-            {/* STEP 2: CONTACT & ADDRESS */}
-            {currentStep === 2 && (
-              <div className="space-y-10 animate-in fade-in slide-in-from-right-4 duration-500">
-                <SectionHeader title="access & location" icon={Mail} subtitle="Correspondence endpoints" />
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-                  <div className="space-y-6">
-                    <h4 className="text-[9px] font-black text-zinc-900 uppercase tracking-[0.2em] border-l-4 border-zinc-900 pl-4">Digital Access</h4>
-                    <div className="space-y-4">
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">personal email</label>
-                        <input required name="personalEmail" value={formData.personalEmail} onChange={handleChange} className="input-premium" placeholder="email@domain.com" />
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">mobile frequency</label>
-                        <input required name="mobile" value={formData.mobile} onChange={handleChange} className="input-premium" placeholder="+92 xxxxxxxxxx" />
-                      </div>
+          {step === 2 && (
+            <>
+              <div className="grid grid-cols-2 gap-4">
+                <Field label="Personal email *" error={errors.personalEmail?.message}>
+                  <input type="email" {...register("personalEmail")} className={inputCls(errors.personalEmail)} placeholder="name@example.com" />
+                </Field>
+                <Field label="Mobile *" error={errors.mobile?.message}>
+                  <input {...register("mobile")} className={inputCls(errors.mobile)} placeholder="03001234567" />
+                </Field>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <Field label="Org email" error={errors.orgEmail?.message}>
+                  <input type="email" {...register("orgEmail")} className={inputCls(errors.orgEmail)} />
+                </Field>
+                <Field label="Org phone" error={errors.orgPhone?.message}>
+                  <input {...register("orgPhone")} className={inputCls(errors.orgPhone)} />
+                </Field>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <Field label="Emergency contact name" error={errors.emergencyName?.message}>
+                  <input {...register("emergencyName")} className={inputCls(errors.emergencyName)} />
+                </Field>
+                <Field label="Emergency contact phone" error={errors.emergencyPhone?.message}>
+                  <input {...register("emergencyPhone")} className={inputCls(errors.emergencyPhone)} />
+                </Field>
+              </div>
+              <Field label="Residential address *" error={errors.residentialAddress?.message}>
+                <textarea {...register("residentialAddress")} rows={2} className={inputCls(errors.residentialAddress)} />
+              </Field>
+              <Field label="Permanent address" error={errors.permanentAddress?.message}>
+                <textarea {...register("permanentAddress")} rows={2} className={inputCls(errors.permanentAddress)} />
+              </Field>
+              <div className="grid grid-cols-2 gap-4">
+                <Field label="City" error={errors.city?.message}>
+                  <input {...register("city")} className={inputCls(errors.city)} />
+                </Field>
+                <Field label="State" error={errors.state?.message}>
+                  <input {...register("state")} className={inputCls(errors.state)} />
+                </Field>
+              </div>
+            </>
+          )}
+
+          {step === 3 && (
+            <>
+              <div className="grid grid-cols-2 gap-4">
+                <Field label="Institution" error={errors.institutionCode?.message}>
+                  <select {...register("institutionCode")} className={inputCls(errors.institutionCode)}>
+                    <option value="">— none —</option>
+                    {institutions.map((i) => (
+                      <option key={i.inst_code} value={i.inst_code}>{i.name}</option>
+                    ))}
+                  </select>
+                </Field>
+                <Field label="Branch" error={errors.branchCode?.message}>
+                  <select {...register("branchCode")} disabled={!instCode} className={inputCls(errors.branchCode)}>
+                    <option value="">— none —</option>
+                    {branches.map((b) => (
+                      <option key={b.branch_code} value={b.branch_code}>{b.branch_name}</option>
+                    ))}
+                  </select>
+                </Field>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <Field label="Department *" error={errors.departmentCode?.message}>
+                  <select {...register("departmentCode")} className={inputCls(errors.departmentCode)}>
+                    <option value="">— select —</option>
+                    {departments.map((d) => (
+                      <option key={d.dept_code} value={d.dept_code}>{d.dept_name}</option>
+                    ))}
+                  </select>
+                </Field>
+                <Field label="Designation *" error={errors.designationCode?.message}>
+                  <select {...register("designationCode")} disabled={!deptCode} className={inputCls(errors.designationCode)}>
+                    <option value="">— select —</option>
+                    {designations.map((d) => (
+                      <option key={d.position_code} value={d.position_code}>{d.position_name}</option>
+                    ))}
+                  </select>
+                </Field>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <Field label="Joining date *" error={errors.joiningDate?.message}>
+                  <input type="date" {...register("joiningDate")} className={inputCls(errors.joiningDate)} />
+                </Field>
+                <Field label="Shift" error={errors.shift?.message}>
+                  <select {...register("shift")} className={inputCls(errors.shift)}>
+                    <option value="general">General</option>
+                    <option value="morning">Morning</option>
+                    <option value="evening">Evening</option>
+                    <option value="night">Night</option>
+                  </select>
+                </Field>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <Field label="Bank name" error={errors.bankName?.message}>
+                  <input {...register("bankName")} className={inputCls(errors.bankName)} />
+                </Field>
+                <Field label="Account number" error={errors.accountNumber?.message}>
+                  <input {...register("accountNumber")} className={inputCls(errors.accountNumber)} />
+                </Field>
+              </div>
+            </>
+          )}
+
+          {step === 4 && (
+            <>
+              <section>
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-semibold text-slate-900">Education</h3>
+                  <button type="button" onClick={() => eduArr.append({ degree: "", institute: "", passingYear: "" })}
+                    className="inline-flex items-center gap-1 text-sm text-slate-700 hover:text-slate-900">
+                    <Plus size={14} /> Add
+                  </button>
+                </div>
+                {eduArr.fields.length === 0 && <p className="text-sm text-slate-400 italic">No records added.</p>}
+                {eduArr.fields.map((f, i) => (
+                  <div key={f.id} className="grid grid-cols-[1fr_1fr_120px_auto] gap-3 mb-3">
+                    <input {...register(`education.${i}.degree`)} placeholder="Degree" className={inputCls(errors.education?.[i]?.degree)} />
+                    <input {...register(`education.${i}.institute`)} placeholder="Institute" className={inputCls(errors.education?.[i]?.institute)} />
+                    <input {...register(`education.${i}.passingYear`)} placeholder="YYYY" className={inputCls(errors.education?.[i]?.passingYear)} />
+                    <button type="button" onClick={() => eduArr.remove(i)} className="p-2 text-rose-600 hover:bg-rose-50 rounded-lg">
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                ))}
+              </section>
+
+              <section className="pt-6 border-t border-slate-100">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-semibold text-slate-900">Work experience</h3>
+                  <button type="button" onClick={() => expArr.append({ employer: "", jobTitle: "", startDate: "", endDate: "", responsibilities: "" })}
+                    className="inline-flex items-center gap-1 text-sm text-slate-700 hover:text-slate-900">
+                    <Plus size={14} /> Add
+                  </button>
+                </div>
+                {expArr.fields.length === 0 && <p className="text-sm text-slate-400 italic">No records added.</p>}
+                {expArr.fields.map((f, i) => (
+                  <div key={f.id} className="space-y-2 mb-4 p-3 border border-slate-200 rounded-lg">
+                    <div className="grid grid-cols-2 gap-3">
+                      <input {...register(`experience.${i}.employer`)} placeholder="Employer" className={inputCls(errors.experience?.[i]?.employer)} />
+                      <input {...register(`experience.${i}.jobTitle`)} placeholder="Job title" className={inputCls(errors.experience?.[i]?.jobTitle)} />
                     </div>
-                  </div>
-                  <div className="space-y-6">
-                    <h4 className="text-[9px] font-black text-zinc-900 uppercase tracking-[0.2em] border-l-4 border-zinc-900 pl-4">Registry Residency</h4>
-                    <div className="space-y-4">
-                       <textarea name="residentialAddress" value={formData.residentialAddress} onChange={handleChange} rows={3} className="textarea-premium" placeholder="residential node" />
-                       <div className="grid grid-cols-2 gap-4">
-                          <input name="city" value={formData.city} onChange={handleChange} className="input-premium" placeholder="city" />
-                          <input name="state" value={formData.state} onChange={handleChange} className="input-premium" placeholder="state" />
-                       </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <input type="date" {...register(`experience.${i}.startDate`)} className={inputCls(errors.experience?.[i]?.startDate)} />
+                      <input type="date" {...register(`experience.${i}.endDate`)} className={inputCls(errors.experience?.[i]?.endDate)} />
                     </div>
+                    <textarea {...register(`experience.${i}.responsibilities`)} rows={2} placeholder="Responsibilities" className={inputCls()} />
+                    <button type="button" onClick={() => expArr.remove(i)} className="inline-flex items-center gap-1 text-sm text-rose-600 hover:text-rose-700">
+                      <Trash2 size={14} /> Remove
+                    </button>
                   </div>
-                </div>
-              </div>
+                ))}
+              </section>
+            </>
+          )}
+
+          {/* Navigation */}
+          <div className="flex items-center justify-between pt-4 border-t border-slate-100">
+            <button type="button" onClick={prev} disabled={step === 1}
+              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed">
+              <ChevronLeft size={16} /> Back
+            </button>
+
+            {step < 4 ? (
+              <button type="button" onClick={next}
+                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-slate-900 rounded-lg hover:bg-slate-800">
+                Next <ChevronRight size={16} />
+              </button>
+            ) : (
+              <button type="submit" disabled={isSubmitting}
+                className="inline-flex items-center gap-2 px-5 py-2 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 disabled:opacity-60">
+                {isSubmitting ? <><Loader2 size={16} className="animate-spin" /> Saving…</> : <><Check size={16} /> Create employee</>}
+              </button>
             )}
-
-            {/* STEP 3: PLACEMENT */}
-            {currentStep === 3 && (
-              <div className="space-y-10 animate-in fade-in slide-in-from-right-4 duration-500">
-                <SectionHeader title="job assignments" icon={Briefcase} subtitle="Operational placement" />
-                
-                <div className="space-y-6">
-                   <div className="bg-zinc-50 p-6 rounded-3xl border border-zinc-100 flex flex-col sm:flex-row gap-6">
-                      <div className="flex-1 space-y-2">
-                         <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">master organization</label>
-                         <select name="organizationCode" value={formData.organizationCode} onChange={handleChange} className="select-premium">
-                            {organizations.map(org => (<option key={org.org_code} value={org.org_code}>{org.name.toLowerCase()}</option>))}
-                         </select>
-                      </div>
-                      <div className="flex items-center gap-4 px-4 h-full pt-6">
-                         <input type="checkbox" id="isActive" name="isActive" checked={formData.isActive} onChange={handleChange} className="h-5 w-5 rounded-lg border-zinc-200 text-zinc-900" />
-                         <label htmlFor="isActive" className="text-[11px] font-black text-zinc-900 uppercase tracking-widest">Active dossier</label>
-                      </div>
-                   </div>
-
-                   <div className="space-y-6">
-                      {assignments.map((asgn, i) => (
-                        <div key={i} className="bg-white border border-zinc-100 p-8 rounded-[2.5rem] shadow-xl shadow-zinc-200/20 space-y-8 relative group">
-                           {i > 0 && <button type="button" onClick={() => removeAssignmentRow(i)} className="absolute top-6 right-6 h-10 w-10 text-zinc-300 hover:text-rose-500 transition-colors"><Trash2 size={20} /></button>}
-                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
-                              <div className="space-y-2">
-                                <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">institution</label>
-                                <select required name="institutionCode" value={asgn.institutionCode} onChange={(e) => handleAssignmentChange(i, e)} className="select-premium">
-                                  <option value="">select inst...</option>
-                                  {institutions.map(inst => (<option key={inst.inst_code} value={inst.inst_code}>{inst.name.toLowerCase()}</option>))}
-                                </select>
-                              </div>
-                              <div className="space-y-2">
-                                <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">branch hub</label>
-                                <select name="branchCode" value={asgn.branchCode} onChange={(e) => handleAssignmentChange(i, e)} className="select-premium disabled:opacity-30" disabled={!asgn.institutionCode}>
-                                  <option value="">default / node...</option>
-                                  {asgn.branches.map(b => (<option key={b.branch_code} value={b.branch_code}>{b.branch_name.toLowerCase()}</option>))}
-                                </select>
-                              </div>
-                              <div className="space-y-2">
-                                <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">department</label>
-                                <select required name="departmentCode" value={asgn.departmentCode} onChange={(e) => handleAssignmentChange(i, e)} className="select-premium">
-                                  <option value="">select dept...</option>
-                                  {departments.map(d => (<option key={d.dept_code} value={d.dept_code}>{d.dept_name.toLowerCase()}</option>))}
-                                </select>
-                              </div>
-                              <div className="space-y-2">
-                                <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">official designation</label>
-                                <select required name="designationCode" value={asgn.designationCode} onChange={(e) => handleAssignmentChange(i, e)} className="select-premium disabled:opacity-30" disabled={!asgn.departmentCode}>
-                                  <option value="">select role...</option>
-                                  {asgn.designations.map(des => (<option key={des.position_code} value={des.position_code}>{des.position_name.toLowerCase()}</option>))}
-                                </select>
-                              </div>
-                           </div>
-                        </div>
-                      ))}
-                      <button type="button" onClick={addAssignmentRow} className="w-full py-6 border-2 border-dashed border-zinc-100 rounded-[2.5rem] text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] hover:border-zinc-900 hover:text-zinc-900 transition-all flex items-center justify-center gap-3">
-                         <Plus size={18} /> Add Secondary Assignment
-                      </button>
-                   </div>
-                </div>
-              </div>
-            )}
-
-            {/* STEP 4: HISTORY & FINANCIAL */}
-            {currentStep === 4 && (
-              <div className="space-y-12 animate-in fade-in slide-in-from-right-4 duration-500">
-                <SectionHeader title="compliance & history" icon={History} subtitle="Educational & financial audit" />
-                
-                <div className="space-y-10">
-                   <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-                      <div className="space-y-4">
-                         <h4 className="text-[10px] font-black text-zinc-900 uppercase tracking-widest">Master Financials</h4>
-                         <div className="space-y-4">
-                            <input name="bankName" value={formData.bankName} onChange={handleChange} className="input-premium" placeholder="bank institution name" />
-                            <input name="accountNumber" value={formData.accountNumber} onChange={handleChange} className="input-premium" placeholder="account / iban identifier" />
-                         </div>
-                      </div>
-                      <div className="space-y-4">
-                         <h4 className="text-[10px] font-black text-zinc-900 uppercase tracking-widest">Emergency Comms</h4>
-                         <div className="space-y-4">
-                            <input name="emergencyName" value={formData.emergencyName} onChange={handleChange} className="input-premium" placeholder="contact full name" />
-                            <input name="emergencyPhone" value={formData.emergencyPhone} onChange={handleChange} className="input-premium" placeholder="emergency frequency" />
-                         </div>
-                      </div>
-                   </div>
-
-                   <div className="space-y-6 pt-6">
-                      <div className="flex items-center justify-between">
-                         <h4 className="text-[10px] font-black text-zinc-900 uppercase tracking-widest">Educational Registry</h4>
-                         <button type="button" onClick={addEduRow} className="text-blue-600 text-[10px] font-black uppercase tracking-widest hover:underline">+ link degree</button>
-                      </div>
-                      <div className="space-y-4">
-                        {education.map((edu, idx) => (
-                           <div key={idx} className="bg-zinc-50 p-6 rounded-[2rem] border border-zinc-100 grid grid-cols-1 sm:grid-cols-4 gap-4 relative group">
-                              <input name="degree" value={edu.degree} onChange={(e) => handleEduChange(idx, e)} className="input-premium-mini" placeholder="degree" />
-                              <input name="institute" value={edu.institute} onChange={(e) => handleEduChange(idx, e)} className="input-premium-mini" placeholder="institute" />
-                              <input name="passingYear" value={edu.passingYear} onChange={(e) => handleEduChange(idx, e)} className="input-premium-mini" placeholder="year" />
-                              <input name="grade" value={edu.grade} onChange={(e) => handleEduChange(idx, e)} className="input-premium-mini" placeholder="gpa/grade" />
-                              {idx > 0 && <button type="button" onClick={() => removeEduRow(idx)} className="absolute -top-3 -right-3 h-8 w-8 bg-white border border-rose-100 text-rose-500 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all"><Trash2 size={14} /></button>}
-                           </div>
-                        ))}
-                      </div>
-                   </div>
-                </div>
-              </div>
-            )}
-
-            {/* SPACER FOR FIXED BOTTOM NAV */}
-            <div className="flex-1 min-h-[100px]" />
-
-            {/* ACTION BAR (Internal to card) */}
-            <div className="flex items-center justify-between mt-auto pt-10 border-t border-zinc-100">
-               <button 
-                type="button" 
-                onClick={() => currentStep > 1 ? setCurrentStep(currentStep - 1) : router.back()}
-                className="flex items-center gap-3 text-[10px] font-black text-zinc-400 hover:text-zinc-900 uppercase tracking-[0.2em] transition-all"
-               >
-                 {currentStep > 1 ? <><ChevronLeft size={16} /> Previous Sequence</> : 'Cancel Operation'}
-               </button>
-               <button 
-                type="submit" 
-                disabled={loading}
-                className="px-12 py-5 bg-zinc-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-[0.3em] flex items-center justify-center gap-4 hover:bg-blue-600 transition-all active:scale-95 shadow-2xl shadow-zinc-900/20 shadow-blue-600/10"
-               >
-                 {loading ? 'Processing...' : currentStep === 4 ? 'Commit Record' : 'Continue Integration'}
-                 {currentStep < 4 && !loading && <ChevronRight size={18} />}
-               </button>
-            </div>
-
           </div>
-
         </form>
-
       </div>
-
-      <style jsx>{`
-        .input-premium { @apply w-full px-6 py-4 bg-zinc-50 border border-zinc-100 rounded-2xl text-sm font-bold text-zinc-900 outline-none focus:border-zinc-900 focus:bg-white focus:shadow-xl transition-all; }
-        .textarea-premium { @apply w-full px-6 py-4 bg-zinc-50 border border-zinc-100 rounded-2xl text-sm font-bold text-zinc-900 outline-none focus:border-zinc-900 focus:bg-white focus:shadow-xl transition-all resize-none; }
-        .select-premium { @apply w-full px-6 py-4 bg-zinc-50 border border-zinc-100 rounded-2xl text-[11px] font-black text-zinc-900 uppercase tracking-widest outline-none cursor-pointer appearance-none focus:border-zinc-900 focus:bg-white transition-all; }
-        .input-premium-mini { @apply w-full px-4 py-3 bg-white border border-zinc-200 rounded-xl text-xs font-bold text-zinc-900 outline-none border-transparent focus:border-zinc-900 transition-all; }
-      `}</style>
     </ProtectedLayout>
   );
+}
+
+// ----- Shared field + input helpers -----
+function Field({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
+  return (
+    <label className="block">
+      <span className="block text-xs font-medium text-slate-700 mb-1.5">{label}</span>
+      {children}
+      {error && <span className="block text-xs text-rose-600 mt-1">{error}</span>}
+    </label>
+  );
+}
+
+function inputCls(err?: any) {
+  const base = "w-full px-3 py-2 text-sm bg-white border rounded-lg outline-none transition focus:ring-2 focus:ring-slate-900/10 disabled:bg-slate-50 disabled:text-slate-400";
+  return `${base} ${err ? "border-rose-300 focus:border-rose-400" : "border-slate-200 focus:border-slate-400"}`;
 }

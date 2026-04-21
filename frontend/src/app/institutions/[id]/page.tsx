@@ -32,7 +32,7 @@ export default function InstitutionDetails() {
   useEffect(() => {
     async function loadInstitution() {
       try {
-        const response = await fetchWithAuth(`/employees/institutions/${id}/`);
+        const response = await fetchWithAuth(`/employees/institutions/${id}`);
         if (response.ok) {
           const data = await response.json();
           setInstitution(data);
@@ -56,9 +56,9 @@ export default function InstitutionDetails() {
     if (!window.confirm('Are you sure you want to delete this institution?')) return;
 
     try {
-      const response = await fetchWithAuth(`/employees/institutions/${id}/`, { method: 'DELETE' });
+      const response = await fetchWithAuth(`/employees/institutions/${id}`, { method: 'DELETE' });
       if (response.ok) {
-        router.push('/employees/institutions');
+        router.push('/institutions');
       } else {
         alert('Failed to delete institution');
       }

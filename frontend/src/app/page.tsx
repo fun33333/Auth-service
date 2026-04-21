@@ -21,6 +21,7 @@ import {
   Clock,
   Briefcase,
   GitBranch,
+  Edit2,
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -297,6 +298,7 @@ export default function Dashboard() {
   });
 
   const [streamEvents, setStreamEvents] = useState<StreamEvent[]>([]);
+  const [deptMix, setDeptMix] = useState<{ name: string; count: number }[]>([]);
 
   // Monthly hiring trend (mock sparkline data)
   const monthlyTrend = [14, 22, 18, 30, 26, 40];
@@ -462,7 +464,7 @@ export default function Dashboard() {
               </div>
             ) : (
               <div className="space-y-1">
-                {deptMix.map((d, index) => (
+                {deptMix.map((d: { name: string; count: number; }, index: React.Key | null | undefined) => (
                   <OrgMixRow key={index} label={d.name} count={d.count} />
                 ))}
               </div>
@@ -613,3 +615,4 @@ export default function Dashboard() {
     </ProtectedLayout>
   );
 }
+

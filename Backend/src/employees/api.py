@@ -575,13 +575,8 @@ def create_designation(request, payload: DesignationCreateSchema):
     summary="Create New Employee",
     auth=AuthBearer()
 )
-def create_employee(request, payload: EmployeeCreateSchema = Form(...), resume: UploadedFile = File(None)):
-    token = request.auth_token if hasattr(request, 'auth_token') else None
-    if not token:
-        auth_header = request.headers.get('Authorization')
-        if auth_header and auth_header.startswith('Bearer '):
-            token = auth_header.split(' ')[1]
-            
+def create_employee(request, payload: EmployeeCreateSchema):
+    """Create a new employee. Accepts JSON body. Resume upload moved to a separate endpoint."""
     field_errors = {}
     try:
         cnic_clean = payload.cnic.replace('-', '').replace(' ', '')
@@ -862,10 +857,14 @@ def get_employee(request, employee_id: str):
         for asn in employee.assignments.filter(is_deleted=False):
             assignments.append({
                 'institution': asn.institution.name if asn.institution else "Global",
+                'institution_code': asn.institution.inst_code if asn.institution else None,
                 'branch_name': asn.branch.branch_name if asn.branch else "N/A",
-                'department': asn.department.dept_name,
-                'designation': asn.designation.position_name,
-                'shift': asn.get_shift_display(),
+                'branch_code': asn.branch.branch_code if asn.branch else None,
+                'department': asn.department.dept_name if asn.department else None,
+                'department_code': asn.department.dept_code if asn.department else None,
+                'designation': asn.designation.position_name if asn.designation else None,
+                'designation_code': asn.designation.position_code if asn.designation else None,
+                'shift': asn.shift,
                 'joining_date': asn.joining_date.isoformat(),
                 'is_primary': asn.is_primary,
                 'role_data': asn.role_data
@@ -883,9 +882,12 @@ def get_employee(request, employee_id: str):
             'org_phone': employee.org_phone,
             'cnic': employee.cnic,
             'dob': employee.dob.isoformat() if employee.dob else None,
-            'gender': employee.get_gender_display(),
-            'marital_status': employee.get_marital_status_display(),
-            'employment_type': employee.get_employment_type_display(),
+            'gender': employee.gender,
+            'gender_display': employee.get_gender_display(),
+            'marital_status': employee.marital_status,
+            'marital_status_display': employee.get_marital_status_display(),
+            'employment_type': employee.employment_type,
+            'employment_type_display': employee.get_employment_type_display(),
             'nationality': employee.nationality,
             'religion': employee.religion,
             'emergency_contact': {
@@ -944,4 +946,199 @@ def delete_employee(request, employee_id: str):
         return 404, {'error': f'Employee with ID {employee_id} not found'}
     except Exception as e:
         logger.error(f"Error deleting employee {employee_id}: {str(e)}", exc_info=True)
+        return 400, {'error': str(e)}
+
+
+# ========================================
+# UPDATE EMPLOYEE (PUT)
+# ========================================
+
+class EmployeeUpdateSchema(BaseModel):
+    """Partial employee update. All fields optional; only provided fields are applied."""
+    # Personal
+    fullName: Optional[str] = None
+    dob: Optional[str] = None
+    cnic: Optional[str] = None
+    gender: Optional[str] = None
+    maritalStatus: Optional[str] = None
+    nationality: Optional[str] = None
+    religion: Optional[str] = None
+
+    # Contact
+    personalEmail: Optional[str] = None
+    mobile: Optional[str] = None
+    orgEmail: Optional[str] = None
+    orgPhone: Optional[str] = None
+    emergencyName: Optional[str] = None
+    emergencyPhone: Optional[str] = None
+    residentialAddress: Optional[str] = None
+    permanentAddress: Optional[str] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
+
+    # Primary assignment (flat, same shape as create payload)
+    organizationCode: Optional[str] = None
+    institutionCode: Optional[str] = None
+    branchCode: Optional[str] = None
+    departmentCode: Optional[str] = None
+    designationCode: Optional[str] = None
+    joiningDate: Optional[str] = None
+    shift: Optional[str] = None
+
+    # Bank
+    bankName: Optional[str] = None
+    accountNumber: Optional[str] = None
+
+    # History (replace-on-update semantics)
+    education: Optional[List[EducationSchema]] = None
+    experience: Optional[List[ExperienceSchema]] = None
+
+    @validator('cnic')
+    def validate_cnic(cls, v):
+        if v is None:
+            return v
+        if not re.match(r'^\d{5}-?\d{7}-?\d{1}$', v):
+            raise ValueError('Invalid Pakistani CNIC format (XXXXX-XXXXXXX-X)')
+        return v.replace('-', '')
+
+    @validator('mobile', 'emergencyPhone', 'orgPhone')
+    def validate_phone(cls, v):
+        if v and not re.match(r'^(\+92|92|0|0092)?3\d{2}-?\d{7}$', v):
+            raise ValueError('Invalid Pakistani Mobile number format')
+        return v
+
+    @validator('personalEmail', 'orgEmail')
+    def validate_email(cls, v):
+        if v and not re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', v):
+            raise ValueError('Invalid email format')
+        return v
+
+
+@router.put(
+    "/employees/{employee_id}",
+    response={200: dict, 400: dict, 404: dict},
+    summary="Update Employee",
+    auth=AuthBearer()
+)
+def update_employee(request, employee_id: str, payload: EmployeeUpdateSchema):
+    """
+    Partial update of an employee. Only fields present in the request body are applied.
+    Primary assignment FKs (institutionCode/branchCode/departmentCode/designationCode)
+    update the employee's primary EmployeeAssignment row in place.
+    """
+    try:
+        employee = Employee.objects.get(employee_id=employee_id, is_deleted=False)
+    except Employee.DoesNotExist:
+        return 404, {'error': f'Employee with ID {employee_id} not found'}
+
+    field_errors = {}
+
+    # Resolve optional FKs
+    inst = None
+    if payload.institutionCode:
+        inst = Institution.objects.filter(inst_code=payload.institutionCode, is_deleted=False).first()
+        if not inst:
+            field_errors['institutionCode'] = ['Institution not found']
+
+    branch = None
+    if payload.branchCode:
+        branch = Branch.objects.filter(branch_code=payload.branchCode, is_deleted=False).first()
+        if not branch:
+            field_errors['branchCode'] = ['Branch not found']
+
+    dept = None
+    if payload.departmentCode:
+        dept = Department.objects.filter(dept_code=payload.departmentCode, is_deleted=False).first()
+        if not dept:
+            field_errors['departmentCode'] = ['Department not found']
+
+    designation = None
+    if payload.designationCode:
+        primary_existing = employee.assignments.filter(is_primary=True, is_deleted=False).first()
+        scope_dept = dept or (primary_existing.department if primary_existing else None)
+        if not scope_dept:
+            field_errors['designationCode'] = ['Cannot validate designation without a department']
+        else:
+            designation = Designation.objects.filter(
+                department=scope_dept, position_code=payload.designationCode, is_deleted=False
+            ).first()
+            if not designation:
+                field_errors['designationCode'] = ['Designation not found for this department']
+
+    # CNIC uniqueness (excluding self)
+    if payload.cnic and Employee.objects.filter(cnic=payload.cnic, is_deleted=False).exclude(pk=employee.pk).exists():
+        field_errors['cnic'] = ['An employee with this CNIC already exists']
+
+    if field_errors:
+        return 400, {'error': 'Validation failed', 'field_errors': field_errors}
+
+    try:
+        with transaction.atomic():
+            field_map = {
+                'fullName': 'full_name',
+                'cnic': 'cnic',
+                'mobile': 'personal_phone',
+                'personalEmail': 'personal_email',
+                'orgEmail': 'org_email',
+                'orgPhone': 'org_phone',
+                'gender': 'gender',
+                'maritalStatus': 'marital_status',
+                'nationality': 'nationality',
+                'religion': 'religion',
+                'residentialAddress': 'residential_address',
+                'permanentAddress': 'permanent_address',
+                'city': 'city',
+                'state': 'state',
+                'emergencyName': 'emergency_contact_name',
+                'emergencyPhone': 'emergency_contact_phone',
+                'bankName': 'bank_name',
+                'accountNumber': 'account_number',
+            }
+            data = payload.dict(exclude_unset=True)
+            for payload_key, model_field in field_map.items():
+                if payload_key in data:
+                    setattr(employee, model_field, data[payload_key])
+
+            if 'dob' in data and data['dob']:
+                employee.dob = datetime.strptime(data['dob'], '%Y-%m-%d').date()
+
+            if payload.education is not None:
+                employee.education_history = [e.dict() for e in payload.education]
+            if payload.experience is not None:
+                employee.work_experience = [e.dict() for e in payload.experience]
+
+            employee.save()
+
+            # Update primary assignment if any assignment field was provided
+            assignment_fields_provided = any([
+                payload.institutionCode, payload.branchCode,
+                payload.departmentCode, payload.designationCode,
+                payload.joiningDate, payload.shift
+            ])
+            if assignment_fields_provided:
+                primary = employee.assignments.filter(is_primary=True, is_deleted=False).first()
+                if primary:
+                    if inst is not None:
+                        primary.institution = inst
+                    if branch is not None:
+                        primary.branch = branch
+                    if dept is not None:
+                        primary.department = dept
+                    if designation is not None:
+                        primary.designation = designation
+                    if payload.joiningDate:
+                        primary.joining_date = datetime.strptime(payload.joiningDate, '%Y-%m-%d').date()
+                    if payload.shift:
+                        primary.shift = payload.shift
+                    primary.save()
+
+        logger.info(f"Employee updated: {employee.employee_code} - {employee.full_name}")
+        return 200, {
+            'success': True,
+            'message': 'Employee updated successfully',
+            'employee_id': employee.employee_id,
+            'employee_code': employee.employee_code,
+        }
+    except Exception as e:
+        logger.error(f"Error updating employee {employee_id}: {str(e)}", exc_info=True)
         return 400, {'error': str(e)}

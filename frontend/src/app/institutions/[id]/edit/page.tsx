@@ -50,7 +50,7 @@ export default function EditInstitutionForm() {
   useEffect(() => {
     async function loadInstitution() {
       try {
-        const response = await fetchWithAuth(`/employees/institutions/${id}/`);
+        const response = await fetchWithAuth(`/employees/institutions/${id}`);
         if (response.ok) {
           const data = await response.json();
           setInstitution(data);
@@ -101,14 +101,14 @@ export default function EditInstitutionForm() {
     }
 
     try {
-      const response = await fetchWithAuth(`/employees/institutions/${id}/`, {
+      const response = await fetchWithAuth(`/employees/institutions/${id}`, {
         method: 'PUT',
         body: JSON.stringify(formData),
       });
 
       if (response.ok) {
         // Success - redirect to institutions list
-        router.push('/employees/institutions');
+        router.push('/institutions');
       } else {
         const errorData = await response.json();
         setError(errorData.error || 'Failed to update institution');
