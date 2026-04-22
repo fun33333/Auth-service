@@ -4,7 +4,7 @@ Employees API endpoints for Auth Service.
 Provides REST API for employee management including creation,
 retrieval, and updates for integration with HDMS frontend.
 """
-from ninja import Router, File, Form, Schema
+from ninja import Router, File, Form, Schema, Body
 from ninja.files import UploadedFile
 import requests
 import os
@@ -12,7 +12,7 @@ from typing import Optional, List
 from pydantic import BaseModel, validator
 from datetime import date, datetime
 from employees.models import Employee, Organization, Institution, Department, Designation, EmployeeAssignment, Branch
-from django.db import transaction
+from django.db import transaction, models
 from django.shortcuts import get_object_or_404
 import re
 import logging
@@ -170,12 +170,12 @@ class DesignationCreateSchema(BaseModel):
     department_code: str
     position_code: str
     position_name: str
-    description: str = None
+    description: Optional[str] = None
 
 class DesignationUpdateSchema(BaseModel):
     """Schema for updating a designation"""
-    position_name: str = None
-    description: str = None
+    position_name: Optional[str] = None
+    description: Optional[str] = None
 
 from authentication.api import AuthBearer
 
@@ -230,7 +230,7 @@ def list_institutions(request):
 
 
 @router.post("/institutions", response={201: InstitutionSchema, 400: ErrorResponseSchema})
-def create_institution(request, payload: dict):
+def create_institution(request, payload: Body[dict]):
     """Create a new institution"""
     try:
         org_code = payload.get("organization_code")
@@ -303,7 +303,7 @@ def get_institution(request, institution_id: str):
     "/institutions/{institution_id}",
     response={200: InstitutionSchema, 404: ErrorResponseSchema}
 )
-def update_institution(request, institution_id: str, payload: dict):
+def update_institution(request, institution_id: str, payload: Body[dict]):
     """Update institution"""
     inst = Institution.objects.filter(
         id=institution_id,
@@ -388,7 +388,7 @@ def list_branches(request, institution_code: str = None):
 
 
 @router.post("/branches", response={201: BranchSchema, 400: ErrorResponseSchema})
-def create_branch(request, payload: dict):
+def create_branch(request, payload: Body[dict]):
     """Create a new branch under an institution"""
     try:
         inst = get_object_or_404(Institution, inst_code=payload['institution_code'])
@@ -418,6 +418,68 @@ def create_branch(request, payload: dict):
         }
     except Exception as e:
         return 400, {"error": str(e)}
+
+
+def _resolve_branch(branch_key: str):
+    """Lookup a non-deleted branch by branch_id or branch_code."""
+    return Branch.objects.filter(is_deleted=False).filter(
+        models.Q(branch_id=branch_key) | models.Q(branch_code=branch_key)
+    ).first()
+
+
+@router.put("/branches/{branch_key}", response={200: BranchSchema, 400: ErrorResponseSchema, 404: ErrorResponseSchema})
+def update_branch(request, branch_key: str, payload: Body[dict]):
+    """Update a branch. Accepts branch_id or branch_code as key."""
+    branch = _resolve_branch(branch_key)
+    if not branch:
+        return 404, {"error": "Branch not found"}
+
+    inst_code = payload.get("institution_code")
+    if inst_code and inst_code != branch.institution.inst_code:
+        inst = Institution.objects.filter(inst_code=inst_code, is_deleted=False).first()
+        if not inst:
+            return 400, {"error": f"Institution '{inst_code}' not found"}
+        branch.institution = inst
+
+    new_code = payload.get("branch_code")
+    if new_code and new_code != branch.branch_code:
+        if Branch.objects.filter(branch_code=new_code).exclude(pk=branch.pk).exists():
+            return 400, {"error": f"Branch code '{new_code}' already exists"}
+        branch.branch_code = new_code
+
+    for field in ("branch_name", "status", "address", "city", "contact_number", "email", "branch_head_name"):
+        if field in payload:
+            setattr(branch, field, payload[field] or None if field in ("email", "contact_number", "address", "branch_head_name") else payload[field])
+
+    try:
+        branch.save()
+    except Exception as e:
+        return 400, {"error": str(e)}
+
+    return 200, {
+        "branch_id": branch.branch_id,
+        "branch_code": branch.branch_code,
+        "branch_name": branch.branch_name,
+        "institution_code": branch.institution.inst_code,
+        "status": branch.status,
+        "address": branch.address,
+        "city": branch.city,
+        "contact_number": branch.contact_number,
+        "email": branch.email,
+        "branch_head_name": branch.branch_head_name,
+        "domain_data": branch.domain_data,
+    }
+
+
+@router.delete("/branches/{branch_key}", response={200: dict, 404: ErrorResponseSchema})
+def delete_branch(request, branch_key: str):
+    """Soft delete a branch. Accepts branch_id or branch_code as key."""
+    branch = _resolve_branch(branch_key)
+    if not branch:
+        return 404, {"error": "Branch not found"}
+    branch.is_deleted = True
+    branch.save()
+    return 200, {"message": "Branch deleted successfully"}
 
 
 @router.get("/departments", response=List[dict])
@@ -621,9 +683,9 @@ def create_employee(request, payload: EmployeeCreateSchema):
                 full_name=payload.fullName,
                 cnic=cnic_clean,
                 personal_phone=payload.mobile,
-                personal_email=payload.personalEmail,
-                org_email=payload.orgEmail,
-                org_phone=payload.orgPhone,
+                personal_email=payload.personalEmail or None,
+                org_email=payload.orgEmail or None,
+                org_phone=payload.orgPhone or None,
                 dob=dob,
                 gender=payload.gender,
                 marital_status=payload.maritalStatus,
@@ -844,14 +906,16 @@ def get_employee_by_user_id(request, user_id: str):
 @router.get("/employees/{employee_id}", response=dict)
 def get_employee(request, employee_id: str):
     """
-    Get single employee details by employee_id.
-    
-    Returns complete employee information including education, experience, etc.
+    Get single employee details. Accepts either employee_id or employee_code.
     """
     try:
         employee = Employee.objects.prefetch_related(
             'assignments', 'assignments__department', 'assignments__designation', 'assignments__institution'
-        ).get(employee_id=employee_id, is_deleted=False)
+        ).filter(is_deleted=False).filter(
+            models.Q(employee_id=employee_id) | models.Q(employee_code=employee_id)
+        ).first()
+        if not employee:
+            raise Employee.DoesNotExist()
         
         assignments = []
         for asn in employee.assignments.filter(is_deleted=False):
@@ -928,8 +992,12 @@ def delete_employee(request, employee_id: str):
     This preserves the employee record but marks it as deleted.
     """
     try:
-        employee = Employee.objects.get(employee_id=employee_id, is_deleted=False)
-        
+        employee = Employee.objects.filter(is_deleted=False).filter(
+            models.Q(employee_id=employee_id) | models.Q(employee_code=employee_id)
+        ).first()
+        if not employee:
+            raise Employee.DoesNotExist()
+
         # Soft delete
         employee.is_deleted = True
         employee.save()
@@ -1026,9 +1094,10 @@ def update_employee(request, employee_id: str, payload: EmployeeUpdateSchema):
     Primary assignment FKs (institutionCode/branchCode/departmentCode/designationCode)
     update the employee's primary EmployeeAssignment row in place.
     """
-    try:
-        employee = Employee.objects.get(employee_id=employee_id, is_deleted=False)
-    except Employee.DoesNotExist:
+    employee = Employee.objects.filter(is_deleted=False).filter(
+        models.Q(employee_id=employee_id) | models.Q(employee_code=employee_id)
+    ).first()
+    if not employee:
         return 404, {'error': f'Employee with ID {employee_id} not found'}
 
     field_errors = {}
@@ -1095,9 +1164,14 @@ def update_employee(request, employee_id: str, payload: EmployeeUpdateSchema):
                 'accountNumber': 'account_number',
             }
             data = payload.dict(exclude_unset=True)
+            # For nullable unique fields, treat "" as None to avoid unique-constraint collisions
+            NULLABLE_BLANK_TO_NONE = {"orgEmail", "orgPhone", "personalEmail"}
             for payload_key, model_field in field_map.items():
                 if payload_key in data:
-                    setattr(employee, model_field, data[payload_key])
+                    val = data[payload_key]
+                    if payload_key in NULLABLE_BLANK_TO_NONE and val == "":
+                        val = None
+                    setattr(employee, model_field, val)
 
             if 'dob' in data and data['dob']:
                 employee.dob = datetime.strptime(data['dob'], '%Y-%m-%d').date()
