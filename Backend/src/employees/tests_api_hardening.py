@@ -53,3 +53,61 @@ class TestOptionalNullUpdates:
             content_type="application/json",
         )
         assert response.status_code == 200, response.content
+
+
+class TestBodySchemaRouting:
+    """Endpoints accept JSON bodies, validate required fields, and surface per-field errors."""
+
+    @pytest.mark.django_db
+    def test_create_institution_rejects_missing_name(self, api_client, org):
+        response = api_client.post(
+            "/api/employees/institutions",
+            data=json.dumps({"organization_code": "IAK", "inst_code": "X-INST"}),
+            content_type="application/json",
+        )
+        assert response.status_code == 422, response.content
+        body = response.json()
+        assert "detail" in body
+        locs = [".".join(str(p) for p in err.get("loc", [])) for err in body["detail"]]
+        assert any("name" in loc for loc in locs), locs
+
+    @pytest.mark.django_db
+    def test_create_institution_success(self, api_client, org):
+        response = api_client.post(
+            "/api/employees/institutions",
+            data=json.dumps({
+                "organization_code": "IAK",
+                "inst_code": "X-INST",
+                "name": "X Institution",
+                "inst_type": "educational",
+            }),
+            content_type="application/json",
+        )
+        assert response.status_code == 201, response.content
+        assert response.json()["inst_code"] == "X-INST"
+
+    @pytest.mark.django_db
+    def test_create_branch_rejects_missing_branch_name(self, api_client, institution):
+        response = api_client.post(
+            "/api/employees/branches",
+            data=json.dumps({"branch_code": "X-BR", "institution_code": institution.inst_code}),
+            content_type="application/json",
+        )
+        assert response.status_code == 422, response.content
+        locs = [".".join(str(p) for p in err.get("loc", [])) for err in response.json()["detail"]]
+        assert any("branch_name" in loc for loc in locs), locs
+
+    @pytest.mark.django_db
+    def test_update_branch_accepts_partial_payload(self, api_client, institution):
+        from employees.models import Branch
+        branch = Branch.objects.create(
+            institution=institution, branch_code="X-BR", branch_name="Before"
+        )
+        response = api_client.put(
+            f"/api/employees/branches/{branch.branch_code}",
+            data=json.dumps({"branch_name": "After"}),
+            content_type="application/json",
+        )
+        assert response.status_code == 200, response.content
+        branch.refresh_from_db()
+        assert branch.branch_name == "After"

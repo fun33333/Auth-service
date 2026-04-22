@@ -4,7 +4,7 @@ Employees API endpoints for Auth Service.
 Provides REST API for employee management including creation,
 retrieval, and updates for integration with HDMS frontend.
 """
-from ninja import Router, File, Form, Schema, Body
+from ninja import Router, File, Form, Schema
 from ninja.files import UploadedFile
 import requests
 import os
@@ -139,6 +139,54 @@ class ErrorResponseSchema(BaseModel):
     """Error response schema"""
     error: str
 
+class InstitutionCreateSchema(BaseModel):
+    """Request body for POST /institutions."""
+    organization_code: Optional[str] = None  # Falls back to first Organization when absent
+    inst_code: str
+    name: str
+    inst_type: str = "educational"
+    address: Optional[str] = None
+    city: Optional[str] = None
+    contact_number: Optional[str] = None
+
+
+class InstitutionUpdateSchema(BaseModel):
+    """Request body for PUT /institutions/{id}. All fields optional."""
+    organization_code: Optional[str] = None
+    inst_code: Optional[str] = None
+    name: Optional[str] = None
+    inst_type: Optional[str] = None
+    address: Optional[str] = None
+    city: Optional[str] = None
+    contact_number: Optional[str] = None
+
+
+class BranchCreateSchema(BaseModel):
+    """Request body for POST /branches."""
+    institution_code: str
+    branch_code: str
+    branch_name: str
+    status: str = "active"
+    address: Optional[str] = None
+    city: Optional[str] = None
+    contact_number: Optional[str] = None
+    email: Optional[str] = None
+    branch_head_name: Optional[str] = None
+
+
+class BranchUpdateSchema(BaseModel):
+    """Request body for PUT /branches/{key}. All fields optional."""
+    institution_code: Optional[str] = None
+    branch_code: Optional[str] = None
+    branch_name: Optional[str] = None
+    status: Optional[str] = None
+    address: Optional[str] = None
+    city: Optional[str] = None
+    contact_number: Optional[str] = None
+    email: Optional[str] = None
+    branch_head_name: Optional[str] = None
+
+
 class DepartmentCreateSchema(BaseModel):
     """Schema for creating a department"""
     dept_code: str
@@ -230,10 +278,10 @@ def list_institutions(request):
 
 
 @router.post("/institutions", response={201: InstitutionSchema, 400: ErrorResponseSchema})
-def create_institution(request, payload: Body[dict]):
+def create_institution(request, payload: InstitutionCreateSchema):
     """Create a new institution"""
     try:
-        org_code = payload.get("organization_code")
+        org_code = payload.organization_code
         if org_code:
             org = Organization.objects.filter(org_code=org_code).first()
         else:
@@ -244,12 +292,12 @@ def create_institution(request, payload: Body[dict]):
 
         inst = Institution.objects.create(
             organization=org,
-            inst_code=payload.get("inst_code"),
-            name=payload.get("name"),
-            inst_type=payload.get("inst_type", "educational"),
-            address=payload.get("address"),
-            city=payload.get("city"),
-            contact_number=payload.get("contact_number")
+            inst_code=payload.inst_code,
+            name=payload.name,
+            inst_type=payload.inst_type,
+            address=payload.address,
+            city=payload.city,
+            contact_number=payload.contact_number,
         )
 
         return 201, {
@@ -303,7 +351,7 @@ def get_institution(request, institution_id: str):
     "/institutions/{institution_id}",
     response={200: InstitutionSchema, 404: ErrorResponseSchema}
 )
-def update_institution(request, institution_id: str, payload: Body[dict]):
+def update_institution(request, institution_id: str, payload: InstitutionUpdateSchema):
     """Update institution"""
     inst = Institution.objects.filter(
         id=institution_id,
@@ -313,14 +361,16 @@ def update_institution(request, institution_id: str, payload: Body[dict]):
     if not inst:
         return 404, {"error": "Institution not found"}
 
-    inst.inst_code = payload.get("inst_code", inst.inst_code)
-    inst.name = payload.get("name", inst.name)
-    inst.inst_type = payload.get("inst_type", inst.inst_type)
-    inst.address = payload.get("address", inst.address)
-    inst.city = payload.get("city", inst.city)
-    inst.contact_number = payload.get("contact_number", inst.contact_number)
+    data = payload.dict(exclude_unset=True)
 
-    org_code = payload.get("organization_code")
+    inst.inst_code = data["inst_code"] if "inst_code" in data else inst.inst_code
+    inst.name = data["name"] if "name" in data else inst.name
+    inst.inst_type = data["inst_type"] if "inst_type" in data else inst.inst_type
+    inst.address = data["address"] if "address" in data else inst.address
+    inst.city = data["city"] if "city" in data else inst.city
+    inst.contact_number = data["contact_number"] if "contact_number" in data else inst.contact_number
+
+    org_code = data.get("organization_code")
     if org_code:
         org = Organization.objects.filter(org_code=org_code).first()
         if org:
@@ -388,20 +438,20 @@ def list_branches(request, institution_code: str = None):
 
 
 @router.post("/branches", response={201: BranchSchema, 400: ErrorResponseSchema})
-def create_branch(request, payload: Body[dict]):
+def create_branch(request, payload: BranchCreateSchema):
     """Create a new branch under an institution"""
     try:
-        inst = get_object_or_404(Institution, inst_code=payload['institution_code'])
+        inst = get_object_or_404(Institution, inst_code=payload.institution_code)
         branch = Branch.objects.create(
             institution=inst,
-            branch_code=payload['branch_code'],
-            branch_name=payload['branch_name'],
-            status=payload.get('status', 'active'),
-            address=payload.get('address'),
-            city=payload.get('city'),
-            contact_number=payload.get('contact_number'),
-            email=payload.get('email'),
-            branch_head_name=payload.get('branch_head_name')
+            branch_code=payload.branch_code,
+            branch_name=payload.branch_name,
+            status=payload.status,
+            address=payload.address,
+            city=payload.city,
+            contact_number=payload.contact_number,
+            email=payload.email,
+            branch_head_name=payload.branch_head_name,
         )
         return 201, {
             "branch_id": branch.branch_id,
@@ -428,28 +478,30 @@ def _resolve_branch(branch_key: str):
 
 
 @router.put("/branches/{branch_key}", response={200: BranchSchema, 400: ErrorResponseSchema, 404: ErrorResponseSchema})
-def update_branch(request, branch_key: str, payload: Body[dict]):
+def update_branch(request, branch_key: str, payload: BranchUpdateSchema):
     """Update a branch. Accepts branch_id or branch_code as key."""
     branch = _resolve_branch(branch_key)
     if not branch:
         return 404, {"error": "Branch not found"}
 
-    inst_code = payload.get("institution_code")
+    data = payload.dict(exclude_unset=True)
+
+    inst_code = data.get("institution_code")
     if inst_code and inst_code != branch.institution.inst_code:
         inst = Institution.objects.filter(inst_code=inst_code, is_deleted=False).first()
         if not inst:
             return 400, {"error": f"Institution '{inst_code}' not found"}
         branch.institution = inst
 
-    new_code = payload.get("branch_code")
+    new_code = data.get("branch_code")
     if new_code and new_code != branch.branch_code:
         if Branch.objects.filter(branch_code=new_code).exclude(pk=branch.pk).exists():
             return 400, {"error": f"Branch code '{new_code}' already exists"}
         branch.branch_code = new_code
 
     for field in ("branch_name", "status", "address", "city", "contact_number", "email", "branch_head_name"):
-        if field in payload:
-            setattr(branch, field, payload[field] or None if field in ("email", "contact_number", "address", "branch_head_name") else payload[field])
+        if field in data:
+            setattr(branch, field, data[field])
 
     try:
         branch.save()
