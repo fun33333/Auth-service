@@ -41,14 +41,12 @@ class ExperienceSchema(BaseModel):
 class InstitutionSchema(Schema):
     """Schema for Institution details"""
     id: Optional[str] = None
-    inst_id: str
     inst_code: str
     name: str
     inst_type: str
     address: Optional[str] = None
     city: Optional[str] = None
     contact_number: Optional[str] = None
-    extra_data: Optional[dict] = None
     created_at: Optional[str] = None
     updated_at: Optional[str] = None
 
@@ -61,10 +59,16 @@ class BranchSchema(Schema):
     status: str
     address: Optional[str] = None
     city: Optional[str] = None
+    district: Optional[str] = None
+    postal_code: Optional[str] = None
     contact_number: Optional[str] = None
+    secondary_contact: Optional[str] = None
     email: Optional[str] = None
     branch_head_name: Optional[str] = None
-    domain_data: Optional[dict] = None
+    branch_head_contact: Optional[str] = None
+    branch_head_email: Optional[str] = None
+    established_year: Optional[int] = None
+    registration_number: Optional[str] = None
 
 class EmployeeCreateSchema(BaseModel):
     """Schema for creating employee from frontend form"""
@@ -169,9 +173,16 @@ class BranchCreateSchema(BaseModel):
     status: str = "active"
     address: Optional[str] = None
     city: Optional[str] = None
+    district: Optional[str] = None
+    postal_code: Optional[str] = None
     contact_number: Optional[str] = None
+    secondary_contact: Optional[str] = None
     email: Optional[str] = None
     branch_head_name: Optional[str] = None
+    branch_head_contact: Optional[str] = None
+    branch_head_email: Optional[str] = None
+    established_year: Optional[int] = None
+    registration_number: Optional[str] = None
 
 
 class BranchUpdateSchema(BaseModel):
@@ -182,9 +193,16 @@ class BranchUpdateSchema(BaseModel):
     status: Optional[str] = None
     address: Optional[str] = None
     city: Optional[str] = None
+    district: Optional[str] = None
+    postal_code: Optional[str] = None
     contact_number: Optional[str] = None
+    secondary_contact: Optional[str] = None
     email: Optional[str] = None
     branch_head_name: Optional[str] = None
+    branch_head_contact: Optional[str] = None
+    branch_head_email: Optional[str] = None
+    established_year: Optional[int] = None
+    registration_number: Optional[str] = None
 
 
 class DepartmentCreateSchema(BaseModel):
@@ -262,14 +280,14 @@ def list_institutions(request):
     return [
         {
             "id": str(inst.id),
-            "inst_id": str(inst.inst_id),
+
             "inst_code": inst.inst_code,
             "name": inst.name,
             "inst_type": inst.inst_type,
             "address": inst.address,
             "city": inst.city,
             "contact_number": inst.contact_number,
-            "extra_data": inst.extra_data,
+
             "created_at": inst.created_at.isoformat() if inst.created_at else None,
             "updated_at": inst.updated_at.isoformat() if inst.updated_at else None,
         }
@@ -302,14 +320,14 @@ def create_institution(request, payload: InstitutionCreateSchema):
 
         return 201, {
             "id": str(inst.id),
-            "inst_id": str(inst.inst_id),
+
             "inst_code": inst.inst_code,
             "name": inst.name,
             "inst_type": inst.inst_type,
             "address": inst.address,
             "city": inst.city,
             "contact_number": inst.contact_number,
-            "extra_data": inst.extra_data,
+
             "created_at": inst.created_at.isoformat() if inst.created_at else None,
             "updated_at": inst.updated_at.isoformat() if inst.updated_at else None,
         }
@@ -419,22 +437,7 @@ def list_branches(request, institution_code: str = None):
     if institution_code:
         query = query.filter(institution__inst_code=institution_code)
     
-    results = []
-    for b in query:
-        results.append({
-            "branch_id": b.branch_id,
-            "branch_code": b.branch_code,
-            "branch_name": b.branch_name,
-            "institution_code": b.institution.inst_code,
-            "status": b.status,
-            "address": b.address,
-            "city": b.city,
-            "contact_number": b.contact_number,
-            "email": b.email,
-            "branch_head_name": b.branch_head_name,
-            "domain_data": b.domain_data
-        })
-    return results
+    return [_branch_response(b) for b in query]
 
 
 @router.post("/branches", response={201: BranchSchema, 400: ErrorResponseSchema})
@@ -449,25 +452,43 @@ def create_branch(request, payload: BranchCreateSchema):
             status=payload.status,
             address=payload.address,
             city=payload.city,
+            district=payload.district,
+            postal_code=payload.postal_code,
             contact_number=payload.contact_number,
+            secondary_contact=payload.secondary_contact,
             email=payload.email,
             branch_head_name=payload.branch_head_name,
+            branch_head_contact=payload.branch_head_contact,
+            branch_head_email=payload.branch_head_email,
+            established_year=payload.established_year,
+            registration_number=payload.registration_number,
         )
-        return 201, {
-            "branch_id": branch.branch_id,
-            "branch_code": branch.branch_code,
-            "branch_name": branch.branch_name,
-            "institution_code": inst.inst_code,
-            "status": branch.status,
-            "address": branch.address,
-            "city": branch.city,
-            "contact_number": branch.contact_number,
-            "email": branch.email,
-            "branch_head_name": branch.branch_head_name,
-            "domain_data": branch.domain_data
-        }
+        return 201, _branch_response(branch)
     except Exception as e:
         return 400, {"error": str(e)}
+
+
+def _branch_response(branch):
+    """Build consistent branch dict for all branch endpoints."""
+    return {
+        "branch_id": branch.branch_id,
+        "branch_code": branch.branch_code,
+        "branch_name": branch.branch_name,
+        "institution_code": branch.institution.inst_code,
+        "status": branch.status,
+        "address": branch.address,
+        "city": branch.city,
+        "district": branch.district,
+        "postal_code": branch.postal_code,
+        "contact_number": branch.contact_number,
+        "secondary_contact": branch.secondary_contact,
+        "email": branch.email,
+        "branch_head_name": branch.branch_head_name,
+        "branch_head_contact": branch.branch_head_contact,
+        "branch_head_email": branch.branch_head_email,
+        "established_year": branch.established_year,
+        "registration_number": branch.registration_number,
+    }
 
 
 def _resolve_branch(branch_key: str):
@@ -510,7 +531,12 @@ def update_branch(request, branch_key: str, payload: BranchUpdateSchema):
             return 400, {"error": f"Branch code '{new_code}' already exists"}
         branch.branch_code = new_code
 
-    for field in ("branch_name", "status", "address", "city", "contact_number", "email", "branch_head_name"):
+    for field in (
+        "branch_name", "status", "address", "city", "district", "postal_code",
+        "contact_number", "secondary_contact", "email",
+        "branch_head_name", "branch_head_contact", "branch_head_email",
+        "established_year", "registration_number",
+    ):
         if field in data:
             setattr(branch, field, data[field])
 
@@ -519,19 +545,7 @@ def update_branch(request, branch_key: str, payload: BranchUpdateSchema):
     except Exception as e:
         return 400, {"error": str(e)}
 
-    return 200, {
-        "branch_id": branch.branch_id,
-        "branch_code": branch.branch_code,
-        "branch_name": branch.branch_name,
-        "institution_code": branch.institution.inst_code,
-        "status": branch.status,
-        "address": branch.address,
-        "city": branch.city,
-        "contact_number": branch.contact_number,
-        "email": branch.email,
-        "branch_head_name": branch.branch_head_name,
-        "domain_data": branch.domain_data,
-    }
+    return 200, _branch_response(branch)
 
 
 @router.delete("/branches/{branch_key}", response={200: dict, 404: ErrorResponseSchema})

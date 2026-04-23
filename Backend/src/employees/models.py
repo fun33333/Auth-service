@@ -74,9 +74,7 @@ class Institution(SoftDeleteModel):
     Replaces AcademicInstitutionInformation with a more generic structure.
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name='institutions', null=True, blank=True)
-    
-    inst_id = models.CharField(max_length=50, unique=True, editable=False, help_text="Auto-generated serial ID")
+    organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name='institutions')
     inst_code = models.CharField(max_length=20, unique=True, help_text="Unique code (e.g., AIT01, AMC01)")
     name = models.CharField(max_length=255)
     
@@ -90,23 +88,7 @@ class Institution(SoftDeleteModel):
         ('other', 'Other'),
     ]
     inst_type = models.CharField(max_length=30, choices=INST_TYPE_CHOICES)
-    
-    # 🔗 For syncing with existing SIS Campuses
-    legacy_campus_id = models.UUIDField(null=True, blank=True, help_text="Link to existing SIS Campus UUID")
-    
-    # 🆕 DYNAMIC SCHEMA FOR INSTITUTION
-    # For School: capacity, principal_name, established_year
-    # For Hospital: num_beds, md_name, registration_no
-    attribute_schema = models.JSONField(
-        default=list, 
-        blank=True, 
-        help_text="JSON schema for institution-specific attributes"
-    )
-    
-    # Values stored here matching the schema
-    extra_data = models.JSONField(default=dict, blank=True)
 
-    # Address/Contact remains common
     address = models.TextField(blank=True, null=True)
     city = models.CharField(max_length=100, blank=True, null=True)
     contact_number = models.CharField(max_length=20, blank=True, null=True)
@@ -115,31 +97,16 @@ class Institution(SoftDeleteModel):
         verbose_name = "Institution"
         verbose_name_plural = "Institutions"
 
-    def save(self, *args, **kwargs):
-        if not self.inst_id:
-            last = Institution.all_objects.all().order_by('inst_id').last()
-            if last and last.inst_id:
-                try:
-                    num_part = last.inst_id.split('-')[-1]
-                    new_num = int(num_part) + 1
-                except (ValueError, IndexError):
-                    new_num = 1
-            else:
-                new_num = 1
-            self.inst_id = f"INST-{new_num:03d}"
-        super().save(*args, **kwargs)
-
     def __str__(self):
         return f"{self.name} ({self.inst_code})"
-    def update_from_branches(self):
-        """Aggregate totals from all branches. Derives employee count via branch chain."""
+    def branch_count(self):
+        return self.branches.filter(is_deleted=False).count()
+
+    def employee_count(self):
         from .models import EmployeeAssignment
-        self.extra_data['total_branches'] = self.branches.count()
-        total_emp = EmployeeAssignment.objects.filter(
-            branch__institution=self
+        return EmployeeAssignment.objects.filter(
+            branch__institution=self, is_deleted=False
         ).values('employee').distinct().count()
-        self.extra_data['total_employees'] = total_emp
-        self.save(update_fields=['extra_data'])
 
 class Branch(SoftDeleteModel):
     """
@@ -220,77 +187,15 @@ class Branch(SoftDeleteModel):
         default='active'
     )
     
-    # ========================================
-    # DOMAIN-SPECIFIC DATA (JSON)
-    # ========================================
-    domain_data = models.JSONField(
-        default=dict, 
-        blank=True,
-        help_text="""
-        Domain-specific attributes stored as JSON.
-        
-        For Schools:
-        {
-            "type": "school",
-            "campus_type": "main|branch",
-            "campus_photo_url": "...",
-            "shift_available": "morning|afternoon|both",
-            "grades_offered": "Nursery,KG-I,1,2,3...",
-            "total_students": 450,
-            "male_students": 230,
-            "female_students": 220,
-            "total_teachers": 25,
-            "total_classrooms": 15,
-            "total_offices": 3,
-            "library_available": true,
-            "sports_available": "Cricket, Football",
-            "accreditation": "BISE Karachi",
-            "instruction_language": "English, Urdu",
-            "academic_year_start_month": "April",
-            "academic_year_end_month": "March",
-            ... (all other Campus model fields)
-        }
-        
-        For Hospitals:
-        {
-            "type": "hospital",
-            "num_beds": 100,
-            "specializations": ["Cardiology", "Neurology"],
-            "emergency_services": true
-        }
-        
-        For Kitchens:
-        {
-            "type": "kitchen",
-            "daily_capacity": 5000,
-            "meal_types": ["breakfast", "lunch", "dinner"]
-        }
-        """
-    )
-    
-    # ========================================
-    # MIGRATION TRACKING
-    # ========================================
-    legacy_campus_id = models.IntegerField(
-        null=True, 
-        blank=True, 
-        unique=True,
-        help_text="Link to SIS Campus.id for migration tracking"
-    )
-    
-    # ========================================
-    # SYSTEM FIELDS
-    # ========================================
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
         verbose_name = "Branch"
         verbose_name_plural = "Branches"
         ordering = ['branch_code']
         indexes = [
             models.Index(fields=['branch_code']),
-            models.Index(fields=['legacy_campus_id']),
         ]
     
     def save(self, *args, **kwargs):
@@ -311,20 +216,6 @@ class Branch(SoftDeleteModel):
     
     def __str__(self):
         return f"{self.branch_name} ({self.branch_code})"
-    
-    @property
-    def is_school(self):
-        """Check if this branch is a school"""
-        return self.domain_data.get('type') == 'school'
-    
-    @property
-    def is_hospital(self):
-        """Check if this branch is a hospital"""
-        return self.domain_data.get('type') == 'hospital'
-    
-    def get_domain_field(self, field_name, default=None):
-        """Safely get a field from domain_data"""
-        return self.domain_data.get(field_name, default)
         
 class Department(SoftDeleteModel):
     """
@@ -338,25 +229,45 @@ class Department(SoftDeleteModel):
     dept_code = models.CharField(max_length=10, help_text="e.g., HR, FIN, ACAD")
     dept_name = models.CharField(max_length=200)
     
-    # Removed dept_sector as requested - the dept itself defines its nature
     description = models.TextField(blank=True, null=True)
+
     class Meta:
         verbose_name = "Department"
         verbose_name_plural = "Departments"
         unique_together = [
-            ['institution', 'dept_code'], 
+            ['institution', 'dept_code'],
             ['organization', 'dept_code'],
             ['branch', 'dept_code']
         ]
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        parents = [self.branch, self.institution, self.organization]
+        set_parents = [p for p in parents if p is not None]
+        if len(set_parents) != 1:
+            raise ValidationError(
+                "Department must have exactly one parent: branch, institution, or organization."
+            )
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+
     @property
     def is_global(self):
-        return self.institution is None
+        return self.branch is None and self.institution is None and self.organization is not None
+
     @property
     def department_id(self):
         return str(self.id)
 
     def __str__(self):
-        scope = "Global" if self.is_global else self.institution.inst_code
+        if self.branch:
+            scope = self.branch.branch_code
+        elif self.institution:
+            scope = self.institution.inst_code
+        else:
+            scope = "Global"
         return f"{self.dept_name} [{scope}]"
 
 class Designation(SoftDeleteModel):
@@ -501,7 +412,8 @@ class Employee(SoftDeleteModel):
             last = Employee.all_objects.all().order_by('employee_id').last()
             num = (int(last.employee_id.split('-')[-1]) + 1) if last and last.employee_id else 1
             padding = 4 if num < 10000 else len(str(num))
-            self.employee_id = f"IAK-{num:0{padding}d}"
+            prefix = self.organization.org_code if self.organization else "IAK"
+            self.employee_id = f"{prefix}-{num:0{padding}d}"
         super().save(*args, **kwargs)
 
     def __str__(self):
