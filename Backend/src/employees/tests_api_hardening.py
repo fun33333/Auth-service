@@ -111,3 +111,46 @@ class TestBodySchemaRouting:
         assert response.status_code == 200, response.content
         branch.refresh_from_db()
         assert branch.branch_name == "After"
+
+
+class TestAssignmentInstitutionRemoval:
+    """Regression tests proving EmployeeAssignment.institution FK must be removed."""
+
+    @pytest.mark.django_db
+    def test_assignment_has_no_institution_field(self):
+        from employees.models import EmployeeAssignment
+        field_names = [f.name for f in EmployeeAssignment._meta.get_fields()]
+        assert 'institution' not in field_names, \
+            "EmployeeAssignment.institution FK must be removed — it causes impossible assignments"
+
+    @pytest.mark.django_db
+    def test_get_employee_returns_institution_derived_from_branch(self, api_client, designation):
+        import datetime
+        from employees.models import Employee, Organization, EmployeeAssignment
+        org = Organization.objects.first()
+        emp = Employee.objects.create(
+            organization=org,
+            full_name="Derive Test",
+            cnic="42201-9999999-9",
+            dob=datetime.date(1990, 1, 1),
+            gender="male",
+        )
+        asn = EmployeeAssignment.objects.create(
+            employee=emp,
+            department=designation.department,
+            designation=designation,
+            joining_date=datetime.date(2026, 1, 1),
+            is_primary=True,
+        )
+        # Force-set employee_code so GET lookup works
+        emp.employee_code = f"DERIVE-TEST-{emp.employee_id}"
+        emp.save(update_fields=["employee_code"])
+
+        response = api_client.get(f"/api/employees/employees/{emp.employee_code}")
+        assert response.status_code == 200, response.content
+        body = response.json()
+        assignments = body.get("assignments", [])
+        assert len(assignments) >= 1
+        # institution_code must come from department.institution chain (not a stored FK)
+        expected = designation.department.institution.inst_code if designation.department.institution else None
+        assert assignments[0]["institution_code"] == expected

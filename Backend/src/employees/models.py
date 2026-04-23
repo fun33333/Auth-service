@@ -132,11 +132,12 @@ class Institution(SoftDeleteModel):
     def __str__(self):
         return f"{self.name} ({self.inst_code})"
     def update_from_branches(self):
-        """Aggregate totals from all branches"""
-        self.extra_data['total_branches'] = self.branches.count()
-        # total_employees is the count of unique employees assigned to any branch/dept in this institution
+        """Aggregate totals from all branches. Derives employee count via branch chain."""
         from .models import EmployeeAssignment
-        total_emp = EmployeeAssignment.objects.filter(institution=self).values('employee').distinct().count()
+        self.extra_data['total_branches'] = self.branches.count()
+        total_emp = EmployeeAssignment.objects.filter(
+            branch__institution=self
+        ).values('employee').distinct().count()
         self.extra_data['total_employees'] = total_emp
         self.save(update_fields=['extra_data'])
 
@@ -514,7 +515,6 @@ class EmployeeAssignment(SoftDeleteModel):
     
     employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='assignments')
     
-    # ADD THIS NEW FIELD (after employee, before institution):
     branch = models.ForeignKey(
         'Branch',
         on_delete=models.CASCADE,
@@ -523,9 +523,6 @@ class EmployeeAssignment(SoftDeleteModel):
         related_name='assignments',
         help_text="Branch where employee works (for branch-specific roles)"
     )
-    
-    # KEEP EXISTING institution field:
-    institution = models.ForeignKey(Institution, on_delete=models.CASCADE, null=True, blank=True, related_name='assignments')
     department = models.ForeignKey(Department, on_delete=models.PROTECT, related_name='assignments')
     designation = models.ForeignKey(Designation, on_delete=models.PROTECT, related_name='assignments')
     
@@ -560,8 +557,8 @@ class EmployeeAssignment(SoftDeleteModel):
             else:
                 if self.branch:
                     prefix = self.branch.branch_code
-                elif self.institution:
-                    prefix = self.institution.inst_code
+                elif self.department.institution:
+                    prefix = self.department.institution.inst_code
                 else:
                     prefix = self.department.organization.org_code if self.department.organization else self.department.dept_code
 
@@ -587,8 +584,8 @@ class EmployeeAssignment(SoftDeleteModel):
     def __str__(self):
         if self.branch:
             scope = self.branch.branch_code
-        elif self.institution:
-            scope = self.institution.inst_code
+        elif self.department.institution:
+            scope = self.department.institution.inst_code
         else:
             scope = "Global"
         return f"{self.employee.full_name} - {self.designation.position_name} ({scope})"

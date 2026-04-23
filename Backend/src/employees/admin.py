@@ -150,7 +150,7 @@ class EmployeeAdmin(SoftDeleteAdmin):
 @admin.register(EmployeeAssignment)
 class EmployeeAssignmentAdmin(SoftDeleteAdmin):
     list_display = ['employee', 'designation', 'branch', 'institution_display', 'is_primary', 'is_deleted_badge']
-    list_filter = ['is_primary', 'shift', 'branch', 'institution']
+    list_filter = ['is_primary', 'shift', 'branch']
     search_fields = ['employee__full_name', 'employee__employee_id']
 
     def save_model(self, request, obj, form, change):
@@ -158,12 +158,14 @@ class EmployeeAssignmentAdmin(SoftDeleteAdmin):
         if hasattr(obj, '_new_employee_code'):
             from django.contrib import messages
             self.message_user(
-                request, 
+                request,
                 f"Success: Employee code for {obj.employee.full_name} has been updated to {obj._new_employee_code}",
                 level=messages.SUCCESS
             )
             del obj._new_employee_code
 
     def institution_display(self, obj):
-        return obj.institution.inst_code if obj.institution else "Global"
+        from employees.api import _assignment_institution
+        inst = _assignment_institution(obj)
+        return inst.inst_code if inst else "Global"
     institution_display.short_description = 'Institution'

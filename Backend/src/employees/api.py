@@ -477,6 +477,17 @@ def _resolve_branch(branch_key: str):
     ).first()
 
 
+def _assignment_institution(asn):
+    """Derive institution from an assignment without using a stored FK.
+    Priority: branch.institution → department.institution → None (global).
+    """
+    if asn.branch_id and asn.branch.institution_id:
+        return asn.branch.institution
+    if asn.department_id and asn.department.institution_id:
+        return asn.department.institution
+    return None
+
+
 @router.put("/branches/{branch_key}", response={200: BranchSchema, 400: ErrorResponseSchema, 404: ErrorResponseSchema})
 def update_branch(request, branch_key: str, payload: BranchUpdateSchema):
     """Update a branch. Accepts branch_id or branch_code as key."""
@@ -757,7 +768,6 @@ def create_employee(request, payload: EmployeeCreateSchema):
 
             EmployeeAssignment.objects.create(
                 employee=employee,
-                institution=inst,
                 branch=branch,
                 department=dept,
                 designation=designation,
@@ -908,7 +918,7 @@ def list_employees(
                 'primary_assignment': {
                     'department': primary.department.dept_name if primary else None,
                     'designation': primary.designation.position_name if primary else None,
-                    'institution': primary.institution.name if primary and primary.institution else "Global",
+                    'institution': _assignment_institution(primary).name if primary and _assignment_institution(primary) else "Global",
                 } if primary else None,
                 'employment_type': emp.get_employment_type_display(),
                 'is_active': emp.is_active,
@@ -962,7 +972,12 @@ def get_employee(request, employee_id: str):
     """
     try:
         employee = Employee.objects.prefetch_related(
-            'assignments', 'assignments__department', 'assignments__designation', 'assignments__institution'
+            'assignments',
+            'assignments__branch',
+            'assignments__branch__institution',
+            'assignments__department',
+            'assignments__department__institution',
+            'assignments__designation',
         ).filter(is_deleted=False).filter(
             models.Q(employee_id=employee_id) | models.Q(employee_code=employee_id)
         ).first()
@@ -972,8 +987,8 @@ def get_employee(request, employee_id: str):
         assignments = []
         for asn in employee.assignments.filter(is_deleted=False):
             assignments.append({
-                'institution': asn.institution.name if asn.institution else "Global",
-                'institution_code': asn.institution.inst_code if asn.institution else None,
+                'institution': _assignment_institution(asn).name if _assignment_institution(asn) else "Global",
+                'institution_code': _assignment_institution(asn).inst_code if _assignment_institution(asn) else None,
                 'branch_name': asn.branch.branch_name if asn.branch else "N/A",
                 'branch_code': asn.branch.branch_code if asn.branch else None,
                 'department': asn.department.dept_name if asn.department else None,
@@ -1244,8 +1259,6 @@ def update_employee(request, employee_id: str, payload: EmployeeUpdateSchema):
             if assignment_fields_provided:
                 primary = employee.assignments.filter(is_primary=True, is_deleted=False).first()
                 if primary:
-                    if inst is not None:
-                        primary.institution = inst
                     if branch is not None:
                         primary.branch = branch
                     if dept is not None:
