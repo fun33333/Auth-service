@@ -98,7 +98,7 @@ class EmployeeAdmin(SoftDeleteAdmin):
             'fields': (('personal_email', 'personal_phone'), ('org_email', 'org_phone'))
         }),
         ('Address', {
-            'fields': ('residential_address', 'permanent_address', 'city', 'state')
+            'fields': ('residential_address', 'permanent_address', 'city')
         }),
         ('Emergency & Bank', {
             'fields': (('emergency_contact_name', 'emergency_contact_phone'), ('bank_name', 'account_number'))

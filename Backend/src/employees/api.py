@@ -91,7 +91,7 @@ class EmployeeCreateSchema(BaseModel):
     residentialAddress: str
     permanentAddress: Optional[str] = None
     city: Optional[str] = None
-    state: Optional[str] = None
+
     
     # Assignment Details
     organizationCode: str = 'IAK'
@@ -262,7 +262,12 @@ def list_organizations(request):
         {
             "id": str(org.id),
             "name": org.name,
-            "org_code": org.org_code
+            "org_code": org.org_code,
+            "email": org.email,
+            "phone": org.phone,
+            "logo_url": org.logo_url,
+            "website": org.website,
+            "address": org.address,
         }
         for org in Organization.objects.filter(is_deleted=False)
     ]
@@ -767,7 +772,6 @@ def create_employee(request, payload: EmployeeCreateSchema):
                 residential_address=payload.residentialAddress,
                 permanent_address=payload.permanentAddress,
                 city=payload.city,
-                state=payload.state,
                 emergency_contact_name=payload.emergencyName,
                 emergency_contact_phone=payload.emergencyPhone,
                 bank_name=payload.bankName,
@@ -1039,7 +1043,6 @@ def get_employee(request, employee_id: str):
                 'residential': employee.residential_address,
                 'permanent': employee.permanent_address,
                 'city': employee.city,
-                'state': employee.state,
             },
             'assignments': assignments,
             'bank_info': {
@@ -1119,7 +1122,7 @@ class EmployeeUpdateSchema(BaseModel):
     residentialAddress: Optional[str] = None
     permanentAddress: Optional[str] = None
     city: Optional[str] = None
-    state: Optional[str] = None
+
 
     # Primary assignment (flat, same shape as create payload)
     organizationCode: Optional[str] = None
@@ -1234,7 +1237,6 @@ def update_employee(request, employee_id: str, payload: EmployeeUpdateSchema):
                 'residentialAddress': 'residential_address',
                 'permanentAddress': 'permanent_address',
                 'city': 'city',
-                'state': 'state',
                 'emergencyName': 'emergency_contact_name',
                 'emergencyPhone': 'emergency_contact_phone',
                 'bankName': 'bank_name',

@@ -59,6 +59,9 @@ class Organization(SoftDeleteModel):
     name = models.CharField(max_length=255, help_text="Organization Name (e.g., Al-Khidmat Foundation)")
     org_code = models.CharField(max_length=10, unique=True, help_text="Short code for the organization (e.g., AKF)")
     website = models.URLField(blank=True, null=True)
+    email = models.EmailField(blank=True, null=True)
+    phone = models.CharField(max_length=20, blank=True, null=True)
+    logo_url = models.URLField(blank=True, null=True)
     address = models.TextField(blank=True, null=True)
     
     class Meta:
@@ -360,8 +363,7 @@ class Employee(SoftDeleteModel):
     residential_address = models.TextField(blank=True, null=True)
     permanent_address = models.TextField(blank=True, null=True)
     city = models.CharField(max_length=100, blank=True, null=True)
-    state = models.CharField(max_length=100, blank=True, null=True)
-    
+
     # Emergency Contact
     emergency_contact_name = models.CharField(max_length=200, blank=True, null=True)
     emergency_contact_phone = models.CharField(max_length=20, blank=True, null=True)
@@ -379,7 +381,6 @@ class Employee(SoftDeleteModel):
     work_experience = models.JSONField(default=list, blank=True, help_text="[{employer, jobTitle, startDate, endDate, responsibilities}]")
     
     is_active = models.BooleanField(default=True)
-    is_superadmin = models.BooleanField(default=False) # Added for role check
 
     @property
     def email(self):

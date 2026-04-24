@@ -49,7 +49,6 @@ const schema = z.object({
   residentialAddress: z.string().trim().min(3, "Address required"),
   permanentAddress: z.string().optional().default(""),
   city: z.string().optional().default(""),
-  state: z.string().optional().default(""),
 
   organizationCode: z.string().default("IAK"),
   institutionCode: z.string().optional().default(""),
@@ -83,7 +82,7 @@ const STEPS = [
 
 const FIELDS_PER_STEP: Record<number, (keyof FormInput)[]> = {
   1: ["fullName", "cnic", "dob", "gender", "maritalStatus", "nationality", "religion"],
-  2: ["personalEmail", "mobile", "orgEmail", "orgPhone", "emergencyName", "emergencyPhone", "residentialAddress", "permanentAddress", "city", "state"],
+  2: ["personalEmail", "mobile", "orgEmail", "orgPhone", "emergencyName", "emergencyPhone", "residentialAddress", "permanentAddress", "city"],
   3: ["institutionCode", "branchCode", "departmentCode", "designationCode", "joiningDate", "shift", "bankName", "accountNumber"],
   4: ["education", "experience"],
 };
@@ -110,7 +109,7 @@ export default function EditEmployeePage() {
       nationality: "Pakistani", religion: "",
       personalEmail: "", mobile: "", orgEmail: "", orgPhone: "",
       emergencyName: "", emergencyPhone: "",
-      residentialAddress: "", permanentAddress: "", city: "", state: "",
+      residentialAddress: "", permanentAddress: "", city: "",
       organizationCode: "IAK", institutionCode: "", branchCode: "",
       departmentCode: "", designationCode: "",
       joiningDate: new Date().toISOString().slice(0, 10),
@@ -134,7 +133,7 @@ export default function EditEmployeePage() {
         const [iRes, dRes, eRes] = await Promise.all([
           fetchWithAuth("/employees/institutions"),
           fetchWithAuth("/employees/departments"),
-          fetchWithAuth(`/employees/${id}`),
+          fetchWithAuth(`/employees/employees/${id}`),
         ]);
         if (iRes.ok) setInstitutions(await iRes.json());
         if (dRes.ok) setDepartments(await dRes.json());
@@ -164,7 +163,6 @@ export default function EditEmployeePage() {
           residentialAddress: emp.address?.residential || "",
           permanentAddress: emp.address?.permanent || "",
           city: emp.address?.city || "",
-          state: emp.address?.state || "",
           organizationCode: "IAK",
           institutionCode: primary.institution_code || "",
           branchCode: primary.branch_code || "",
@@ -219,7 +217,7 @@ export default function EditEmployeePage() {
   const onSubmit = async (values: FormOutput) => {
     setSubmitError(null);
     try {
-      const res = await fetchWithAuth(`/employees/${id}`, {
+      const res = await fetchWithAuth(`/employees/employees/${id}`, {
         method: "PUT",
         body: JSON.stringify(values),
       });
@@ -389,9 +387,6 @@ export default function EditEmployeePage() {
               <div className="grid grid-cols-2 gap-4">
                 <Field label="City" error={errors.city?.message}>
                   <input {...register("city")} className={inputCls(errors.city)} />
-                </Field>
-                <Field label="State" error={errors.state?.message}>
-                  <input {...register("state")} className={inputCls(errors.state)} />
                 </Field>
               </div>
             </>

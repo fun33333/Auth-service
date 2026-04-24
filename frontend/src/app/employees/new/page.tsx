@@ -51,7 +51,6 @@ const schema = z.object({
   residentialAddress: z.string().trim().min(3, "Address required"),
   permanentAddress: z.string().optional().default(""),
   city: z.string().optional().default(""),
-  state: z.string().optional().default(""),
 
   // Step 3 — Placement
   organizationCode: z.string().default("IAK"),
@@ -89,7 +88,7 @@ const STEPS = [
 
 const FIELDS_PER_STEP: Record<number, (keyof FormInput)[]> = {
   1: ["fullName", "cnic", "dob", "gender", "maritalStatus", "nationality", "religion"],
-  2: ["personalEmail", "mobile", "orgEmail", "orgPhone", "emergencyName", "emergencyPhone", "residentialAddress", "permanentAddress", "city", "state"],
+  2: ["personalEmail", "mobile", "orgEmail", "orgPhone", "emergencyName", "emergencyPhone", "residentialAddress", "permanentAddress", "city"],
   3: ["institutionCode", "branchCode", "departmentCode", "designationCode", "joiningDate", "shift", "bankName", "accountNumber"],
   4: ["education", "experience"],
 };
@@ -111,7 +110,7 @@ export default function NewEmployeePage() {
       nationality: "Pakistani", religion: "",
       personalEmail: "", mobile: "", orgEmail: "", orgPhone: "",
       emergencyName: "", emergencyPhone: "",
-      residentialAddress: "", permanentAddress: "", city: "", state: "",
+      residentialAddress: "", permanentAddress: "", city: "",
       organizationCode: "IAK", institutionCode: "", branchCode: "",
       departmentCode: "", designationCode: "",
       joiningDate: new Date().toISOString().slice(0, 10),
@@ -316,9 +315,6 @@ export default function NewEmployeePage() {
               <div className="grid grid-cols-2 gap-4">
                 <Field label="City" error={errors.city?.message}>
                   <input {...register("city")} className={inputCls(errors.city)} />
-                </Field>
-                <Field label="State" error={errors.state?.message}>
-                  <input {...register("state")} className={inputCls(errors.state)} />
                 </Field>
               </div>
             </>
