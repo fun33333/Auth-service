@@ -32,7 +32,6 @@ type Organization = {
 
 type Institution = {
   id: string;
-  inst_id: string;
   inst_code: string;
   name: string;
   inst_type: string;
@@ -148,18 +147,17 @@ function EntityCard({
 
 function InstitutionModal({ open, onClose, onSave, initial, organizations }: {
   open: boolean; onClose: () => void;
-  onSave: (d: any) => void; initial?: Institution | null;
+  onSave: (d: any) => Promise<{ ok: boolean; error?: string; fieldErrors?: Record<string, string> }>;
+  initial?: Institution | null;
   organizations: Organization[];
 }) {
   const [form, setForm] = useState({
-    name: initial?.name ?? '',
-    inst_code: initial?.inst_code ?? '',
-    inst_type: initial?.inst_type ?? 'educational',
-    organization_code: initial?.organization_code ?? '',
-    city: initial?.city ?? '',
-    address: initial?.address ?? '',
-    contact_number: initial?.contact_number ?? '',
+    name: '', inst_code: '', inst_type: 'educational',
+    organization_code: '', city: '', address: '', contact_number: '',
   });
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [submitError, setSubmitError] = useState('');
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -172,8 +170,34 @@ function InstitutionModal({ open, onClose, onSave, initial, organizations }: {
         address: initial?.address ?? '',
         contact_number: initial?.contact_number ?? '',
       });
+      setErrors({});
+      setSubmitError('');
     }
   }, [initial, open, organizations]);
+
+  const validate = () => {
+    const e: Record<string, string> = {};
+    if (!form.name.trim()) e.name = 'Name required';
+    if (!form.inst_code.trim()) e.inst_code = 'Code required';
+    if (!form.organization_code) e.organization_code = 'Organization required';
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  };
+
+  const handleSubmit = async () => {
+    if (!validate()) return;
+    setSaving(true);
+    setSubmitError('');
+    const result = await onSave(form);
+    setSaving(false);
+    if (!result.ok) {
+      if (result.fieldErrors) setErrors(result.fieldErrors);
+      setSubmitError(result.error || 'Save failed');
+    }
+  };
+
+  const inp = (err?: string) =>
+    `w-full px-5 py-3.5 bg-zinc-50 border focus:bg-white rounded-xl text-[10px] uppercase font-black tracking-widest outline-none transition-all ${err ? 'border-rose-400' : 'border-transparent focus:border-[#BDA6CE]'}`;
 
   if (!open) return null;
 
@@ -188,36 +212,53 @@ function InstitutionModal({ open, onClose, onSave, initial, organizations }: {
           <button onClick={onClose} className="p-2 text-zinc-300 hover:text-zinc-900 transition-all"><X size={20} /></button>
         </div>
         <div className="p-8 grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-[70vh] overflow-y-auto">
+          {submitError && (
+            <div className="col-span-2 bg-rose-50 border border-rose-200 text-rose-700 text-[10px] font-bold px-4 py-3 rounded-xl">
+              {submitError}
+            </div>
+          )}
           <div className="col-span-2">
-            <label className="block text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1.5 ml-1">Entity Full Name</label>
-            <input type="text" placeholder="e.g. Al-Khidmat Foundation" value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))}
-              className="w-full px-5 py-3.5 bg-zinc-50 border border-transparent focus:border-[#BDA6CE] focus:bg-white rounded-xl text-[10px] uppercase font-black tracking-widest outline-none transition-all placeholder:normal-case placeholder:font-normal" />
+            <label className="block text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1.5 ml-1">Entity Full Name *</label>
+            <input type="text" placeholder="e.g. Al-Khidmat Foundation" value={form.name}
+              onChange={e => { setForm(p => ({ ...p, name: e.target.value })); setErrors(p => ({ ...p, name: '' })); }}
+              className={inp(errors.name)} />
+            {errors.name && <p className="text-[9px] text-rose-500 font-bold mt-1 ml-1">{errors.name}</p>}
           </div>
           <div>
-            <label className="block text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1.5 ml-1">Assigned Code</label>
-            <input type="text" placeholder="AKS-01" value={form.inst_code} onChange={e => setForm(p => ({ ...p, inst_code: e.target.value }))}
-              className="w-full px-5 py-3.5 bg-zinc-50 border border-transparent focus:border-[#BDA6CE] focus:bg-white rounded-xl text-[10px] uppercase font-black tracking-widest outline-none transition-all placeholder:normal-case placeholder:font-normal" />
+            <label className="block text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1.5 ml-1">Assigned Code *</label>
+            <input type="text" placeholder="AKS-01" value={form.inst_code}
+              onChange={e => { setForm(p => ({ ...p, inst_code: e.target.value })); setErrors(p => ({ ...p, inst_code: '' })); }}
+              className={inp(errors.inst_code)} />
+            {errors.inst_code && <p className="text-[9px] text-rose-500 font-bold mt-1 ml-1">{errors.inst_code}</p>}
           </div>
           <div>
             <label className="block text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1.5 ml-1">Classification</label>
             <select value={form.inst_type} onChange={e => setForm(p => ({ ...p, inst_type: e.target.value }))}
-              className="w-full px-5 py-3.5 bg-zinc-50 border border-transparent focus:border-[#BDA6CE] focus:bg-white rounded-xl text-[10px] uppercase font-black tracking-widest outline-none transition-all appearance-none">
+              className={inp()}>
               <option value="educational">Educational</option>
               <option value="healthcare">Healthcare</option>
               <option value="social_welfare">Social Welfare</option>
+              <option value="administrative">Administrative</option>
+              <option value="technical">Technical</option>
+              <option value="operational">Operational</option>
+              <option value="other">Other</option>
             </select>
           </div>
           <div className="col-span-2">
-            <label className="block text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1.5 ml-1">Parent Command</label>
-            <select value={form.organization_code} onChange={e => setForm(p => ({ ...p, organization_code: e.target.value }))}
-              className="w-full px-5 py-3.5 bg-zinc-50 border border-transparent focus:border-[#BDA6CE] focus:bg-white rounded-xl text-[10px] uppercase font-black tracking-widest outline-none transition-all appearance-none">
+            <label className="block text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1.5 ml-1">Parent Organization *</label>
+            <select value={form.organization_code}
+              onChange={e => { setForm(p => ({ ...p, organization_code: e.target.value })); setErrors(p => ({ ...p, organization_code: '' })); }}
+              className={inp(errors.organization_code)}>
+              <option value="">— Select Organization —</option>
               {organizations.map(org => <option key={org.id} value={org.org_code}>{org.name}</option>)}
             </select>
+            {errors.organization_code && <p className="text-[9px] text-rose-500 font-bold mt-1 ml-1">{errors.organization_code}</p>}
           </div>
           <div className="col-span-2 pt-6 flex justify-end gap-2">
-            <button onClick={onClose} className="px-6 py-3 text-[9px] font-black text-zinc-400 uppercase tracking-widest">Cancel</button>
-            <button onClick={() => onSave(form)} className="px-8 py-3.5 bg-zinc-900 text-white rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-[#BDA6CE] transition-all active:scale-95 shadow-xl">
-              {initial ? 'Finalize Changes' : 'Execute Registration'}
+            <button onClick={onClose} disabled={saving} className="px-6 py-3 text-[9px] font-black text-zinc-400 uppercase tracking-widest">Cancel</button>
+            <button onClick={handleSubmit} disabled={saving}
+              className="px-8 py-3.5 bg-zinc-900 text-white rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-[#BDA6CE] transition-all active:scale-95 shadow-xl disabled:opacity-50">
+              {saving ? 'Saving...' : initial ? 'Finalize Changes' : 'Execute Registration'}
             </button>
           </div>
         </div>
@@ -228,20 +269,15 @@ function InstitutionModal({ open, onClose, onSave, initial, organizations }: {
 
 function BranchModal({ open, onClose, onSave, initial, institutionCode }: {
   open: boolean; onClose: () => void;
-  onSave: (d: any) => void; initial?: Branch | null;
+  onSave: (d: any) => Promise<{ ok: boolean; error?: string; fieldErrors?: Record<string, string> }>;
+  initial?: Branch | null;
   institutionCode: string;
 }) {
-  const [form, setForm] = useState({
-    branch_name: initial?.branch_name ?? '',
-    branch_code: initial?.branch_code ?? '',
-    institution_code: institutionCode,
-    status: initial?.status ?? 'active',
-    city: initial?.city ?? '',
-    address: initial?.address ?? '',
-    contact_number: initial?.contact_number ?? '',
-    email: initial?.email ?? '',
-    branch_head_name: initial?.branch_head_name ?? '',
-  });
+  const empty = { branch_name: '', branch_code: '', institution_code: institutionCode, status: 'active', city: '', address: '', contact_number: '', email: '', branch_head_name: '' };
+  const [form, setForm] = useState(empty);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [submitError, setSubmitError] = useState('');
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -256,8 +292,38 @@ function BranchModal({ open, onClose, onSave, initial, institutionCode }: {
         email: initial?.email ?? '',
         branch_head_name: initial?.branch_head_name ?? '',
       });
+      setErrors({});
+      setSubmitError('');
     }
   }, [initial, open, institutionCode]);
+
+  const PK_PHONE = /^(\+92|92|0|0092)?3\d{2}-?\d{7}$/;
+  const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+  const validate = () => {
+    const e: Record<string, string> = {};
+    if (!form.branch_name.trim()) e.branch_name = 'Branch name required';
+    if (!form.branch_code.trim()) e.branch_code = 'Branch code required';
+    if (form.contact_number && !PK_PHONE.test(form.contact_number)) e.contact_number = 'Invalid PK phone (e.g. 03001234567)';
+    if (form.email && !EMAIL_RE.test(form.email)) e.email = 'Invalid email';
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  };
+
+  const handleSubmit = async () => {
+    if (!validate()) return;
+    setSaving(true);
+    setSubmitError('');
+    const result = await onSave(form);
+    setSaving(false);
+    if (!result.ok) {
+      if (result.fieldErrors) setErrors(result.fieldErrors);
+      setSubmitError(result.error || 'Save failed');
+    }
+  };
+
+  const inp = (err?: string) =>
+    `w-full px-5 py-3.5 bg-zinc-50 border focus:bg-white rounded-xl text-[10px] uppercase font-black tracking-widest outline-none transition-all ${err ? 'border-rose-400' : 'border-transparent focus:border-[#BDA6CE]'}`;
 
   if (!open) return null;
 
@@ -272,54 +338,68 @@ function BranchModal({ open, onClose, onSave, initial, institutionCode }: {
           <button onClick={onClose} className="p-2 text-zinc-300 hover:text-zinc-900 transition-all"><X size={20} /></button>
         </div>
         <div className="p-8 grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-[70vh] overflow-y-auto">
+          {submitError && (
+            <div className="col-span-2 bg-rose-50 border border-rose-200 text-rose-700 text-[10px] font-bold px-4 py-3 rounded-xl">
+              {submitError}
+            </div>
+          )}
           <div className="col-span-2">
-            <label className="block text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1.5 ml-1">Unit Display Name</label>
-            <input type="text" placeholder="e.g. Area Command Hub" value={form.branch_name} onChange={e => setForm(p => ({ ...p, branch_name: e.target.value }))}
-              className="w-full px-5 py-3.5 bg-zinc-50 border border-transparent focus:border-[#BDA6CE] focus:bg-white rounded-xl text-[10px] uppercase font-black tracking-widest outline-none transition-all placeholder:normal-case placeholder:font-normal" />
+            <label className="block text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1.5 ml-1">Unit Display Name *</label>
+            <input type="text" placeholder="e.g. Area Command Hub" value={form.branch_name}
+              onChange={e => { setForm(p => ({ ...p, branch_name: e.target.value })); setErrors(p => ({ ...p, branch_name: '' })); }}
+              className={inp(errors.branch_name)} />
+            {errors.branch_name && <p className="text-[9px] text-rose-500 font-bold mt-1 ml-1">{errors.branch_name}</p>}
           </div>
           <div>
-            <label className="block text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1.5 ml-1">Unit Code</label>
-            <input type="text" placeholder="UNIT-ISL-01" value={form.branch_code} onChange={e => setForm(p => ({ ...p, branch_code: e.target.value }))}
-              className="w-full px-5 py-3.5 bg-zinc-50 border border-transparent focus:border-[#BDA6CE] focus:bg-white rounded-xl text-[10px] uppercase font-black tracking-widest outline-none transition-all placeholder:normal-case placeholder:font-normal" />
+            <label className="block text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1.5 ml-1">Unit Code *</label>
+            <input type="text" placeholder="UNIT-ISL-01" value={form.branch_code}
+              onChange={e => { setForm(p => ({ ...p, branch_code: e.target.value })); setErrors(p => ({ ...p, branch_code: '' })); }}
+              className={inp(errors.branch_code)} />
+            {errors.branch_code && <p className="text-[9px] text-rose-500 font-bold mt-1 ml-1">{errors.branch_code}</p>}
           </div>
           <div>
             <label className="block text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1.5 ml-1">Deployment Status</label>
-            <select value={form.status} onChange={e => setForm(p => ({ ...p, status: e.target.value }))}
-              className="w-full px-5 py-3.5 bg-zinc-50 border border-transparent focus:border-[#BDA6CE] focus:bg-white rounded-xl text-[10px] uppercase font-black tracking-widest outline-none transition-all appearance-none">
+            <select value={form.status} onChange={e => setForm(p => ({ ...p, status: e.target.value }))} className={inp()}>
               <option value="active">Active</option>
-              <option value="standby">Standby</option>
-              <option value="offline">Offline</option>
+              <option value="inactive">Inactive</option>
+              <option value="closed">Closed</option>
+              <option value="under_construction">Under Construction</option>
             </select>
           </div>
           <div className="col-span-2">
             <label className="block text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1.5 ml-1">Branch Head / CO</label>
-            <input type="text" placeholder="e.g. Dr. Salman Khan" value={form.branch_head_name} onChange={e => setForm(p => ({ ...p, branch_head_name: e.target.value }))}
-              className="w-full px-5 py-3.5 bg-zinc-50 border border-transparent focus:border-[#BDA6CE] focus:bg-white rounded-xl text-[10px] uppercase font-black tracking-widest outline-none transition-all placeholder:normal-case placeholder:font-normal" />
+            <input type="text" placeholder="e.g. Dr. Salman Khan" value={form.branch_head_name}
+              onChange={e => setForm(p => ({ ...p, branch_head_name: e.target.value }))} className={inp()} />
           </div>
           <div>
             <label className="block text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1.5 ml-1">Contact Phone</label>
-            <input type="text" placeholder="+92-XXX-XXXXXXX" value={form.contact_number} onChange={e => setForm(p => ({ ...p, contact_number: e.target.value }))}
-              className="w-full px-5 py-3.5 bg-zinc-50 border border-transparent focus:border-[#BDA6CE] focus:bg-white rounded-xl text-[10px] uppercase font-black tracking-widest outline-none transition-all" />
+            <input type="tel" placeholder="03001234567" value={form.contact_number}
+              onChange={e => { setForm(p => ({ ...p, contact_number: e.target.value })); setErrors(p => ({ ...p, contact_number: '' })); }}
+              className={inp(errors.contact_number)} />
+            {errors.contact_number && <p className="text-[9px] text-rose-500 font-bold mt-1 ml-1">{errors.contact_number}</p>}
           </div>
           <div>
             <label className="block text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1.5 ml-1">Deployment Email</label>
-            <input type="text" placeholder="unit@inst.pk" value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))}
-              className="w-full px-5 py-3.5 bg-zinc-50 border border-transparent focus:border-[#BDA6CE] focus:bg-white rounded-xl text-[10px] lowercase font-black outline-none transition-all" />
+            <input type="email" placeholder="unit@inst.pk" value={form.email}
+              onChange={e => { setForm(p => ({ ...p, email: e.target.value })); setErrors(p => ({ ...p, email: '' })); }}
+              className={`${inp(errors.email)} lowercase`} />
+            {errors.email && <p className="text-[9px] text-rose-500 font-bold mt-1 ml-1">{errors.email}</p>}
           </div>
           <div className="col-span-2">
             <label className="block text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1.5 ml-1">Station City</label>
-            <input type="text" placeholder="e.g. Islamabad" value={form.city} onChange={e => setForm(p => ({ ...p, city: e.target.value }))}
-              className="w-full px-5 py-3.5 bg-zinc-50 border border-transparent focus:border-[#BDA6CE] focus:bg-white rounded-xl text-[10px] uppercase font-black tracking-widest outline-none transition-all placeholder:normal-case placeholder:font-normal" />
+            <input type="text" placeholder="e.g. Islamabad" value={form.city}
+              onChange={e => setForm(p => ({ ...p, city: e.target.value }))} className={inp()} />
           </div>
           <div className="col-span-2">
             <label className="block text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1.5 ml-1">Full Physical Address</label>
-            <input type="text" placeholder="Plot 123, Sector G-10..." value={form.address} onChange={e => setForm(p => ({ ...p, address: e.target.value }))}
-              className="w-full px-5 py-3.5 bg-zinc-50 border border-transparent focus:border-[#BDA6CE] focus:bg-white rounded-xl text-[10px] uppercase font-black tracking-widest outline-none transition-all placeholder:normal-case placeholder:font-normal" />
+            <input type="text" placeholder="Plot 123, Sector G-10..." value={form.address}
+              onChange={e => setForm(p => ({ ...p, address: e.target.value }))} className={inp()} />
           </div>
           <div className="col-span-2 pt-6 flex justify-end gap-2">
-            <button onClick={onClose} className="px-6 py-3 text-[9px] font-black text-zinc-400 uppercase tracking-widest">Cancel</button>
-            <button onClick={() => onSave(form)} className="px-8 py-3.5 bg-zinc-900 text-white rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-[#BDA6CE] transition-all active:scale-95 shadow-xl">
-              {initial ? 'Apply Command' : 'Initialize Deployment'}
+            <button onClick={onClose} disabled={saving} className="px-6 py-3 text-[9px] font-black text-zinc-400 uppercase tracking-widest">Cancel</button>
+            <button onClick={handleSubmit} disabled={saving}
+              className="px-8 py-3.5 bg-zinc-900 text-white rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-[#BDA6CE] transition-all active:scale-95 shadow-xl disabled:opacity-50">
+              {saving ? 'Saving...' : initial ? 'Apply Command' : 'Initialize Deployment'}
             </button>
           </div>
         </div>
@@ -396,30 +476,52 @@ function InstitutionsPage() {
 
   useEffect(() => { loadInitialData(); }, []);
 
-  async function handleInstitutionSave(data: any) {
-    const method = editInst ? "PUT" : "POST";
-    const url = editInst ? `/employees/institutions/${editInst.id}` : "/employees/institutions";
-    const res = await fetchWithAuth(url, { method, body: JSON.stringify(data) });
-    if (res.ok) { setInstModal(false); await loadInitialData(); }
+  async function handleInstitutionSave(data: any): Promise<{ ok: boolean; error?: string; fieldErrors?: Record<string, string> }> {
+    try {
+      const method = editInst ? "PUT" : "POST";
+      const url = editInst ? `/employees/institutions/${editInst.id}` : "/employees/institutions";
+      const res = await fetchWithAuth(url, { method, body: JSON.stringify(data) });
+      const body = await res.json().catch(() => ({}));
+      if (res.ok) { setInstModal(false); await loadInitialData(); return { ok: true }; }
+      if (body?.field_errors) return { ok: false, fieldErrors: body.field_errors };
+      if (Array.isArray(body?.detail)) return { ok: false, error: body.detail.map((d: any) => d?.msg || JSON.stringify(d)).join('; ') };
+      return { ok: false, error: body?.error || 'Failed to save institution' };
+    } catch {
+      return { ok: false, error: 'Network error' };
+    }
   }
 
-  async function handleBranchSave(data: any) {
-    const method = editBranch ? "PUT" : "POST";
-    const url = editBranch ? `/employees/branches/${editBranch.branch_id}` : "/employees/branches";
-    const res = await fetchWithAuth(url, { method, body: JSON.stringify(data) });
-    if (res.ok) { setBranchModal(false); await loadInitialData(); }
+  async function handleBranchSave(data: any): Promise<{ ok: boolean; error?: string; fieldErrors?: Record<string, string> }> {
+    try {
+      const method = editBranch ? "PUT" : "POST";
+      const url = editBranch ? `/employees/branches/${editBranch.branch_id}` : "/employees/branches";
+      const res = await fetchWithAuth(url, { method, body: JSON.stringify(data) });
+      const body = await res.json().catch(() => ({}));
+      if (res.ok) { setBranchModal(false); await loadInitialData(); return { ok: true }; }
+      if (body?.field_errors) return { ok: false, fieldErrors: body.field_errors };
+      if (Array.isArray(body?.detail)) return { ok: false, error: body.detail.map((d: any) => d?.msg || JSON.stringify(d)).join('; ') };
+      return { ok: false, error: body?.error || 'Failed to save branch' };
+    } catch {
+      return { ok: false, error: 'Network error' };
+    }
   }
 
   async function deleteEntity(id: string) {
     if (!confirm("Confirm dissolution?")) return;
-    const res = await fetchWithAuth(`/employees/institutions/${id}`, { method: "DELETE" });
-    if (res.ok) await loadInitialData();
+    try {
+      const res = await fetchWithAuth(`/employees/institutions/${id}`, { method: "DELETE" });
+      if (res.ok) { await loadInitialData(); }
+      else { const b = await res.json().catch(() => ({})); alert(b?.error || 'Failed to delete institution'); }
+    } catch { alert('Network error'); }
   }
 
   async function deleteUnit(id: string) {
     if (!confirm("Confirm decommissioning?")) return;
-    const res = await fetchWithAuth(`/employees/branches/${id}`, { method: "DELETE" });
-    if (res.ok) await loadInitialData();
+    try {
+      const res = await fetchWithAuth(`/employees/branches/${id}`, { method: "DELETE" });
+      if (res.ok) { await loadInitialData(); }
+      else { const b = await res.json().catch(() => ({})); alert(b?.error || 'Failed to delete branch'); }
+    } catch { alert('Network error'); }
   }
 
   const filtered = institutions.filter(inst => 

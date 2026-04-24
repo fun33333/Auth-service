@@ -9,7 +9,6 @@ import Link from 'next/link';
 
 interface Institution {
   id: string;
-  inst_id: string;
   inst_code: string;
   name: string;
   inst_type: string;
@@ -54,17 +53,17 @@ export default function InstitutionDetails() {
 
   const handleDelete = async () => {
     if (!window.confirm('Are you sure you want to delete this institution?')) return;
-
     try {
       const response = await fetchWithAuth(`/employees/institutions/${id}`, { method: 'DELETE' });
       if (response.ok) {
         router.push('/institutions');
       } else {
-        alert('Failed to delete institution');
+        const body = await response.json().catch(() => ({}));
+        setError(body?.error || 'Failed to delete institution');
       }
     } catch (err) {
       console.error("Failed to delete institution:", err);
-      alert('Error deleting institution');
+      setError('Network error — could not delete institution');
     }
   };
 
@@ -163,7 +162,6 @@ export default function InstitutionDetails() {
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
               <h3 className="text-sm font-semibold text-slate-500 uppercase mb-4">Institution Code</h3>
               <p className="text-xl font-bold text-slate-900 font-mono">{institution.inst_code}</p>
-              <p className="text-xs text-slate-500 mt-2">System ID: {institution.inst_id}</p>
             </div>
           </div>
 
