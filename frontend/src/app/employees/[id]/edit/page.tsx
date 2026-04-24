@@ -50,13 +50,13 @@ const schema = z.object({
   permanentAddress: z.string().optional().default(""),
   city: z.string().optional().default(""),
 
-  organizationCode: z.string().default("IAK"),
+  organizationCode: z.string().min(1, "Organization required"),
   institutionCode: z.string().optional().default(""),
   branchCode: z.string().optional().default(""),
   departmentCode: z.string().min(1, "Department required"),
   designationCode: z.string().min(1, "Designation required"),
   joiningDate: z.string().min(1, "Joining date required"),
-  shift: z.enum(["general", "morning", "evening", "night"]).default("general"),
+  shift: z.enum(["general", "morning", "afternoon", "night", "hourly", "both"]).default("general"),
 
   bankName: z.string().optional().default(""),
   accountNumber: z.string().optional().default(""),
@@ -83,7 +83,7 @@ const STEPS = [
 const FIELDS_PER_STEP: Record<number, (keyof FormInput)[]> = {
   1: ["fullName", "cnic", "dob", "gender", "maritalStatus", "nationality", "religion"],
   2: ["personalEmail", "mobile", "orgEmail", "orgPhone", "emergencyName", "emergencyPhone", "residentialAddress", "permanentAddress", "city"],
-  3: ["institutionCode", "branchCode", "departmentCode", "designationCode", "joiningDate", "shift", "bankName", "accountNumber"],
+  3: ["organizationCode", "institutionCode", "branchCode", "departmentCode", "designationCode", "joiningDate", "shift", "bankName", "accountNumber"],
   4: ["education", "experience"],
 };
 
@@ -96,6 +96,7 @@ export default function EditEmployeePage() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [organizations, setOrganizations] = useState<{ org_code: string; name: string }[]>([]);
   const [institutions, setInstitutions] = useState<Institution[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
@@ -110,7 +111,7 @@ export default function EditEmployeePage() {
       personalEmail: "", mobile: "", orgEmail: "", orgPhone: "",
       emergencyName: "", emergencyPhone: "",
       residentialAddress: "", permanentAddress: "", city: "",
-      organizationCode: "IAK", institutionCode: "", branchCode: "",
+      organizationCode: "", institutionCode: "", branchCode: "",
       departmentCode: "", designationCode: "",
       joiningDate: new Date().toISOString().slice(0, 10),
       shift: "general", bankName: "", accountNumber: "",
@@ -130,11 +131,13 @@ export default function EditEmployeePage() {
     if (!id) return;
     (async () => {
       try {
-        const [iRes, dRes, eRes] = await Promise.all([
+        const [oRes, iRes, dRes, eRes] = await Promise.all([
+          fetchWithAuth("/employees/organizations"),
           fetchWithAuth("/employees/institutions"),
           fetchWithAuth("/employees/departments"),
           fetchWithAuth(`/employees/employees/${id}`),
         ]);
+        if (oRes.ok) { const orgs = await oRes.json(); setOrganizations(Array.isArray(orgs) ? orgs : []); }
         if (iRes.ok) setInstitutions(await iRes.json());
         if (dRes.ok) setDepartments(await dRes.json());
 
@@ -163,7 +166,7 @@ export default function EditEmployeePage() {
           residentialAddress: emp.address?.residential || "",
           permanentAddress: emp.address?.permanent || "",
           city: emp.address?.city || "",
-          organizationCode: "IAK",
+          organizationCode: emp.organization_code || "",
           institutionCode: primary.institution_code || "",
           branchCode: primary.branch_code || "",
           departmentCode: primary.department_code || "",
@@ -395,6 +398,14 @@ export default function EditEmployeePage() {
           {step === 3 && (
             <>
               <div className="grid grid-cols-2 gap-4">
+                <Field label="Organization *" error={errors.organizationCode?.message}>
+                  <select {...register("organizationCode")} className={inputCls(errors.organizationCode)}>
+                    <option value="">— select org —</option>
+                    {organizations.map((o) => (
+                      <option key={o.org_code} value={o.org_code}>{o.name} ({o.org_code})</option>
+                    ))}
+                  </select>
+                </Field>
                 <Field label="Institution" error={errors.institutionCode?.message}>
                   <select {...register("institutionCode")} className={inputCls(errors.institutionCode)}>
                     <option value="">— none —</option>
@@ -436,10 +447,12 @@ export default function EditEmployeePage() {
                 </Field>
                 <Field label="Shift" error={errors.shift?.message}>
                   <select {...register("shift")} className={inputCls(errors.shift)}>
-                    <option value="general">General</option>
+                    <option value="general">General / Office</option>
                     <option value="morning">Morning</option>
-                    <option value="evening">Evening</option>
+                    <option value="afternoon">Afternoon</option>
                     <option value="night">Night</option>
+                    <option value="hourly">Hourly</option>
+                    <option value="both">Both (M+A)</option>
                   </select>
                 </Field>
               </div>

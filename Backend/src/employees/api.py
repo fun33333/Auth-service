@@ -566,18 +566,18 @@ def list_departments(request, branch_code: str = None, institution_code: str = N
     query = Department.objects.filter(is_deleted=False)
     
     if branch_code:
-        query = query.filter(institution__branches__branch_code=branch_code)
+        query = query.filter(branch__branch_code=branch_code)
     elif institution_code:
         query = query.filter(institution__inst_code=institution_code)
-        
-    departments = query.values('id', 'dept_code', 'dept_name', 'institution__inst_code')
+
+    departments = query.values('id', 'dept_code', 'dept_name', 'institution__inst_code', 'branch__branch_code')
     return [
         {
             'id': str(d['id']),
             'dept_code': d['dept_code'],
             'dept_name': d['dept_name'],
-            'dept_sector': 'General', # Fallback since sector was removed
-            'institution_code': d['institution__inst_code']
+            'institution_code': d['institution__inst_code'],
+            'branch_code': d['branch__branch_code'],
         }
         for d in departments
     ]
@@ -596,11 +596,18 @@ def create_department(request, payload: DepartmentCreateSchema):
     
     try:
         inst = None
-        if payload.institution_code:
+        branch = None
+        if payload.branch_code:
+            from employees.models import Branch as BranchModel
+            branch = BranchModel.objects.filter(branch_code=payload.branch_code, is_deleted=False).first()
+            if not branch:
+                return 400, {"error": f"Branch '{payload.branch_code}' not found"}
+        elif payload.institution_code:
             inst = get_object_or_404(Institution, inst_code=payload.institution_code)
-            
+
         dept = Department.objects.create(
             institution=inst,
+            branch=branch,
             dept_code=payload.dept_code.upper(),
             dept_name=payload.dept_name,
             description=payload.description or None
@@ -623,8 +630,8 @@ def get_department(request, dept_code: str):
             "department_id": str(dept.id),
             "dept_code": dept.dept_code,
             "dept_name": dept.dept_name,
-            "dept_sector": "General",
             "institution_code": dept.institution.inst_code if dept.institution else None,
+            "branch_code": dept.branch.branch_code if dept.branch else None,
             "description": dept.description,
             "employee_count": dept.assignments.filter(is_deleted=False).count(),
             "designations": [
@@ -645,8 +652,13 @@ def update_department(request, dept_code: str, payload: DepartmentUpdateSchema):
             dept.dept_name = payload.dept_name
         if payload.description is not None:
             dept.description = payload.description
-        if payload.institution_code is not None:
+        if payload.branch_code is not None:
+            from employees.models import Branch as BranchModel
+            dept.branch = BranchModel.objects.filter(branch_code=payload.branch_code, is_deleted=False).first() if payload.branch_code else None
+            dept.institution = None  # branch takes priority, clear institution
+        elif payload.institution_code is not None:
             dept.institution = Institution.objects.filter(inst_code=payload.institution_code).first()
+            dept.branch = None  # institution set, clear branch
         dept.save()
         return 200, {
             "message": "Department updated successfully",
@@ -1018,6 +1030,7 @@ def get_employee(request, employee_id: str):
         return {
             'employee_id': employee.employee_id,
             'employee_code': employee.employee_code,
+            'organization_code': employee.organization.org_code if employee.organization else None,
             'full_name': employee.full_name,
             'personal_email': employee.personal_email,
             'personal_phone': employee.personal_phone,
