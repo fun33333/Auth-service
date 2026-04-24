@@ -352,14 +352,12 @@ def get_institution(request, institution_id: str):
 
     return 200, {
         "id": str(inst.id),
-        "inst_id": str(inst.inst_id),
         "inst_code": inst.inst_code,
         "name": inst.name,
         "inst_type": inst.inst_type,
         "address": inst.address,
         "city": inst.city,
         "contact_number": inst.contact_number,
-        "extra_data": inst.extra_data,
         "created_at": inst.created_at.isoformat() if inst.created_at else None,
         "updated_at": inst.updated_at.isoformat() if inst.updated_at else None,
     }
@@ -398,14 +396,12 @@ def update_institution(request, institution_id: str, payload: InstitutionUpdateS
 
     return 200, {
         "id": str(inst.id),
-        "inst_id": str(inst.inst_id),
         "inst_code": inst.inst_code,
         "name": inst.name,
         "inst_type": inst.inst_type,
         "address": inst.address,
         "city": inst.city,
         "contact_number": inst.contact_number,
-        "extra_data": inst.extra_data,
         "created_at": inst.created_at.isoformat() if inst.created_at else None,
         "updated_at": inst.updated_at.isoformat() if inst.updated_at else None,
     }

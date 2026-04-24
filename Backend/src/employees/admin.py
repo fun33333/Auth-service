@@ -80,7 +80,7 @@ class DesignationAdmin(SoftDeleteAdmin):
 
 class AssignmentInline(admin.TabularInline):
     model = EmployeeAssignment
-    fields = ['branch', 'institution', 'department', 'designation', 'joining_date', 'shift', 'is_primary', 'is_active']
+    fields = ['branch', 'department', 'designation', 'joining_date', 'shift', 'is_primary', 'is_active']
     extra = 1
 
 
