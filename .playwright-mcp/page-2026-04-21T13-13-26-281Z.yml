@@ -1,0 +1,126 @@
+- generic [active] [ref=e1]:
+  - button "Open Next.js Dev Tools" [ref=e7] [cursor=pointer]:
+    - img [ref=e8]
+  - alert [ref=e11]
+  - generic [ref=e247]:
+    - complementary [ref=e248]:
+      - generic [ref=e249]:
+        - link "EMS Portal" [ref=e250] [cursor=pointer]:
+          - /url: /
+          - img [ref=e252]
+          - generic [ref=e257]: EMS Portal
+        - button [ref=e258]:
+          - img [ref=e259]
+      - generic [ref=e263]:
+        - generic [ref=e264]: U
+        - generic [ref=e265]:
+          - paragraph [ref=e266]: Ubaid
+          - paragraph [ref=e267]: Teacher
+      - navigation [ref=e268]:
+        - link "Dashboard" [ref=e269] [cursor=pointer]:
+          - /url: /
+          - img [ref=e270]
+          - generic [ref=e275]: Dashboard
+        - link "Institutions" [ref=e276] [cursor=pointer]:
+          - /url: /institutions
+          - img [ref=e277]
+          - generic [ref=e281]: Institutions
+        - link "Departments" [ref=e282] [cursor=pointer]:
+          - /url: /departments
+          - img [ref=e283]
+          - generic [ref=e288]: Departments
+        - link "Designations" [ref=e289] [cursor=pointer]:
+          - /url: /designations
+          - img [ref=e290]
+          - generic [ref=e293]: Designations
+        - link "Employees" [ref=e294] [cursor=pointer]:
+          - /url: /employees
+          - img [ref=e295]
+          - generic [ref=e300]: Employees
+      - button "Sign Out" [ref=e302]:
+        - img [ref=e303]
+        - generic [ref=e306]: Sign Out
+    - generic [ref=e307]:
+      - banner [ref=e308]:
+        - button [ref=e309]:
+          - img [ref=e310]
+        - generic [ref=e311]:
+          - img [ref=e312]
+          - textbox "Quick search..." [ref=e315]
+        - generic [ref=e316]:
+          - button [ref=e317]:
+            - img [ref=e318]
+          - button "U Ubaid" [ref=e323] [cursor=pointer]:
+            - generic [ref=e324]: U
+            - generic [ref=e325]: Ubaid
+            - img [ref=e326]
+      - main [ref=e328]:
+        - generic [ref=e329]:
+          - heading "Employee" [level=1] [ref=e331]
+          - generic [ref=e332]:
+            - generic [ref=e333]:
+              - img [ref=e335]
+              - paragraph [ref=e341]: Total Employee
+            - generic [ref=e343]:
+              - img [ref=e345]
+              - paragraph [ref=e349]: New Employee
+            - generic [ref=e351]:
+              - img [ref=e353]
+              - paragraph [ref=e357]: Male
+            - generic [ref=e359]:
+              - img [ref=e361]
+              - paragraph [ref=e365]: Female
+          - generic [ref=e367]:
+            - generic [ref=e368]:
+              - text: Employee Name
+              - textbox "Search here..." [ref=e370]
+            - generic [ref=e371]:
+              - text: Select Status
+              - combobox [ref=e372] [cursor=pointer]:
+                - option "All" [selected]
+                - option "Active"
+                - option "Inactive"
+            - generic [ref=e373]:
+              - text: Select Priority
+              - combobox [ref=e374] [cursor=pointer]:
+                - option "All" [selected]
+                - option "High"
+                - option "Medium"
+                - option "Low"
+            - generic [ref=e375]:
+              - button [ref=e376]:
+                - img [ref=e377]
+              - link "+ Add Employee" [ref=e380] [cursor=pointer]:
+                - /url: /employees/new
+          - generic [ref=e381]:
+            - generic [ref=e382]:
+              - paragraph [ref=e383]: Show Entries
+              - combobox [ref=e384] [cursor=pointer]:
+                - option "10" [selected]
+                - option "25"
+                - option "50"
+            - generic [ref=e385]:
+              - button [ref=e386]:
+                - img [ref=e387]
+              - button [ref=e392]:
+                - img [ref=e393]
+          - table [ref=e396]:
+            - rowgroup [ref=e397]:
+              - row "Name Employee ID Phone Join Date Department Action" [ref=e398]:
+                - columnheader "Name" [ref=e399]
+                - columnheader "Employee ID" [ref=e400]
+                - columnheader "Phone" [ref=e401]
+                - columnheader "Join Date" [ref=e402]
+                - columnheader "Department" [ref=e403]
+                - columnheader "Action" [ref=e404]
+            - rowgroup [ref=e405]:
+              - row [ref=e406]:
+                - cell [ref=e407]
+              - row [ref=e409]:
+                - cell [ref=e410]
+              - row [ref=e412]:
+                - cell [ref=e413]
+              - row [ref=e415]:
+                - cell [ref=e416]
+              - row [ref=e418]:
+                - cell [ref=e419]

@@ -1,0 +1,27 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - generic [ref=e4]:
+      - img [ref=e6]
+      - heading "Portal Login" [level=1] [ref=e9]
+      - paragraph [ref=e10]: Employee Management System
+    - generic [ref=e12]:
+      - generic [ref=e13]:
+        - generic [ref=e14]: Employee Code
+        - generic [ref=e15]:
+          - generic:
+            - img
+          - textbox "Employee Code" [ref=e16]:
+            - /placeholder: e.g. EMP12345
+      - generic [ref=e17]:
+        - generic [ref=e18]: Password
+        - generic [ref=e19]:
+          - generic:
+            - img
+          - textbox "Password" [ref=e20]:
+            - /placeholder: ••••••••
+          - button [ref=e21]:
+            - img [ref=e22]
+      - button "Sign In" [ref=e25]:
+        - img [ref=e26]
+        - text: Sign In
+  - alert [ref=e29]

@@ -26,6 +26,18 @@
 
 ## Change History
 
+### 2026-04-24 (Bugfix — stale container image after P6/P7 model cleanup)
+
+**Bug:** `ProgrammingError: column employees_employee.state does not exist` on admin Employee change/save.
+
+**Root cause:** P6/P7 commit (`db7ed7a`) removed `state` from `Employee` model and generated migration `0014` to drop the column. Migration ran fine. But container image was never rebuilt — old image still had `state` in models.py. ORM generated SQL selecting `state` → PostgreSQL rejected it (column already dropped).
+
+**Fix:** `docker compose build auth-service && docker compose up -d auth-service` — container now runs latest code, model and DB in sync.
+
+**Lesson:** After any model field removal, container must be rebuilt, not just migrated.
+
+---
+
 ### 2026-04-24 (Bugfix — stale field references after P1-P5 model cleanup)
 
 **Bugs found via post-cleanup audit:**

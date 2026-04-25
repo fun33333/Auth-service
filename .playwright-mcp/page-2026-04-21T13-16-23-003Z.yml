@@ -1,0 +1,63 @@
+- generic [active] [ref=e1]:
+  - button "Open Next.js Dev Tools" [ref=e7] [cursor=pointer]:
+    - img [ref=e8]
+  - alert [ref=e11]
+  - generic [ref=e13]:
+    - complementary [ref=e14]:
+      - generic [ref=e15]:
+        - link "EMS Portal" [ref=e16] [cursor=pointer]:
+          - /url: /
+          - img [ref=e18]
+          - generic [ref=e23]: EMS Portal
+        - button [ref=e24]:
+          - img [ref=e25]
+      - generic [ref=e29]:
+        - generic [ref=e30]: U
+        - generic [ref=e31]:
+          - paragraph [ref=e32]: Ubaid
+          - paragraph [ref=e33]: Teacher
+      - navigation [ref=e34]:
+        - link "Dashboard" [ref=e35] [cursor=pointer]:
+          - /url: /
+          - img [ref=e36]
+          - generic [ref=e41]: Dashboard
+        - link "Institutions" [ref=e42] [cursor=pointer]:
+          - /url: /institutions
+          - img [ref=e43]
+          - generic [ref=e47]: Institutions
+        - link "Departments" [ref=e48] [cursor=pointer]:
+          - /url: /departments
+          - img [ref=e49]
+          - generic [ref=e54]: Departments
+        - link "Designations" [ref=e55] [cursor=pointer]:
+          - /url: /designations
+          - img [ref=e56]
+          - generic [ref=e59]: Designations
+        - link "Employees" [ref=e60] [cursor=pointer]:
+          - /url: /employees
+          - img [ref=e61]
+          - generic [ref=e66]: Employees
+      - button "Sign Out" [ref=e68]:
+        - img [ref=e69]
+        - generic [ref=e72]: Sign Out
+    - generic [ref=e73]:
+      - banner [ref=e74]:
+        - button [ref=e75]:
+          - img [ref=e76]
+        - generic [ref=e77]:
+          - img [ref=e78]
+          - textbox "Quick search..." [ref=e81]
+        - generic [ref=e82]:
+          - button [ref=e83]:
+            - img [ref=e84]
+          - button "U Ubaid" [ref=e89] [cursor=pointer]:
+            - generic [ref=e90]: U
+            - generic [ref=e91]: Ubaid
+            - img [ref=e92]
+      - main [ref=e94]:
+        - generic [ref=e95]:
+          - link "Back" [ref=e98] [cursor=pointer]:
+            - /url: /employees
+            - img [ref=e99]
+            - text: Back
+          - generic [ref=e101]: Employee not found (404)

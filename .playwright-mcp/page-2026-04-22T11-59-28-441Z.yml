@@ -1,0 +1,199 @@
+- generic [ref=e1]:
+  - button "Open Next.js Dev Tools" [ref=e7] [cursor=pointer]:
+    - img [ref=e8]
+  - alert [ref=e11]
+  - generic [ref=e13]:
+    - complementary [ref=e14]:
+      - generic [ref=e15]:
+        - link "EMS Portal" [ref=e16] [cursor=pointer]:
+          - /url: /
+          - img [ref=e18]
+          - generic [ref=e23]: EMS Portal
+        - button [ref=e24]:
+          - img [ref=e25]
+      - generic [ref=e29]:
+        - generic [ref=e30]: U
+        - generic [ref=e31]:
+          - paragraph [ref=e32]: Ubaid
+          - paragraph [ref=e33]: Teacher
+      - navigation [ref=e34]:
+        - link "Dashboard" [ref=e35] [cursor=pointer]:
+          - /url: /
+          - img [ref=e36]
+          - generic [ref=e41]: Dashboard
+        - link "Institutions" [ref=e42] [cursor=pointer]:
+          - /url: /institutions
+          - img [ref=e43]
+          - generic [ref=e47]: Institutions
+        - link "Departments" [ref=e48] [cursor=pointer]:
+          - /url: /departments
+          - img [ref=e49]
+          - generic [ref=e54]: Departments
+        - link "Designations" [ref=e55] [cursor=pointer]:
+          - /url: /designations
+          - img [ref=e56]
+          - generic [ref=e59]: Designations
+        - link "Employees" [ref=e60] [cursor=pointer]:
+          - /url: /employees
+          - img [ref=e61]
+          - generic [ref=e66]: Employees
+      - button "Sign Out" [ref=e68]:
+        - img [ref=e69]
+        - generic [ref=e72]: Sign Out
+    - generic [ref=e73]:
+      - banner [ref=e74]:
+        - button [ref=e75]:
+          - img [ref=e76]
+        - generic [ref=e77]:
+          - img [ref=e78]
+          - textbox "Quick search..." [ref=e81]
+        - generic [ref=e82]:
+          - button [ref=e83]:
+            - img [ref=e84]
+          - button "U Ubaid" [ref=e89] [cursor=pointer]:
+            - generic [ref=e90]: U
+            - generic [ref=e91]: Ubaid
+            - img [ref=e92]
+      - main [ref=e94]:
+        - generic [ref=e95]:
+          - generic [ref=e96]:
+            - generic [ref=e97]:
+              - heading "Operational Branches" [level=1] [ref=e98]
+              - paragraph [ref=e99]: Physical Deployment & Station Registry
+            - button "Initialize Unit" [active] [ref=e100]:
+              - img [ref=e101]
+              - text: Initialize Unit
+          - generic [ref=e102]:
+            - generic [ref=e103]:
+              - img [ref=e105]
+              - generic [ref=e109]:
+                - paragraph [ref=e110]: Total Branches
+                - generic [ref=e288]:
+                  - heading "3" [level=3] [ref=e289]
+                  - generic [ref=e290]: HUB
+            - generic [ref=e114]:
+              - img [ref=e116]
+              - generic [ref=e119]:
+                - paragraph [ref=e120]: Active Nodes
+                - generic [ref=e291]:
+                  - heading "3" [level=3] [ref=e292]
+                  - generic [ref=e293]: HUB
+            - generic [ref=e124]:
+              - img [ref=e126]
+              - generic [ref=e130]:
+                - paragraph [ref=e131]: Offline Units
+                - generic [ref=e294]:
+                  - heading "0" [level=3] [ref=e295]
+                  - generic [ref=e296]: HUB
+            - generic [ref=e135]:
+              - img [ref=e137]
+              - generic [ref=e140]:
+                - paragraph [ref=e141]: Strategic Bases
+                - generic [ref=e297]:
+                  - heading "1" [level=3] [ref=e298]
+                  - generic [ref=e299]: HUB
+          - generic [ref=e146]:
+            - img [ref=e147]
+            - textbox "FILTER BY UNIT NAME, REGISTRY CODE OR CITY BASE..." [ref=e150]
+          - table [ref=e154]:
+            - rowgroup [ref=e155]:
+              - row "Operational Unit Deployment Contact Node Status Actions" [ref=e156]:
+                - columnheader "Operational Unit" [ref=e157]
+                - columnheader "Deployment" [ref=e158]
+                - columnheader "Contact Node" [ref=e159]
+                - columnheader "Status" [ref=e160]
+                - columnheader "Actions" [ref=e161]
+            - rowgroup [ref=e162]:
+              - row "A Alkhair Institute of Technology AIT01 IT Central Base -- no-email@registry.pk active" [ref=e300]:
+                - cell "A Alkhair Institute of Technology AIT01 IT" [ref=e301]:
+                  - generic [ref=e302]:
+                    - generic [ref=e303]: A
+                    - generic [ref=e304]:
+                      - heading "Alkhair Institute of Technology" [level=5] [ref=e305]
+                      - generic [ref=e306]:
+                        - generic [ref=e307]: AIT01
+                        - generic [ref=e309]: IT
+                - cell "Central Base" [ref=e310]:
+                  - generic [ref=e311]:
+                    - generic [ref=e312]:
+                      - img [ref=e313]
+                      - generic [ref=e316]: Central Base
+                    - paragraph
+                - cell "-- no-email@registry.pk" [ref=e317]:
+                  - generic [ref=e318]:
+                    - generic [ref=e319]:
+                      - img [ref=e321]
+                      - generic [ref=e323]: "--"
+                    - generic [ref=e324]:
+                      - img [ref=e326]
+                      - generic [ref=e329]: no-email@registry.pk
+                - cell "active" [ref=e330]:
+                  - generic [ref=e331]: active
+                - cell [ref=e333]:
+                  - generic [ref=e334]:
+                    - button [ref=e335]:
+                      - img [ref=e336]
+                    - button [ref=e338]:
+                      - img [ref=e339]
+              - row "T Test Branch T001 TB-T001 IT Karachi -- no-email@registry.pk active" [ref=e342]:
+                - cell "T Test Branch T001 TB-T001 IT" [ref=e343]:
+                  - generic [ref=e344]:
+                    - generic [ref=e345]: T
+                    - generic [ref=e346]:
+                      - heading "Test Branch T001" [level=5] [ref=e347]
+                      - generic [ref=e348]:
+                        - generic [ref=e349]: TB-T001
+                        - generic [ref=e351]: IT
+                - cell "Karachi" [ref=e352]:
+                  - generic [ref=e353]:
+                    - generic [ref=e354]:
+                      - img [ref=e355]
+                      - generic [ref=e358]: Karachi
+                    - paragraph
+                - cell "-- no-email@registry.pk" [ref=e359]:
+                  - generic [ref=e360]:
+                    - generic [ref=e361]:
+                      - img [ref=e363]
+                      - generic [ref=e365]: "--"
+                    - generic [ref=e366]:
+                      - img [ref=e368]
+                      - generic [ref=e371]: no-email@registry.pk
+                - cell "active" [ref=e372]:
+                  - generic [ref=e373]: active
+                - cell [ref=e375]:
+                  - generic [ref=e376]:
+                    - button [ref=e377]:
+                      - img [ref=e378]
+                    - button [ref=e380]:
+                      - img [ref=e381]
+              - row "p probe zzTEST IT Central Base -- no-email@registry.pk active" [ref=e384]:
+                - cell "p probe zzTEST IT" [ref=e385]:
+                  - generic [ref=e386]:
+                    - generic [ref=e387]: p
+                    - generic [ref=e388]:
+                      - heading "probe" [level=5] [ref=e389]
+                      - generic [ref=e390]:
+                        - generic [ref=e391]: zzTEST
+                        - generic [ref=e393]: IT
+                - cell "Central Base" [ref=e394]:
+                  - generic [ref=e395]:
+                    - generic [ref=e396]:
+                      - img [ref=e397]
+                      - generic [ref=e400]: Central Base
+                    - paragraph
+                - cell "-- no-email@registry.pk" [ref=e401]:
+                  - generic [ref=e402]:
+                    - generic [ref=e403]:
+                      - img [ref=e405]
+                      - generic [ref=e407]: "--"
+                    - generic [ref=e408]:
+                      - img [ref=e410]
+                      - generic [ref=e413]: no-email@registry.pk
+                - cell "active" [ref=e414]:
+                  - generic [ref=e415]: active
+                - cell [ref=e417]:
+                  - generic [ref=e418]:
+                    - button [ref=e419]:
+                      - img [ref=e420]
+                    - button [ref=e422]:
+                      - img [ref=e423]

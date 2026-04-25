@@ -1,0 +1,129 @@
+- generic [ref=e1]:
+  - button "Open Next.js Dev Tools" [ref=e7] [cursor=pointer]:
+    - img [ref=e8]
+  - alert [ref=e11]
+  - generic [ref=e13]:
+    - complementary [ref=e14]:
+      - generic [ref=e15]:
+        - link "EMS Portal" [ref=e16] [cursor=pointer]:
+          - /url: /
+          - img [ref=e18]
+          - generic [ref=e23]: EMS Portal
+        - button [ref=e24]:
+          - img [ref=e25]
+      - generic [ref=e29]:
+        - generic [ref=e30]: U
+        - generic [ref=e31]:
+          - paragraph [ref=e32]: Ubaid
+          - paragraph [ref=e33]: Teacher
+      - navigation [ref=e34]:
+        - link "Dashboard" [ref=e35] [cursor=pointer]:
+          - /url: /
+          - img [ref=e36]
+          - generic [ref=e41]: Dashboard
+        - link "Institutions" [ref=e42] [cursor=pointer]:
+          - /url: /institutions
+          - img [ref=e43]
+          - generic [ref=e47]: Institutions
+        - link "Departments" [ref=e48] [cursor=pointer]:
+          - /url: /departments
+          - img [ref=e49]
+          - generic [ref=e54]: Departments
+        - link "Designations" [ref=e55] [cursor=pointer]:
+          - /url: /designations
+          - img [ref=e56]
+          - generic [ref=e59]: Designations
+        - link "Employees" [ref=e60] [cursor=pointer]:
+          - /url: /employees
+          - img [ref=e61]
+          - generic [ref=e66]: Employees
+      - button "Sign Out" [ref=e68]:
+        - img [ref=e69]
+        - generic [ref=e72]: Sign Out
+    - generic [ref=e73]:
+      - banner [ref=e74]:
+        - button [ref=e75]:
+          - img [ref=e76]
+        - generic [ref=e77]:
+          - img [ref=e78]
+          - textbox "Quick search..." [ref=e81]
+        - generic [ref=e82]:
+          - button [ref=e83]:
+            - img [ref=e84]
+          - button "U Ubaid" [ref=e89] [cursor=pointer]:
+            - generic [ref=e90]: U
+            - generic [ref=e91]: Ubaid
+            - img [ref=e92]
+      - main [ref=e94]:
+        - generic [ref=e95]:
+          - link "Back to employees" [ref=e97] [cursor=pointer]:
+            - /url: /employees
+            - img [ref=e98]
+            - text: Back to employees
+          - heading "Add new employee" [level=1] [ref=e100]
+          - paragraph [ref=e101]: Fill all required fields. Step 3 of 4.
+          - list [ref=e102]:
+            - listitem [ref=e103]:
+              - generic [ref=e104]:
+                - img [ref=e162]
+                - generic [ref=e108]: Identity
+            - listitem [ref=e110]:
+              - generic [ref=e111]:
+                - img [ref=e198]
+                - generic [ref=e115]: Contact
+            - listitem [ref=e117]:
+              - generic [ref=e118]:
+                - img [ref=e119]
+                - generic [ref=e122]: Placement
+            - listitem [ref=e124]:
+              - generic [ref=e125]:
+                - img [ref=e126]
+                - generic [ref=e129]: History
+          - generic [ref=e130]:
+            - generic [ref=e200]:
+              - generic [ref=e201]:
+                - generic [ref=e202]: Institution
+                - combobox "Institution" [ref=e203]:
+                  - option "— none —"
+                  - option "IT Institute" [selected]
+              - generic [ref=e204]:
+                - generic [ref=e205]: Branch
+                - combobox "Branch" [ref=e206]:
+                  - option "— none —"
+                  - option "Alkhair Institute of Technology" [selected]
+            - generic [ref=e207]:
+              - generic [ref=e208]:
+                - generic [ref=e209]: Department *
+                - combobox "Department *" [ref=e210]:
+                  - option "— select —"
+                  - option "Academic" [selected]
+              - generic [ref=e211]:
+                - generic [ref=e212]: Designation *
+                - combobox "Designation *" [ref=e213]:
+                  - option "— select —" [selected]
+                  - option "Teacher"
+            - generic [ref=e214]:
+              - generic [ref=e215]:
+                - generic [ref=e216]: Joining date *
+                - textbox "Joining date *" [ref=e217]: 2026-04-21
+              - generic [ref=e218]:
+                - generic [ref=e219]: Shift
+                - combobox "Shift" [ref=e220]:
+                  - option "General" [selected]
+                  - option "Morning"
+                  - option "Evening"
+                  - option "Night"
+            - generic [ref=e221]:
+              - generic [ref=e222]:
+                - generic [ref=e223]: Bank name
+                - textbox "Bank name" [ref=e224]
+              - generic [ref=e225]:
+                - generic [ref=e226]: Account number
+                - textbox "Account number" [ref=e227]
+            - generic [ref=e155]:
+              - button "Back" [ref=e156]:
+                - img [ref=e157]
+                - text: Back
+              - button "Next" [active] [ref=e159]:
+                - text: Next
+                - img [ref=e160]
