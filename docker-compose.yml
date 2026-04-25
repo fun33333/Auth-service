@@ -21,6 +21,7 @@ services:
       - "8000:8000"
     volumes:
       - ./Backend/src:/app  # Mount source for live reload in dev
+      - ../config:/etc/erp/keys:ro  # JWT key files (read-only)
     networks:
       - erp_network
     restart: unless-stopped
