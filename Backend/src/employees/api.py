@@ -893,7 +893,14 @@ def list_employees(
     """
     try:
         # Base query - only non-deleted employees
-        query = Employee.objects.filter(is_deleted=False).prefetch_related('assignments', 'assignments__department', 'assignments__designation', 'assignments__institution')
+        query = Employee.objects.filter(is_deleted=False).prefetch_related(
+            'assignments',
+            'assignments__department',
+            'assignments__department__institution',
+            'assignments__designation',
+            'assignments__branch',
+            'assignments__branch__institution',
+        )
         
         # Apply search filter
         if search:

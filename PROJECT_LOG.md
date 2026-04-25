@@ -26,6 +26,20 @@
 
 ## Change History
 
+### 2026-04-25 (Bugfix — employee list empty on frontend)
+
+**Bug:** `GET /api/employees/employees` returned `{ employees: [], total: 0, error: "..." }` — frontend showed empty list.
+
+**Root cause:** `list_employees` in `employees/api.py:896` had `prefetch_related('assignments__institution')`. `EmployeeAssignment.institution` FK was removed in P1 cleanup (commit `14b44ac`) — Django rejected the invalid prefetch path at query time, the except block caught it and returned an empty list.
+
+**Fix:** Replaced invalid prefetch with the correct traversal chain that `_assignment_institution()` actually uses:
+- `assignments__branch__institution`
+- `assignments__department__institution`
+
+**File:** `Backend/src/employees/api.py:896`
+
+---
+
 ### 2026-04-24 (Bugfix — stale container image after P6/P7 model cleanup)
 
 **Bug:** `ProgrammingError: column employees_employee.state does not exist` on admin Employee change/save.
