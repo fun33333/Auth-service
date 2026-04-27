@@ -26,6 +26,36 @@
 
 ## Change History
 
+### 2026-04-27 (Validation hardening + masked inputs + assignment endpoints + E2E verification)
+
+**Scope:** Multi-part forms+API hardening pass across employees/institutions/branches.
+
+**Backend (`employees/api.py`):**
+- Added `EmployeeCreateSchema` / `EmployeeUpdateSchema` validators:
+  - `dob` — must be `YYYY-MM-DD`, employee min age 13 years
+  - `gender` — restricted to `['male','female']` (no "other")
+  - `maritalStatus`, `shift`, `employmentType`, `branch.status`, `institution.inst_type` — enum-bounded
+- `shift` choices kept aligned with model (`general/morning/afternoon/night/hourly/both`) — wrong values would break `employee_code` generation (`shift[0].upper()`).
+- Added `EmployeeUpdateSchema.isActive` + `employmentType` handling in `update_employee`.
+- Added dedicated `EmployeeAssignment` endpoints (POST/PUT/DELETE) with `_assignment_response()` helper.
+- Fixed silent DOB default — now returns 400 + `field_errors`.
+- Fixed `joining_date` NOT NULL violation in assignment create — defaults to `date.today()` when omitted (commit `f95666f`).
+
+**Frontend:**
+- New components: `PhoneInput.tsx` (max 11 digits, auto-dash after 4: `XXXX-XXXXXXX`), `CNICInput.tsx` (13 digits, `XXXXX-XXXXXXX-X`).
+- Wired via `Controller` into: `employees/new`, `employees/[id]/edit`, `branches`, `institutions/new`, `institutions/[id]/edit`.
+- Removed gender "other" option everywhere.
+- Edit form pre-populates `isActive`, exposes toggle in placement step.
+- `shift` options match model exactly across all frontend forms.
+
+**E2E (Playwright):** Employee list loads, CNIC + phone masking work, gender "other" rejected, DOB <13 rejected by backend, assignment POST/PUT/DELETE all pass after `joining_date` fix, isActive toggle visible + pre-populated, shift "evening" rejected.
+
+**Pending:** DOB age validation in frontend zod schema (currently only backend catches under-13).
+
+**Commits:** `57111e4`, `f95666f`.
+
+---
+
 ### 2026-04-25 (Bugfix — employee list empty on frontend)
 
 **Bug:** `GET /api/employees/employees` returned `{ employees: [], total: 0, error: "..." }` — frontend showed empty list.
