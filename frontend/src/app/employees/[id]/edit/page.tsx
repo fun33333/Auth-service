@@ -12,6 +12,9 @@ import {
 } from "lucide-react";
 import ProtectedLayout from "@/components/ProtectedLayout";
 import { fetchWithAuth } from "@/utils/api";
+import { Controller } from "react-hook-form";
+import PhoneInput from "@/components/PhoneInput";
+import CNICInput from "@/components/CNICInput";
 
 // ----- Validators (mirror backend) -----
 const CNIC_RE = /^\d{5}-?\d{7}-?\d{1}$/;
@@ -35,7 +38,7 @@ const schema = z.object({
   fullName: z.string().trim().min(2, "Name too short").max(100),
   cnic: z.string().regex(CNIC_RE, "Format: XXXXX-XXXXXXX-X"),
   dob: z.string().optional().default(""),
-  gender: z.enum(["male", "female", "other"]),
+  gender: z.enum(["male", "female"]),
   maritalStatus: z.enum(["single", "married", "divorced", "widowed"]).optional(),
   nationality: z.string().default("Pakistani"),
   religion: z.string().optional().default(""),
@@ -57,6 +60,7 @@ const schema = z.object({
   designationCode: z.string().min(1, "Designation required"),
   joiningDate: z.string().min(1, "Joining date required"),
   shift: z.enum(["general", "morning", "afternoon", "night", "hourly", "both"]).default("general"),
+  isActive: z.boolean().optional().default(true),
 
   bankName: z.string().optional().default(""),
   accountNumber: z.string().optional().default(""),
@@ -119,7 +123,7 @@ export default function EditEmployeePage() {
     },
   });
 
-  const { register, handleSubmit, trigger, watch, reset, setError, formState: { errors, isSubmitting } } = form;
+  const { register, handleSubmit, trigger, watch, reset, setError, control, formState: { errors, isSubmitting } } = form;
   const eduArr = useFieldArray({ control: form.control, name: "education" });
   const expArr = useFieldArray({ control: form.control, name: "experience" });
 
@@ -173,6 +177,7 @@ export default function EditEmployeePage() {
           designationCode: primary.designation_code || "",
           joiningDate: primary.joining_date ? primary.joining_date.slice(0, 10) : new Date().toISOString().slice(0, 10),
           shift: (primary.shift || "general") as any,
+          isActive: emp.is_active ?? true,
           bankName: emp.bank_info?.bank_name || "",
           accountNumber: emp.bank_info?.account_number || "",
           education: (emp.education_history || []).map((e: any) => ({
@@ -321,7 +326,9 @@ export default function EditEmployeePage() {
               </Field>
               <div className="grid grid-cols-2 gap-4">
                 <Field label="CNIC *" error={errors.cnic?.message}>
-                  <input {...register("cnic")} className={inputCls(errors.cnic)} />
+                  <Controller name="cnic" control={control} render={({ field }) => (
+                    <CNICInput value={field.value} onChange={field.onChange} onBlur={field.onBlur} className={inputCls(errors.cnic)} />
+                  )} />
                 </Field>
                 <Field label="Date of birth" error={errors.dob?.message}>
                   <input type="date" {...register("dob")} className={inputCls(errors.dob)} />
@@ -332,7 +339,6 @@ export default function EditEmployeePage() {
                   <select {...register("gender")} className={inputCls(errors.gender)}>
                     <option value="male">Male</option>
                     <option value="female">Female</option>
-                    <option value="other">Other</option>
                   </select>
                 </Field>
                 <Field label="Marital status" error={errors.maritalStatus?.message}>
@@ -362,7 +368,9 @@ export default function EditEmployeePage() {
                   <input type="email" {...register("personalEmail")} className={inputCls(errors.personalEmail)} />
                 </Field>
                 <Field label="Mobile *" error={errors.mobile?.message}>
-                  <input {...register("mobile")} className={inputCls(errors.mobile)} />
+                  <Controller name="mobile" control={control} render={({ field }) => (
+                    <PhoneInput value={field.value} onChange={field.onChange} onBlur={field.onBlur} className={inputCls(errors.mobile)} />
+                  )} />
                 </Field>
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -370,7 +378,9 @@ export default function EditEmployeePage() {
                   <input type="email" {...register("orgEmail")} className={inputCls(errors.orgEmail)} />
                 </Field>
                 <Field label="Org phone" error={errors.orgPhone?.message}>
-                  <input {...register("orgPhone")} className={inputCls(errors.orgPhone)} />
+                  <Controller name="orgPhone" control={control} render={({ field }) => (
+                    <PhoneInput value={field.value ?? ''} onChange={field.onChange} onBlur={field.onBlur} className={inputCls(errors.orgPhone)} />
+                  )} />
                 </Field>
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -378,7 +388,9 @@ export default function EditEmployeePage() {
                   <input {...register("emergencyName")} className={inputCls(errors.emergencyName)} />
                 </Field>
                 <Field label="Emergency contact phone" error={errors.emergencyPhone?.message}>
-                  <input {...register("emergencyPhone")} className={inputCls(errors.emergencyPhone)} />
+                  <Controller name="emergencyPhone" control={control} render={({ field }) => (
+                    <PhoneInput value={field.value ?? ''} onChange={field.onChange} onBlur={field.onBlur} className={inputCls(errors.emergencyPhone)} />
+                  )} />
                 </Field>
               </div>
               <Field label="Residential address *" error={errors.residentialAddress?.message}>
@@ -463,6 +475,19 @@ export default function EditEmployeePage() {
                 <Field label="Account number" error={errors.accountNumber?.message}>
                   <input {...register("accountNumber")} className={inputCls(errors.accountNumber)} />
                 </Field>
+              </div>
+              <div className="flex items-center gap-4 pt-2">
+                <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Account Status</span>
+                <Controller name="isActive" control={control} render={({ field }) => (
+                  <button
+                    type="button"
+                    onClick={() => field.onChange(!field.value)}
+                    className={`relative w-12 h-6 rounded-full transition-colors ${field.value ? 'bg-emerald-500' : 'bg-zinc-300'}`}
+                  >
+                    <span className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${field.value ? 'translate-x-7' : 'translate-x-1'}`} />
+                  </button>
+                )} />
+                <span className="text-sm font-bold text-zinc-600">{control._formValues.isActive ? 'Active' : 'Inactive'}</span>
               </div>
             </>
           )}

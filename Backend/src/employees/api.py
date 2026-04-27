@@ -128,6 +128,45 @@ class EmployeeCreateSchema(BaseModel):
             raise ValueError('Invalid email format')
         return v
 
+    @validator('dob')
+    def validate_dob(cls, v):
+        if not v:
+            return v
+        try:
+            dob_date = datetime.strptime(v, '%Y-%m-%d').date()
+        except ValueError:
+            raise ValueError('Date of birth must be YYYY-MM-DD format')
+        today = date.today()
+        age = today.year - dob_date.year - ((today.month, today.day) < (dob_date.month, dob_date.day))
+        if age < 13:
+            raise ValueError('Employee must be at least 13 years old')
+        return v
+
+    @validator('gender')
+    def validate_gender(cls, v):
+        allowed = ['male', 'female']
+        if v and v.lower() not in allowed:
+            raise ValueError(f"gender must be one of: {', '.join(allowed)}")
+        return v.lower() if v else v
+
+    @validator('maritalStatus')
+    def validate_marital_status(cls, v):
+        if v is None:
+            return v
+        allowed = ['single', 'married', 'divorced', 'widowed']
+        if v.lower() not in allowed:
+            raise ValueError(f"maritalStatus must be one of: {', '.join(allowed)}")
+        return v.lower()
+
+    @validator('shift')
+    def validate_shift(cls, v):
+        if v is None:
+            return v
+        allowed = ['general', 'morning', 'afternoon', 'night', 'hourly', 'both']
+        if v.lower() not in allowed:
+            raise ValueError(f"shift must be one of: {', '.join(allowed)}")
+        return v.lower()
+
 
 class EmployeeResponseSchema(BaseModel):
     """Response schema after employee creation"""
@@ -153,6 +192,13 @@ class InstitutionCreateSchema(BaseModel):
     city: Optional[str] = None
     contact_number: Optional[str] = None
 
+    @validator('inst_type')
+    def validate_inst_type(cls, v):
+        allowed = ['educational', 'medical', 'ngo', 'corporate', 'government', 'religious', 'other']
+        if v and v.lower() not in allowed:
+            raise ValueError(f"inst_type must be one of: {', '.join(allowed)}")
+        return v.lower() if v else v
+
 
 class InstitutionUpdateSchema(BaseModel):
     """Request body for PUT /institutions/{id}. All fields optional."""
@@ -163,6 +209,15 @@ class InstitutionUpdateSchema(BaseModel):
     address: Optional[str] = None
     city: Optional[str] = None
     contact_number: Optional[str] = None
+
+    @validator('inst_type')
+    def validate_inst_type(cls, v):
+        if v is None:
+            return v
+        allowed = ['educational', 'medical', 'ngo', 'corporate', 'government', 'religious', 'other']
+        if v.lower() not in allowed:
+            raise ValueError(f"inst_type must be one of: {', '.join(allowed)}")
+        return v.lower()
 
 
 class BranchCreateSchema(BaseModel):
@@ -184,6 +239,13 @@ class BranchCreateSchema(BaseModel):
     established_year: Optional[int] = None
     registration_number: Optional[str] = None
 
+    @validator('status')
+    def validate_status(cls, v):
+        allowed = ['active', 'inactive', 'closed', 'under_construction']
+        if v and v.lower() not in allowed:
+            raise ValueError(f"status must be one of: {', '.join(allowed)}")
+        return v.lower() if v else v
+
 
 class BranchUpdateSchema(BaseModel):
     """Request body for PUT /branches/{key}. All fields optional."""
@@ -203,6 +265,15 @@ class BranchUpdateSchema(BaseModel):
     branch_head_email: Optional[str] = None
     established_year: Optional[int] = None
     registration_number: Optional[str] = None
+
+    @validator('status')
+    def validate_status(cls, v):
+        if v is None:
+            return v
+        allowed = ['active', 'inactive', 'closed', 'under_construction']
+        if v.lower() not in allowed:
+            raise ValueError(f"status must be one of: {', '.join(allowed)}")
+        return v.lower()
 
 
 class DepartmentCreateSchema(BaseModel):
@@ -764,7 +835,9 @@ def create_employee(request, payload: EmployeeCreateSchema):
         if field_errors:
             return 400, {"error": "Validation failed", "field_errors": field_errors}
 
-        dob = datetime.strptime(payload.dob, '%Y-%m-%d').date() if payload.dob else date(1990, 1, 1)
+        if not payload.dob:
+            return 400, {"error": "Validation failed", "field_errors": {"dob": ["Date of birth is required"]}}
+        dob = datetime.strptime(payload.dob, '%Y-%m-%d').date()
         joining_date = datetime.strptime(payload.joiningDate, '%Y-%m-%d').date() if payload.joiningDate else date.today()
 
         with transaction.atomic():
@@ -1161,6 +1234,10 @@ class EmployeeUpdateSchema(BaseModel):
     education: Optional[List[EducationSchema]] = None
     experience: Optional[List[ExperienceSchema]] = None
 
+    # Status & HR fields
+    employmentType: Optional[str] = None
+    isActive: Optional[bool] = None
+
     @validator('cnic')
     def validate_cnic(cls, v):
         if v is None:
@@ -1180,6 +1257,56 @@ class EmployeeUpdateSchema(BaseModel):
         if v and not re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', v):
             raise ValueError('Invalid email format')
         return v
+
+    @validator('dob')
+    def validate_dob(cls, v):
+        if not v:
+            return v
+        try:
+            dob_date = datetime.strptime(v, '%Y-%m-%d').date()
+        except ValueError:
+            raise ValueError('Date of birth must be YYYY-MM-DD format')
+        today = date.today()
+        age = today.year - dob_date.year - ((today.month, today.day) < (dob_date.month, dob_date.day))
+        if age < 13:
+            raise ValueError('Employee must be at least 13 years old')
+        return v
+
+    @validator('gender')
+    def validate_gender(cls, v):
+        if v is None:
+            return v
+        allowed = ['male', 'female']
+        if v.lower() not in allowed:
+            raise ValueError(f"gender must be one of: {', '.join(allowed)}")
+        return v.lower()
+
+    @validator('maritalStatus')
+    def validate_marital_status(cls, v):
+        if v is None:
+            return v
+        allowed = ['single', 'married', 'divorced', 'widowed']
+        if v.lower() not in allowed:
+            raise ValueError(f"maritalStatus must be one of: {', '.join(allowed)}")
+        return v.lower()
+
+    @validator('shift')
+    def validate_shift(cls, v):
+        if v is None:
+            return v
+        allowed = ['general', 'morning', 'afternoon', 'night', 'hourly', 'both']
+        if v.lower() not in allowed:
+            raise ValueError(f"shift must be one of: {', '.join(allowed)}")
+        return v.lower()
+
+    @validator('employmentType')
+    def validate_employment_type(cls, v):
+        if v is None:
+            return v
+        allowed = ['full_time', 'part_time', 'contract', 'intern', 'volunteer']
+        if v.lower() not in allowed:
+            raise ValueError(f"employmentType must be one of: {', '.join(allowed)}")
+        return v.lower()
 
 
 @router.put(
@@ -1279,6 +1406,10 @@ def update_employee(request, employee_id: str, payload: EmployeeUpdateSchema):
                 employee.education_history = [e.dict() for e in payload.education]
             if payload.experience is not None:
                 employee.work_experience = [e.dict() for e in payload.experience]
+            if payload.isActive is not None:
+                employee.is_active = payload.isActive
+            if payload.employmentType is not None:
+                employee.employment_type = payload.employmentType
 
             employee.save()
 
@@ -1313,3 +1444,198 @@ def update_employee(request, employee_id: str, payload: EmployeeUpdateSchema):
     except Exception as e:
         logger.error(f"Error updating employee {employee_id}: {str(e)}", exc_info=True)
         return 400, {'error': str(e)}
+
+
+# ========================================
+# EMPLOYEE ASSIGNMENTS (dedicated endpoints)
+# ========================================
+
+class EmployeeAssignmentCreateSchema(BaseModel):
+    branch_code: Optional[str] = None
+    department_code: str
+    designation_code: str
+    joining_date: Optional[str] = None
+    shift: str = 'general'
+    is_primary: bool = False
+
+    @validator('shift')
+    def validate_shift(cls, v):
+        allowed = ['general', 'morning', 'afternoon', 'night', 'hourly', 'both']
+        if v and v.lower() not in allowed:
+            raise ValueError(f"shift must be one of: {', '.join(allowed)}")
+        return v.lower() if v else v
+
+
+class EmployeeAssignmentUpdateSchema(BaseModel):
+    branch_code: Optional[str] = None
+    department_code: Optional[str] = None
+    designation_code: Optional[str] = None
+    joining_date: Optional[str] = None
+    shift: Optional[str] = None
+    is_primary: Optional[bool] = None
+    is_active: Optional[bool] = None
+
+    @validator('shift')
+    def validate_shift(cls, v):
+        if v is None:
+            return v
+        allowed = ['general', 'morning', 'afternoon', 'night', 'hourly', 'both']
+        if v.lower() not in allowed:
+            raise ValueError(f"shift must be one of: {', '.join(allowed)}")
+        return v.lower()
+
+
+def _assignment_response(asn) -> dict:
+    inst = _assignment_institution(asn)
+    return {
+        'id': str(asn.id),
+        'institution': inst.name if inst else None,
+        'institution_code': inst.inst_code if inst else None,
+        'branch_name': asn.branch.branch_name if asn.branch else None,
+        'branch_code': asn.branch.branch_code if asn.branch else None,
+        'department': asn.department.dept_name,
+        'department_code': asn.department.dept_code,
+        'designation': asn.designation.position_name,
+        'designation_code': asn.designation.position_code,
+        'shift': asn.shift,
+        'joining_date': asn.joining_date.isoformat() if asn.joining_date else None,
+        'is_primary': asn.is_primary,
+        'is_active': asn.is_active,
+    }
+
+
+@router.post(
+    "/employees/{employee_key}/assignments",
+    response={201: dict, 400: dict, 404: dict},
+    auth=AuthBearer()
+)
+def create_assignment(request, employee_key: str, payload: EmployeeAssignmentCreateSchema):
+    """Add a new assignment to an employee."""
+    emp = Employee.objects.filter(
+        models.Q(employee_id=employee_key) | models.Q(employee_code=employee_key),
+        is_deleted=False
+    ).first()
+    if not emp:
+        return 404, {'error': 'Employee not found'}
+
+    dept = Department.objects.filter(dept_code=payload.department_code, is_deleted=False).first()
+    if not dept:
+        return 400, {'error': f"Department '{payload.department_code}' not found"}
+
+    desig = Designation.objects.filter(position_code=payload.designation_code, department=dept, is_deleted=False).first()
+    if not desig:
+        return 400, {'error': f"Designation '{payload.designation_code}' not found in this department"}
+
+    branch = None
+    if payload.branch_code:
+        branch = Branch.objects.filter(branch_code=payload.branch_code, is_deleted=False).first()
+        if not branch:
+            return 400, {'error': f"Branch '{payload.branch_code}' not found"}
+
+    joining_date = None
+    if payload.joining_date:
+        try:
+            joining_date = datetime.strptime(payload.joining_date, '%Y-%m-%d').date()
+        except ValueError:
+            return 400, {'error': 'joining_date must be YYYY-MM-DD'}
+
+    if payload.is_primary:
+        emp.assignments.filter(is_primary=True, is_deleted=False).update(is_primary=False)
+
+    asn = EmployeeAssignment.objects.create(
+        employee=emp,
+        branch=branch,
+        department=dept,
+        designation=desig,
+        joining_date=joining_date,
+        shift=payload.shift,
+        is_primary=payload.is_primary,
+        is_active=True,
+    )
+    return 201, _assignment_response(asn)
+
+
+@router.put(
+    "/employees/{employee_key}/assignments/{assignment_id}",
+    response={200: dict, 400: dict, 404: dict},
+    auth=AuthBearer()
+)
+def update_assignment(request, employee_key: str, assignment_id: str, payload: EmployeeAssignmentUpdateSchema):
+    """Update a specific assignment."""
+    emp = Employee.objects.filter(
+        models.Q(employee_id=employee_key) | models.Q(employee_code=employee_key),
+        is_deleted=False
+    ).first()
+    if not emp:
+        return 404, {'error': 'Employee not found'}
+
+    try:
+        asn = emp.assignments.get(id=assignment_id, is_deleted=False)
+    except EmployeeAssignment.DoesNotExist:
+        return 404, {'error': 'Assignment not found'}
+
+    if payload.department_code:
+        dept = Department.objects.filter(dept_code=payload.department_code, is_deleted=False).first()
+        if not dept:
+            return 400, {'error': f"Department '{payload.department_code}' not found"}
+        asn.department = dept
+
+    if payload.designation_code:
+        scope_dept = asn.department
+        desig = Designation.objects.filter(position_code=payload.designation_code, department=scope_dept, is_deleted=False).first()
+        if not desig:
+            return 400, {'error': f"Designation '{payload.designation_code}' not found in this department"}
+        asn.designation = desig
+
+    if payload.branch_code is not None:
+        if payload.branch_code:
+            branch = Branch.objects.filter(branch_code=payload.branch_code, is_deleted=False).first()
+            if not branch:
+                return 400, {'error': f"Branch '{payload.branch_code}' not found"}
+            asn.branch = branch
+        else:
+            asn.branch = None
+
+    if payload.joining_date is not None:
+        try:
+            asn.joining_date = datetime.strptime(payload.joining_date, '%Y-%m-%d').date()
+        except ValueError:
+            return 400, {'error': 'joining_date must be YYYY-MM-DD'}
+
+    if payload.shift is not None:
+        asn.shift = payload.shift
+    if payload.is_primary is not None:
+        if payload.is_primary:
+            emp.assignments.filter(is_primary=True, is_deleted=False).update(is_primary=False)
+        asn.is_primary = payload.is_primary
+    if payload.is_active is not None:
+        asn.is_active = payload.is_active
+
+    asn.save()
+    return 200, _assignment_response(asn)
+
+
+@router.delete(
+    "/employees/{employee_key}/assignments/{assignment_id}",
+    response={200: dict, 400: dict, 404: dict},
+    auth=AuthBearer()
+)
+def delete_assignment(request, employee_key: str, assignment_id: str):
+    """Soft-delete an assignment. Cannot delete the last remaining assignment."""
+    emp = Employee.objects.filter(
+        models.Q(employee_id=employee_key) | models.Q(employee_code=employee_key),
+        is_deleted=False
+    ).first()
+    if not emp:
+        return 404, {'error': 'Employee not found'}
+
+    try:
+        asn = emp.assignments.get(id=assignment_id, is_deleted=False)
+    except EmployeeAssignment.DoesNotExist:
+        return 404, {'error': 'Assignment not found'}
+
+    if emp.assignments.filter(is_deleted=False).count() <= 1:
+        return 400, {'error': 'Cannot delete the only assignment. Employee must have at least one assignment.'}
+
+    asn.soft_delete()
+    return 200, {'message': 'Assignment deleted successfully'}

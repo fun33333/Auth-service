@@ -6,7 +6,8 @@ import { fetchWithAuth } from "@/utils/api";
 import { useRouter, useParams } from "next/navigation";
 import { ArrowLeft, Save } from "lucide-react";
 import Link from "next/link";
-import { useForm, SubmitHandler } from "react-hook-form";
+import { useForm, SubmitHandler, Controller } from "react-hook-form";
+import PhoneInput from "@/components/PhoneInput";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 
@@ -44,7 +45,7 @@ export default function EditInstitutionForm() {
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   const {
-    register, handleSubmit, reset, setError,
+    register, handleSubmit, reset, setError, control,
     formState: { errors, isSubmitting },
   } = useForm<FormInput, any, FormOutput>({
     resolver: zodResolver(schema),
@@ -198,7 +199,9 @@ export default function EditInstitutionForm() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">Contact Number</label>
-                  <input type="tel" placeholder="03001234567" {...register("contact_number")} className={inputCls(errors.contact_number?.message)} />
+                  <Controller name="contact_number" control={control} render={({ field }) => (
+                    <PhoneInput value={field.value ?? ''} onChange={field.onChange} onBlur={field.onBlur} className={inputCls(errors.contact_number?.message)} />
+                  )} />
                   {errors.contact_number && <p className="text-[11px] font-bold text-rose-500 mt-1 ml-1">{errors.contact_number.message}</p>}
                 </div>
               </div>

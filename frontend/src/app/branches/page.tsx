@@ -7,7 +7,8 @@ import {
   Plus, Search, Edit2, Trash2, X,
   GitBranch, MapPin, CheckCircle2, XCircle, Phone, Mail, Globe,
 } from "lucide-react";
-import { useForm, SubmitHandler } from "react-hook-form";
+import { useForm, SubmitHandler, Controller } from "react-hook-form";
+import PhoneInput from "@/components/PhoneInput";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 
@@ -79,7 +80,7 @@ function BranchModal({
   institutions: Institution[];
 }) {
   const {
-    register, handleSubmit, reset, setError,
+    register, handleSubmit, reset, setError, control,
     formState: { errors, isSubmitting },
   } = useForm<BranchInput, any, BranchOutput>({
     resolver: zodResolver(branchSchema),
@@ -127,6 +128,8 @@ function BranchModal({
   };
 
   return (
+
+    
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
       <form onSubmit={handleSubmit(submit)} className="bg-white rounded-[2rem] shadow-2xl w-full max-w-2xl mx-4 animate-in zoom-in-95 duration-200 overflow-hidden border border-zinc-100">
         <div className="flex items-center justify-between px-8 py-6 border-b border-zinc-50">
@@ -191,7 +194,9 @@ function BranchModal({
           </div>
           <div>
             <label className="block text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1.5 ml-1">Contact Phone</label>
-            <input type="text" placeholder="03001234567" {...register("contact_number")} className={inputCls(errors.contact_number?.message)} />
+            <Controller name="contact_number" control={control} render={({ field }) => (
+              <PhoneInput value={field.value ?? ''} onChange={field.onChange} onBlur={field.onBlur} className={inputCls(errors.contact_number?.message)} />
+            )} />
             <FieldError msg={errors.contact_number?.message} />
           </div>
           <div className="sm:col-span-2">
