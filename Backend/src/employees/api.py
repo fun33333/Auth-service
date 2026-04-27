@@ -1539,6 +1539,9 @@ def create_assignment(request, employee_key: str, payload: EmployeeAssignmentCre
         except ValueError:
             return 400, {'error': 'joining_date must be YYYY-MM-DD'}
 
+    if joining_date is None:
+        joining_date = date.today()
+
     if payload.is_primary:
         emp.assignments.filter(is_primary=True, is_deleted=False).update(is_primary=False)
 
