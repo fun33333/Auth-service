@@ -93,3 +93,9 @@ Desktop.ini
 *.pem
 *.key
 *.cert
+
+# ----- Test/Debug Artifacts -----
+.playwright-mcp/
+graphify-out/
+test-*.png
+

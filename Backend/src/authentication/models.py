@@ -166,10 +166,9 @@ class RefreshToken(models.Model):
         help_text="SuperAdmin this token belongs to"
     )
     
-    token = models.CharField(
-        max_length=500,
+    token = models.TextField(
         unique=True,
-        help_text="JWT refresh token"
+        help_text="JWT token (RS256 tokens are ~700+ chars, TextField avoids length limit)"
     )
     
     created_at = models.DateTimeField(

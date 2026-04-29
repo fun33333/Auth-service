@@ -154,3 +154,55 @@ class TestAssignmentInstitutionRemoval:
         # institution_code must come from department.institution chain (not a stored FK)
         expected = designation.department.institution.inst_code if designation.department.institution else None
         assert assignments[0]["institution_code"] == expected
+
+
+class TestRS256JWTRoundtrip:
+    """JWT tokens must be signed with RS256 and verifiable with public key only."""
+
+    def test_access_token_uses_rs256_algorithm(self):
+        import jwt as pyjwt
+        from authentication.jwt_utils import generate_access_token, JWT_PUBLIC_KEY, JWT_ALGORITHM
+
+        class FakeEmployee:
+            id = "00000000-0000-0000-0000-000000000001"
+            employee_code = "TEST-0001"
+            employee_id = "IAK-0001"
+            full_name = "Test User"
+            org_email = "test@test.com"
+            personal_email = None
+            is_active = True
+            department = None
+            designation = None
+            @property
+            def email(self): return self.org_email or ""
+
+        token = generate_access_token(FakeEmployee())
+        assert JWT_ALGORITHM == 'RS256', f"Expected RS256, got {JWT_ALGORITHM}"
+        payload = pyjwt.decode(token, JWT_PUBLIC_KEY, algorithms=['RS256'])
+        assert payload['user_id'] == "00000000-0000-0000-0000-000000000001"
+        assert payload['token_type'] == 'access'
+
+    def test_token_rejected_with_wrong_key(self):
+        import jwt as pyjwt
+        import subprocess
+        from authentication.jwt_utils import generate_access_token
+
+        class FakeEmployee:
+            id = "00000000-0000-0000-0000-000000000002"
+            employee_code = "TEST-0002"
+            employee_id = "IAK-0002"
+            full_name = "Fake"
+            org_email = None
+            personal_email = "fake@test.com"
+            is_active = True
+            department = None
+            designation = None
+            @property
+            def email(self): return self.personal_email or ""
+
+        token = generate_access_token(FakeEmployee())
+        # Generate a different key pair — token must not verify with it
+        wrong_priv = subprocess.run(['openssl', 'genrsa', '2048'], capture_output=True, text=True).stdout
+        wrong_pub = subprocess.run(['openssl', 'rsa', '-pubout'], input=wrong_priv, capture_output=True, text=True).stdout
+        with pytest.raises(pyjwt.exceptions.InvalidSignatureError):
+            pyjwt.decode(token, wrong_pub, algorithms=['RS256'])

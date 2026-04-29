@@ -17,9 +17,10 @@ DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 # API robustness: Prevent 500 errors on POST requests missing trailing slashes
 APPEND_SLASH = True
 
-# JWT Configuration
-JWT_SECRET = os.getenv('JWT_SECRET', SECRET_KEY)
-JWT_ALGORITHM = 'HS256'
+# JWT Configuration — RS256 asymmetric signing
+# jwt_utils.py loads key files from JWT_PRIVATE_KEY_PATH / JWT_PUBLIC_KEY_PATH env vars
+# See: docs/jwt-key-management.md
+JWT_ALGORITHM = os.getenv('JWT_ALGORITHM', 'RS256')
 ACCESS_TOKEN_EXPIRY_HOURS = 1
 REFRESH_TOKEN_EXPIRY_DAYS = 7
 

@@ -12,6 +12,8 @@ import {
 } from "lucide-react";
 import ProtectedLayout from "@/components/ProtectedLayout";
 import { fetchWithAuth } from "@/utils/api";
+import PhoneInput from "@/components/PhoneInput";
+import CNICInput from "@/components/CNICInput";
 
 // ----- Validators (mirror backend) -----
 const CNIC_RE = /^\d{5}-?\d{7}-?\d{1}$/;
@@ -36,7 +38,7 @@ const schema = z.object({
   fullName: z.string().trim().min(2, "Name too short").max(100),
   cnic: z.string().regex(CNIC_RE, "Format: XXXXX-XXXXXXX-X"),
   dob: z.string().optional().default(""),
-  gender: z.enum(["male", "female", "other"]),
+  gender: z.enum(["male", "female"]),
   maritalStatus: z.enum(["single", "married", "divorced", "widowed"]).optional(),
   nationality: z.string().default("Pakistani"),
   religion: z.string().optional().default(""),
@@ -257,7 +259,9 @@ export default function NewEmployeePage() {
               </Field>
               <div className="grid grid-cols-2 gap-4">
                 <Field label="CNIC *" error={errors.cnic?.message}>
-                  <input {...register("cnic")} className={inputCls(errors.cnic)} placeholder="42101-1234567-8" />
+                  <Controller name="cnic" control={control} render={({ field }) => (
+                    <CNICInput value={field.value} onChange={field.onChange} onBlur={field.onBlur} className={inputCls(errors.cnic)} />
+                  )} />
                 </Field>
                 <Field label="Date of birth" error={errors.dob?.message}>
                   <input type="date" {...register("dob")} className={inputCls(errors.dob)} />
@@ -268,7 +272,6 @@ export default function NewEmployeePage() {
                   <select {...register("gender")} className={inputCls(errors.gender)}>
                     <option value="male">Male</option>
                     <option value="female">Female</option>
-                    <option value="other">Other</option>
                   </select>
                 </Field>
                 <Field label="Marital status" error={errors.maritalStatus?.message}>
@@ -298,7 +301,9 @@ export default function NewEmployeePage() {
                   <input type="email" {...register("personalEmail")} className={inputCls(errors.personalEmail)} placeholder="name@example.com" />
                 </Field>
                 <Field label="Mobile *" error={errors.mobile?.message}>
-                  <input {...register("mobile")} className={inputCls(errors.mobile)} placeholder="03001234567" />
+                  <Controller name="mobile" control={control} render={({ field }) => (
+                    <PhoneInput value={field.value} onChange={field.onChange} onBlur={field.onBlur} className={inputCls(errors.mobile)} />
+                  )} />
                 </Field>
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -306,7 +311,9 @@ export default function NewEmployeePage() {
                   <input type="email" {...register("orgEmail")} className={inputCls(errors.orgEmail)} />
                 </Field>
                 <Field label="Org phone" error={errors.orgPhone?.message}>
-                  <input {...register("orgPhone")} className={inputCls(errors.orgPhone)} />
+                  <Controller name="orgPhone" control={control} render={({ field }) => (
+                    <PhoneInput value={field.value ?? ''} onChange={field.onChange} onBlur={field.onBlur} className={inputCls(errors.orgPhone)} />
+                  )} />
                 </Field>
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -314,7 +321,9 @@ export default function NewEmployeePage() {
                   <input {...register("emergencyName")} className={inputCls(errors.emergencyName)} />
                 </Field>
                 <Field label="Emergency contact phone" error={errors.emergencyPhone?.message}>
-                  <input {...register("emergencyPhone")} className={inputCls(errors.emergencyPhone)} />
+                  <Controller name="emergencyPhone" control={control} render={({ field }) => (
+                    <PhoneInput value={field.value ?? ''} onChange={field.onChange} onBlur={field.onBlur} className={inputCls(errors.emergencyPhone)} />
+                  )} />
                 </Field>
               </div>
               <Field label="Residential address *" error={errors.residentialAddress?.message}>

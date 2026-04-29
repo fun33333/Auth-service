@@ -6,7 +6,8 @@ import { fetchWithAuth } from "@/utils/api";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Building2, MapPin, Phone, Globe, Fingerprint, ShieldCheck } from "lucide-react";
 import Link from "next/link";
-import { useForm, SubmitHandler } from "react-hook-form";
+import { useForm, SubmitHandler, Controller } from "react-hook-form";
+import PhoneInput from "@/components/PhoneInput";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 
@@ -46,7 +47,7 @@ export default function NewInstitutionForm() {
   const router = useRouter();
   const [submitError, setSubmitError] = useState<string | null>(null);
   const {
-    register, handleSubmit, setValue, watch, setError,
+    register, handleSubmit, setValue, watch, setError, control,
     formState: { errors, isSubmitting },
   } = useForm<FormInput, any, FormOutput>({
     resolver: zodResolver(schema),
@@ -213,7 +214,9 @@ export default function NewInstitutionForm() {
                       <div>
                         <div className="relative">
                           <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
-                          <input {...register("contact_number")} placeholder="03001234567" className={iconInputCls(errors.contact_number?.message)} />
+                          <Controller name="contact_number" control={control} render={({ field }) => (
+                            <PhoneInput value={field.value ?? ''} onChange={field.onChange} onBlur={field.onBlur} className={iconInputCls(errors.contact_number?.message)} />
+                          )} />
                         </div>
                         {errors.contact_number && <p className="text-rose-500 text-[10px] mt-2 font-bold uppercase ml-1 italic">{errors.contact_number.message}</p>}
                       </div>
