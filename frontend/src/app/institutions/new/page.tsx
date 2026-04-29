@@ -104,10 +104,10 @@ export default function NewInstitutionForm() {
               <Link href="/institutions" className="group p-3 rounded-full bg-white border border-slate-200 text-slate-400 hover:text-indigo-600 hover:border-indigo-100 transition-all shadow-sm">
                 <ArrowLeft size={20} className="group-hover:-translate-x-1 transition-transform" />
               </Link>
-              <div>
+              {/* <div>
                 <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Register Institution</h1>
                 <p className="text-sm text-slate-500">Configure a new functional entity within the system.</p>
-              </div>
+              </div> */}
             </div>
           </div>
 

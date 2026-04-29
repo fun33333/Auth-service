@@ -36,7 +36,7 @@ const Skeleton = ({ className, height, width }: any) => (
 );
 
 const inputCls = (err?: string, extra = "") =>
-  `w-full px-4 py-3 bg-slate-50 border rounded-xl text-sm font-bold text-slate-900 outline-none transition uppercase shadow-inner ${
+  `w-full px-4 py-3 bg-slate-50 border rounded-lg text-sm font-bold text-slate-900 outline-none transition uppercase shadow-inner ${
     err ? "border-rose-400 bg-rose-50/40" : "border-transparent focus:border-indigo-500 focus:bg-white"
   } ${extra}`;
 
@@ -95,36 +95,36 @@ function DesignationModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <form onSubmit={handleSubmit(submit)} className="bg-white rounded-2xl shadow-2xl w-full max-w-xl mx-4 animate-in zoom-in-95 duration-200">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+      <form onSubmit={handleSubmit(submit)} className="bg-white rounded-2xl shadow-2xl w-full max-w-xl mx-5 animate-in zoom-in-95 duration-200">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200">
           <div>
-            <h2 className="text-lg font-semibold text-slate-900">{initial ? "Update Designation" : "Establish New Position"}</h2>
-            <p className="text-sm text-slate-400 mt-0.5">Define role parameters and authority levels.</p>
+            <h2 className="text-lg font-bold text-slate-900">{initial ? "Update Designation" : "Add New Desingnation"}</h2>
+            <p className="text-sm text-slate-500 mt-0.5">Define role parameters and authority levels.</p>
           </div>
           <button type="button" onClick={onClose} className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition"><X size={20} /></button>
         </div>
 
         {submitError && (
-          <div className="mx-6 mt-4 p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs font-bold text-rose-700">
+          <div className="mx-6 mt-4 p-3 rounded-lg bg-rose-50 border border-rose-200 text-xs font-bold text-rose-700">
             {submitError}
           </div>
         )}
 
         <div className="px-6 py-5 space-y-4">
           <div>
-            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Position / Title</label>
-            <input type="text" placeholder="e.g. Senior Surgeon, Head Teacher" {...register("position_name")} className={inputCls(errors.position_name?.message)} />
+            <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2.5 ml-2">Position / Title</label>
+            <input type="text" placeholder="e.g. Senior Surgeon, Head Teacher" {...register("position_name")} className={inputCls(errors.position_name?.message)}  />
             <FieldError msg={errors.position_name?.message} />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Registry Code</label>
+              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 ml-2">Registry Code</label>
               <input type="text" placeholder="e.g. SRG, TCH" disabled={!!initial} {...register("position_code")} className={inputCls(errors.position_code?.message, initial ? lockedExtra : "")} />
               <FieldError msg={errors.position_code?.message} />
             </div>
             <div>
-              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Unit Assignment</label>
-              <select disabled={!!initial} {...register("department_code")} className={`${inputCls(errors.department_code?.message, initial ? lockedExtra : "")} appearance-none bg-white`}>
+              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 ml-2">Unit Assignment</label>
+              <select disabled={!!initial} {...register("department_code")} className={`${inputCls(errors.department_code?.message, initial ? lockedExtra : "")} appearance-none bg-[#F4F3F0]`}>
                 <option value="">Select Department</option>
                 {departments.map(dept => (
                   <option key={dept.dept_code} value={dept.dept_code}>{dept.dept_name} [{dept.dept_code}]</option>
@@ -141,9 +141,9 @@ function DesignationModal({
         </div>
 
         <div className="px-6 py-4 border-t border-slate-100 flex justify-end gap-3 bg-slate-50/50 rounded-b-2xl">
-          <button type="button" onClick={onClose} className="px-5 py-2.5 text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-slate-600 transition">Cancel</button>
+          <button type="button" onClick={onClose} className="px-5 py-2.5 text-[10px] font-black text-slate-500 uppercase tracking-widest hover:text-slate-600 transition">Cancel</button>
           <button type="submit" disabled={isSubmitting}
-            className="px-8 py-2.5 text-[10px] font-black text-white bg-zinc-900 rounded-xl hover:bg-indigo-600 shadow-xl transition-all active:scale-95 uppercase tracking-widest disabled:opacity-50">
+            className="px-8 py-2.5 text-[10px] font-black text-white bg-zinc-900 rounded-xl hover:bg-gray-600 shadow-xl transition-all active:scale-95 uppercase tracking-widest disabled:opacity-50">
             {isSubmitting ? "Saving…" : initial ? "Apply Changes" : "Confirm Entry"}
           </button>
         </div>
@@ -257,7 +257,7 @@ export default function DesignationsPage() {
             <h3 className="text-xl font-black text-slate-900 uppercase tracking-tighter">Decommission Position?</h3>
             <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-2">Soft-delete — recoverable.</p>
             <div className="flex gap-3 mt-8">
-              <button onClick={() => setDeleteId(null)} disabled={deleteBusy} className="flex-1 px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-50 rounded-xl hover:bg-slate-100 transition disabled:opacity-50">Cancel</button>
+              <button onClick={() => setDeleteId(null)} disabled={deleteBusy} className="flex-1 px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-50 rounded-lg hover:bg-slate-100 transition disabled:opacity-50">Cancel</button>
               <button onClick={() => handleDelete(deleteId)} disabled={deleteBusy} className="flex-1 px-4 py-3 text-[10px] font-black text-white bg-red-600 rounded-xl hover:bg-red-700 transition shadow-lg shadow-red-200 disabled:opacity-50">
                 {deleteBusy ? "…" : "Delete"}
               </button>
@@ -274,56 +274,59 @@ export default function DesignationsPage() {
         departments={departments}
       />
 
-      <div className="p-4 sm:p-6 lg:p-10 max-w-[1600px] mx-auto space-y-12 animate-in fade-in duration-1000">
+      <div className="p-4 sm:p-6 lg:p-10 max-w-400 mx-auto space-y-12 animate-in fade-in duration-1000">
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-8 border-b border-zinc-100 pb-12">
           <div className="space-y-4">
-            <h1 className="text-4xl sm:text-4xl font-black tracking-tighter text-zinc-900 leading-none uppercase">Position Registry</h1>
-            <p className="text-[11px] font-black text-zinc-400 uppercase tracking-[0.5em] italic opacity-60">job roles, hierarchies & functional authority</p>
+            <h1 className="text-4xl sm:text-4xl font-black tracking-tighter text-zinc-900 leading-none uppercase">Designation</h1>
+            {/* <p className="text-[11px] font-black text-zinc-400 uppercase tracking-[0.5em] italic opacity-60">job roles, hierarchies & functional authority</p> */}
           </div>
           <div className="flex flex-wrap gap-4 w-full lg:w-auto">
             <button onClick={() => { setEditTarget(null); setModalOpen(true); }}
-              className="flex-1 lg:flex-none h-16 px-10 bg-zinc-900 text-white rounded-[2rem] flex items-center justify-center gap-3 text-[11px] font-black uppercase tracking-widest hover:bg-indigo-600 transition-all active:scale-95 shadow-2xl shadow-zinc-900/10">
-              <Plus size={20} strokeWidth={3} /> Add Position
+              className="flex-1 lg:flex-none h-12 px-5  bg-[#6B3F69] text-white rounded-2xl flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest hover: bg-[#6B3F69] transition-all active:scale-95 shadow-2xl shadow-zinc-900/10">
+              <Plus size={20} strokeWidth={3} /> Add New Designation
             </button>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {stats.map((s) => (
-            <div key={s.label} className="bg-white p-6 sm:p-8 rounded-[2.5rem] border border-zinc-100 shadow-sm hover:shadow-xl hover:translate-y-[-4px] transition-all duration-300 group relative overflow-hidden">
-              <div className={`absolute top-6 right-6 p-4 rounded-2xl ${s.bg} ${s.color} group-hover:scale-110 transition-transform`}><s.icon size={24} strokeWidth={2.5} /></div>
-              <div className="relative z-10">
-                <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1">{s.label}</p>
-                {loading ? <Skeleton width="40%" height={32} /> : (
+            <div key={s.label} className="bg-white p-4 rounded-3xl border border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group flex items-center justify-between">
+              <div>
+                <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-2">{s.label}</p>
+                {loading ? <Skeleton width="50px" height="30px" /> : (
                   <div className="flex items-baseline gap-2">
-                    <h3 className="text-3xl sm:text-4xl font-black text-zinc-900 tracking-tighter leading-none">{s.value}</h3>
-                    <span className="text-[10px] font-black text-emerald-500 uppercase tracking-tighter opacity-60">Live</span>
+                    <h3 className="text-4xl font-black text-slate-900 tracking-tighter leading-none">{s.value}</h3>
+                    <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest">Live</span>
                   </div>
                 )}
+              </div>
+              <div className={`h-14 w-14 rounded-2xl flex items-center justify-center ${s.bg} ${s.color} group-hover:scale-110 transition-transform duration-500`}>
+                <s.icon size={24} strokeWidth={2.5} />
               </div>
             </div>
           ))}
         </div>
+        {/* search bar */}
 
-        <div className="bg-white p-6 rounded-[2.5rem] border border-zinc-100 shadow-2xl shadow-zinc-200/20">
+        <div className="bg-white p-5 rounded-2xl border border-zinc-100 shadow-2xl shadow-zinc-200/20">
           <div className="relative group">
             <Search className="absolute left-6 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-300 group-focus-within:text-zinc-900 transition-colors" />
             <input type="text" placeholder="SEARCH BY ROLE, CODE OR DEPARTMENT HUB..."
-              className="w-full pl-14 pr-6 py-5 bg-zinc-50/50 border border-transparent focus:border-zinc-200 focus:bg-white rounded-2xl text-[11px] font-black text-zinc-900 uppercase tracking-widest outline-none transition-all shadow-inner"
+              className="w-full pl-12 pr-5 py-5 bg-zinc-50/50 border border-transparent focus:border-zinc-200 focus:bg-white rounded-2xl text-[10px] font-black text-zinc-900 uppercase tracking-widest outline-none transition-all shadow-inner"
               value={search} onChange={(e) => setSearch(e.target.value)} />
           </div>
         </div>
 
         <div className="relative pb-20">
-          <div className="bg-white rounded-[3rem] border border-zinc-100 overflow-hidden shadow-2xl shadow-zinc-200/20">
+          <div className="bg-white rounded-2xl border border-zinc-100 overflow-hidden shadow-2xl shadow-zinc-200/20">
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-zinc-50/50 text-left">
                 <thead>
                   <tr className="bg-zinc-50/30">
-                    <th className="py-8 px-8 text-[11px] font-black text-zinc-400 uppercase tracking-[0.2em]">Position / Role</th>
-                    <th className="py-8 px-8 text-[11px] font-black text-zinc-400 uppercase tracking-[0.2em]">Registry Code</th>
-                    <th className="py-8 px-8 text-[11px] font-black text-zinc-400 uppercase tracking-[0.2em]">Unit Hub</th>
-                    <th className="py-8 px-8 text-[11px] font-black text-zinc-400 uppercase tracking-[0.2em] text-right">Actions</th>
+                    <th className="py-8 px-8 text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em]">Position / Role</th>
+                    <th className="py-8 px-8 text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em]">Registry Code</th>
+                    <th className="py-8 px-8 text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em]">Branch</th>
+                    <th className="py-8 px-8 text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zinc-50/50">
@@ -331,14 +334,14 @@ export default function DesignationsPage() {
                     <tr key={i}><td colSpan={4} className="p-8"><Skeleton height={24} className="w-full rounded-full" /></td></tr>
                   )) : filtered.length === 0 ? (
                     <tr>
-                      <td colSpan={4} className="py-24 text-center">
+                      <td colSpan={4} className="py-20 text-center">
                         <XCircle size={40} className="mx-auto text-zinc-200 mb-4" />
                         <h4 className="text-zinc-400 text-xs font-black uppercase tracking-widest">No positions found matching your search.</h4>
                       </td>
                     </tr>
                   ) : filtered.map(d => (
                     <tr key={d.id} className="hover:bg-zinc-50/40 transition-all group">
-                      <td className="p-8">
+                      <td className="p-7">
                         <div className="flex items-center gap-5">
                           <div className="h-12 w-12 rounded-2xl bg-zinc-900 flex items-center justify-center text-white text-sm font-black transition-transform group-hover:scale-110 shadow-lg shadow-zinc-900/10">
                             {d.position_name?.charAt(0)}

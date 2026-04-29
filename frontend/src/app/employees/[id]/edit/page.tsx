@@ -286,22 +286,26 @@ export default function EditEmployeePage() {
         <h1 className="text-2xl font-semibold text-slate-900">Edit employee</h1>
         <p className="text-sm text-slate-500 mt-1">Update and save. Step {step} of 4.</p>
 
-        <ol className="flex items-center gap-2 mt-6 mb-8">
+        <ol className="flex items-center gap-3 mt-8 mb-12">
           {STEPS.map((s, i) => {
             const Icon = s.icon;
             const active = step === s.id;
             const done = step > s.id;
             return (
-              <li key={s.id} className="flex items-center flex-1">
-                <div className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm ${
-                  active ? "bg-slate-900 text-white border-slate-900" :
-                  done ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
-                  "bg-white text-slate-500 border-slate-200"
+              <li key={s.id} className="flex items-center flex-1 group">
+                <div className={`flex items-center gap-3 px-4 py-3 rounded-2xl border transition-all duration-500 ${
+                  active ? "bg-[#6B3F69] text-white border-[#6B3F69] shadow-xl shadow-[#6B3F69]/20 -translate-y-1" :
+                  done ? "bg-emerald-50 text-emerald-700 border-emerald-100 shadow-sm" :
+                  "bg-white text-slate-400 border-slate-100 shadow-sm opacity-60"
                 }`}>
-                  {done ? <Check size={14} /> : <Icon size={14} />}
-                  <span className="font-medium">{s.label}</span>
+                  <div className={`h-6 w-6 rounded-lg flex items-center justify-center ${active ? 'bg-white/20' : done ? 'bg-emerald-100' : 'bg-slate-50'}`}>
+                    {done ? <Check size={14} strokeWidth={3} /> : <Icon size={14} strokeWidth={2.5} />}
+                  </div>
+                  <span className="text-[11px] font-black uppercase tracking-wider">{s.label}</span>
                 </div>
-                {i < STEPS.length - 1 && <div className="flex-1 h-px bg-slate-200 mx-2" />}
+                {i < STEPS.length - 1 && (
+                  <div className={`flex-1 h-1 mx-4 rounded-full transition-all duration-700 ${done ? 'bg-emerald-200' : 'bg-slate-100'}`} />
+                )}
               </li>
             );
           })}
@@ -519,21 +523,35 @@ export default function EditEmployeePage() {
             </>
           )}
 
-          <div className="flex items-center justify-between pt-4 border-t border-slate-100">
-            <button type="button" onClick={prev} disabled={step === 1}
-              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed">
-              <ChevronLeft size={16} /> Back
+          <div className="flex items-center justify-between pt-8 border-t border-slate-50 mt-10">
+            <button 
+              type="button" 
+              onClick={prev} 
+              disabled={step === 1}
+              className="inline-flex items-center gap-3 px-8 h-14 text-[10px] font-black uppercase tracking-widest text-slate-500 bg-white border border-slate-100 rounded-2xl hover:bg-slate-50 hover:text-slate-900 disabled:opacity-30 disabled:cursor-not-allowed transition-all active:scale-95 shadow-sm"
+            >
+              <ChevronLeft size={18} /> Back
             </button>
 
             {step < 4 ? (
-              <button type="button" onClick={next}
-                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-slate-900 rounded-lg hover:bg-slate-800">
-                Next <ChevronRight size={16} />
+              <button 
+                type="button" 
+                onClick={next}
+                className="inline-flex items-center gap-3 px-10 h-14 text-[10px] font-black uppercase tracking-widest text-white bg-slate-900 rounded-2xl hover:bg-[#6B3F69] transition-all active:scale-95 shadow-xl shadow-slate-900/10"
+              >
+                Next Step <ChevronRight size={18} />
               </button>
             ) : (
-              <button type="submit" disabled={isSubmitting}
-                className="inline-flex items-center gap-2 px-5 py-2 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 disabled:opacity-60">
-                {isSubmitting ? <><Loader2 size={16} className="animate-spin" /> Saving…</> : <><Check size={16} /> Save changes</>}
+              <button 
+                type="submit" 
+                disabled={isSubmitting}
+                className="inline-flex items-center gap-3 px-10 h-14 text-[10px] font-black uppercase tracking-widest text-white bg-indigo-600 rounded-2xl hover:bg-indigo-700 disabled:opacity-60 transition-all active:scale-95 shadow-xl shadow-indigo-600/20"
+              >
+                {isSubmitting ? (
+                  <><Loader2 size={18} className="animate-spin" /> Saving Changes…</>
+                ) : (
+                  <><Check size={18} strokeWidth={3} /> Update Profile</>
+                )}
               </button>
             )}
           </div>

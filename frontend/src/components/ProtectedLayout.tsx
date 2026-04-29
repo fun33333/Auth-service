@@ -26,7 +26,6 @@ export default function ProtectedLayout({
 }) {
   const { user, logout, isAuthenticated } = useAuth();
   const [isSidebarOpen, setSidebarOpen] = useState(false);
-  const [isProfileOpen, setProfileOpen] = useState(false);
   const pathname = usePathname();
 
   if (!isAuthenticated) return null;
@@ -47,11 +46,11 @@ export default function ProtectedLayout({
     .toUpperCase() || "U";
 
   return (
-    <div className="flex h-screen overflow-hidden bg-slate-50 relative">
+    <div className="flex h-screen overflow-hidden relative">
       {/* Background Glow */}
       <div className="absolute inset-0 z-0 pointer-events-none blur-[150px] opacity-30">
-        <div className="absolute -top-[20%] -left-[10%] w-[60%] h-[60%] rounded-full bg-[#BDA6CE]" />
-        <div className="absolute top-[50%] -right-[15%] w-[50%] h-[50%] rounded-full bg-[#BDA6CE]" />
+        <div className="absolute -top-[20%] -left-[10%] w-[60%] h-[60%] rounded-full " />
+        <div className="absolute top-[50%] -right-[15%] w-[50%] h-[50%] rounded-full" />
       </div>
 
       <div className="flex h-screen w-full relative z-10">
@@ -65,18 +64,17 @@ export default function ProtectedLayout({
 
         {/* ─── Sidebar ─────────────────────────────────────────────────── */}
         <aside
-          className={`fixed inset-y-0 left-0 z-30 w-60 bg-white/90 backdrop-blur-md border-r border-slate-100 shadow-sm flex flex-col transform transition-transform duration-300 lg:translate-x-0 lg:static ${
-            isSidebarOpen ? "translate-x-0" : "-translate-x-full"
-          }`}
+          className={`fixed inset-y-0 left-0 z-30 w-60 bg-white/90 backdrop-blur-md border-r border-slate-100 shadow-sm flex flex-col transform transition-transform duration-300 lg:translate-x-0 lg:static ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"
+            }`}
         >
           {/* Logo */}
           <div className="flex items-center justify-between h-16 px-5 border-b border-slate-100 shrink-0">
-            <Link href="/" className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
+            <Link href="/" className="flex items-center gap-2 group">
+              <div className="w-8 h-8 bg-[#6B3F69] rounded-lg flex items-center justify-center shadow-md shadow-[#6B3F69]/20 group-hover:scale-105 transition-transform">
                 <Users size={16} className="text-white" />
               </div>
-              <span className="font-black text-slate-800 text-sm tracking-wide">
-                EMS Portal
+              <span className="font-black text-slate-800 text-sm tracking-wide group-hover:text-[#6B3F69] transition-colors">
+                EMS Dashboard
               </span>
             </Link>
             <button
@@ -89,8 +87,8 @@ export default function ProtectedLayout({
 
           {/* User Card */}
           <div className="px-4 py-4 border-b border-slate-100 shrink-0">
-            <div className="flex items-center gap-3 bg-slate-50 rounded-xl p-3">
-              <div className="w-10 h-10 bg-indigo-600 text-white flex items-center justify-center rounded-full text-sm font-black shrink-0">
+            <div className="flex items-center gap-3 bg-slate-50 rounded-xl p-3 hover:shadow-md transition-all cursor-pointer group">
+              <div className="w-10 h-10 bg-[#6B3F69] text-white flex items-center justify-center rounded-full text-sm font-black shrink-0 shadow-sm shadow-[#6B3F69]/20 group-hover:scale-110 transition-transform">
                 {initials}
               </div>
               <div className="min-w-0">
@@ -115,13 +113,12 @@ export default function ProtectedLayout({
                   key={link.name}
                   href={link.href}
                   onClick={() => setSidebarOpen(false)}
-                  className={`flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-semibold transition-all duration-150 ${
-                    isActive
-                      ? "bg-indigo-50 text-indigo-600"
-                      : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"
-                  }`}
+                  className={`flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-semibold transition-all duration-300 group hover:-translate-y-0.5 ${isActive
+                      ? "bg-[#6B3F69] text-white shadow-lg shadow-[#6B3F69]/20"
+                      : "text-slate-500 hover:bg-[#6B3F69]/10 hover:text-[#6B3F69]"
+                    }`}
                 >
-                  <Icon size={17} strokeWidth={isActive ? 2.5 : 2} />
+                  <Icon size={18} strokeWidth={isActive ? 2.5 : 2} className={isActive ? "" : "group-hover:scale-110 transition-transform duration-300"} />
                   <span>{link.name}</span>
                 </Link>
               );
@@ -143,7 +140,7 @@ export default function ProtectedLayout({
         {/* ─── Main Area ───────────────────────────────────────────────── */}
         <div className="flex flex-col flex-1 min-w-0">
           {/* Header */}
-          <header className="h-16 bg-white/80 backdrop-blur-md border-b border-slate-100 flex items-center justify-between px-5 shrink-0 shadow-sm">
+          <header className="h-16 bg-white/80 backdrop-blur-md border-b border-slate-100 flex items-center justify-between px-10 shrink-0 shadow-sm">
             {/* Mobile menu toggle */}
             <button
               className="lg:hidden text-slate-500 hover:text-slate-700"
@@ -153,66 +150,35 @@ export default function ProtectedLayout({
             </button>
 
             {/* Search */}
-            <div className="hidden md:flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 w-64">
+            {/* <div className="hidden md:flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 w-64">
               <Search size={15} className="text-slate-400 shrink-0" />
               <input
                 type="text"
                 placeholder="Quick search..."
-                className="bg-transparent text-sm text-slate-600 placeholder-slate-400 outline-none w-full"
+                className="bg-transparent text-sm text-slate-600 placeholder-slate-900 outline-none w-full"
               />
-            </div>
+            </div> */}
 
             {/* Right side */}
             <div className="flex items-center gap-3 ml-auto">
               {/* Bell */}
-              <button className="relative p-2 rounded-xl hover:bg-slate-100 transition-colors">
+              <button className="relative p-2 rounded-lg hover:bg-slate-100 transition-colors">
                 <Bell size={18} className="text-slate-500" />
                 <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-400 rounded-full" />
               </button>
 
-              {/* Profile Dropdown */}
-              <div className="relative">
-                <button
-                  className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl pl-1 pr-3 py-1 hover:bg-slate-100 transition-colors cursor-pointer"
-                  onClick={() => setProfileOpen(!isProfileOpen)}
-                >
-                  <div className="w-7 h-7 bg-indigo-600 text-white flex items-center justify-center rounded-lg text-xs font-black">
-                    {initials}
-                  </div>
-                  <span className="text-xs font-bold text-slate-700 hidden sm:block max-w-[120px] truncate">
-                    {user?.full_name}
-                  </span>
-                  <ChevronDown size={13} className="text-slate-400" />
-                </button>
-
-                {isProfileOpen && (
-                  <>
-                    <div
-                      className="fixed inset-0 z-10"
-                      onClick={() => setProfileOpen(false)}
-                    />
-                    <div className="absolute right-0 mt-2 w-48 bg-white border border-slate-100 rounded-2xl shadow-xl z-20 overflow-hidden">
-                      <div className="px-4 py-3 border-b border-slate-100">
-                        <p className="text-xs font-black text-slate-800 truncate">
-                          {user?.full_name}
-                        </p>
-                        <p className="text-[11px] text-slate-400 truncate">
-                          {user?.email}
-                        </p>
-                      </div>
-                      <button
-                        onClick={() => {
-                          setProfileOpen(false);
-                          logout();
-                        }}
-                        className="w-full text-left px-4 py-2.5 text-sm font-semibold text-red-500 hover:bg-red-50 transition-colors"
-                      >
-                        Sign Out
-                      </button>
-                    </div>
-                  </>
-                )}
-              </div>
+              {/* Profile Link */}
+              <Link
+                href="/profile"
+                className="flex items-center gap-2 border border-slate-200 rounded-xl pl-1 pr-3 py-1 hover:bg-white/50 transition-colors cursor-pointer group"
+              >
+                <div className="w-7 h-7 bg-[#6B3F69] text-white flex items-center justify-center rounded-lg text-xs font-black group-hover:scale-105 transition-transform shadow-sm shadow-[#6B3F69]/20">
+                  {initials}
+                </div>
+                <span className="text-xs font-bold text-slate-700 hidden sm:block max-w-30 truncate">
+                  {user?.full_name}
+                </span>
+              </Link>
             </div>
           </header>
 
