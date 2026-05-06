@@ -326,7 +326,7 @@ class Employee(SoftDeleteModel):
     
     # Derived from Primary Assignment
     employee_code = models.CharField(
-        max_length=50, unique=True, editable=False, blank=True, db_index=True,
+        max_length=50, unique=True, editable=False, blank=True, null=True, db_index=True,
         help_text="Generated from Primary Assignment"
     )
     
