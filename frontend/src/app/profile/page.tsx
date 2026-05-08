@@ -1,177 +1,162 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import ProtectedLayout from "@/components/ProtectedLayout";
 import { useAuth } from "@/context/AuthContext";
 import Link from "next/link";
-import { User, Mail, Building, Shield, Camera, Calendar, Edit2 } from "lucide-react";
+import { User, Mail, Building, Camera, Calendar, Edit2 } from "lucide-react";
 
 export default function ProfilePage() {
-  const { user } = useAuth();
-  
-  // For the update contact section
-  const [phone, setPhone] = useState("");
-  const [altEmail, setAltEmail] = useState("");
-  
-  if (!user) return null;
+    const { user } = useAuth();
 
-  const roleText = user.is_superadmin ? "System Administrator" : (user.designation || "User");
-  const roleDesc = user.is_superadmin ? "Full system access and management" : "Standard system access and management";
-  const memberSince = "29/04/2026";
+    const [message, setMessage] = useState("");
 
-  return (
-    <ProtectedLayout>
-      <div className="max-w-5xl mx-auto px-4 py-8 animate-in fade-in duration-500">
-        
-        {/* Top Header */}
-        <div className="flex flex-col items-center justify-center text-center mb-10">
-          <div className="h-14 w-14 bg-[#2a4d77] rounded-full flex items-center justify-center mb-4 shadow-sm">
-            <User size={26} className="text-white" strokeWidth={2} />
-          </div>
-          <h1 className="text-2xl font-bold text-[#1e293b]">Profile Settings</h1>
-          <p className="text-sm text-slate-500 mt-1">Manage your account information and preferences</p>
-        </div>
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const [previewImage, setPreviewImage] = useState<string | null>(null);
 
-        <div className="flex flex-col lg:flex-row gap-6">
-          
-          {/* Left Column - Profile Card */}
-          <div className="w-full lg:w-[320px] shrink-0">
-            <div className="bg-white rounded-xl shadow-sm overflow-hidden flex flex-col border border-slate-100">
-              <div className="bg-[#2a4d77] flex flex-col items-center pt-10 pb-8 px-4">
-                <div className="relative mb-4">
-                  <div className="h-28 w-28 rounded-full bg-white flex items-center justify-center text-4xl font-bold text-[#2a4d77] shadow-lg">
-                    {user.full_name?.charAt(0)}
-                  </div>
-                  <div className="absolute bottom-1 right-1 bg-white p-1.5 rounded-full shadow-sm text-slate-400 hover:text-slate-600 cursor-pointer border border-slate-100">
-                    <Camera size={14} />
-                  </div>
+    if (!user) return null;
+
+    const roleText = user.is_superadmin ? "System Administrator" : (user.designation || "User");
+    const roleDesc = user.is_superadmin ? "Full system access and management" : "Standard system access and management";
+    const memberSince = "29/04/2026"; // Or use user created_at if available
+
+    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        // Simulate image upload by creating a local preview URL
+        const imageUrl = URL.createObjectURL(file);
+        setPreviewImage(imageUrl);
+        setMessage("Profile picture updated locally.");
+        setTimeout(() => setMessage(""), 3000);
+    };
+
+    const triggerImageUpload = () => {
+        fileInputRef.current?.click();
+    };
+
+    return (
+        <ProtectedLayout>
+            <div className="max-w-3xl mx-auto px-2 py-5 sm:py-10 animate-in fade-in duration-500">
+
+                {/* Top Header */}
+                <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden p-5">
+                    <div className="flex flex-col items-center justify-center text-center mb-8">
+                        <div className="h-14 w-14 bg-[#6B3F69] rounded-full flex items-center justify-center mb-4 shadow-md shadow-[#6B3F69]/20">
+                            <User size={26} className="text-white" strokeWidth={2} />
+                        </div>
+                        <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">Profile Settings</h1>
+                        <p className="text-sm font-medium text-slate-500 mt-2">Manage your account information and preferences</p>
+                    </div>
+
+                    {message && (
+                        <div className="mb-6 p-4 bg-emerald-50 text-emerald-700 rounded-xl text-sm font-bold text-center animate-in fade-in slide-in-from-top-4 border border-emerald-100 shadow-sm">
+                            {message}
+                        </div>
+                    )}
+
+                    {/* Settings container (centered form) */}
+
+                    <div className="p-6 sm:p-10">
+
+                        {/* Section Header */}
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 pb-6 border-b border-slate-100">
+                            <h3 className="text-lg font-black text-slate-900 tracking-tight">Personal Information</h3>
+                            {/* <Link href={`/employees/${user.id}/edit`} className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-[#6B3F69] text-white text-xs font-black uppercase tracking-widest rounded-xl hover:bg-[#563254] transition-all shadow-lg shadow-[#6B3F69]/20 active:scale-95">
+                                <Edit2 size={14} /> Edit Profile
+                            </Link> */}
+                        </div>
+
+                        {/* Grid Form Fields */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-6 mb-10 border-b border-slate-100 pb-10">
+                            <div>
+                                <label className="flex items-center gap-1.5 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2.5">
+                                    <User size={12} /> Full Name
+                                </label>
+                                <div className="w-full bg-white border border-slate-100 rounded-xl px-4 py-3.5 text-sm text-slate-900 font-bold shadow-sm">
+                                    {user.full_name}
+                                </div>
+                            </div>
+                            <div>
+                                <label className="flex items-center gap-1.5 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2.5">
+                                    <Mail size={12} /> Email Address
+                                </label>
+                                <div className="w-full bg-white border border-slate-100 rounded-xl px-4 py-3.5 text-sm text-slate-900 font-bold shadow-sm">
+                                    {user.email}
+                                </div>
+                            </div>
+                            <div>
+                                <label className="flex items-center gap-1.5 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2.5">
+                                    <Building size={12} /> Department
+                                </label>
+                                <div className="w-full bg-white border border-slate-100 rounded-xl px-4 py-3.5 text-sm text-slate-900 font-bold shadow-sm">
+                                    {user.department || "Unassigned"}
+                                </div>
+                            </div>
+                            <div>
+                                <label className="flex items-center gap-1.5 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2.5">
+                                    <div className="h-2 w-2 rounded-full border-[1.5px] border-slate-400" /> Role
+                                </label>
+                                <div className="w-full bg-white border border-purple-100 rounded-xl px-4 py-3.5 text-sm text-[#6B3F69] font-black shadow-sm">
+                                    {user.is_superadmin ? "Admin" : (user.designation || "User")}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Profile Picture Section */}
+                        <div className="mb-10 border-b border-slate-100 pb-10">
+                            <h3 className="text-sm font-black text-slate-900 mb-6">Profile Picture</h3>
+                            <div className="bg-slate-50 border border-slate-100 rounded-2xl p-6 sm:p-8 flex flex-col sm:flex-row items-center gap-6 group">
+                                <div className="h-24 w-24 shrink-0 rounded-4xl bg-white flex items-center justify-center text-3xl font-black text-[#6B3F69] shadow-lg shadow-[#6B3F69]/10 border border-slate-100 overflow-hidden relative group-hover:scale-105 transition-transform duration-300">
+                                    {previewImage ? (
+                                        <img src={previewImage} alt="Profile" className="h-full w-full object-cover" />
+                                    ) : (
+                                        user.full_name?.charAt(0)
+                                    )}
+                                </div>
+                                <div className="flex-1 text-center sm:text-left">
+                                    <p className="text-[11px] text-slate-500 mb-5 leading-relaxed font-semibold max-w-sm mx-auto sm:mx-0">
+                                        Update your profile picture to help people recognize you easily. The image will appear in your navbar across all pages.
+                                    </p>
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        ref={fileInputRef}
+                                        onChange={handleImageChange}
+                                        className="hidden"
+                                    />
+                                    <button
+                                        onClick={triggerImageUpload}
+                                        className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-white border border-slate-200 text-slate-700 text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-slate-50 hover:text-slate-900 transition-all shadow-sm active:scale-95"
+                                    >
+                                        <Camera size={14} /> Upload Picture
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Role Information Section */}
+                        <div>
+                            <h3 className="text-sm font-black text-slate-900 mb-6">Role Information</h3>
+                            <div className="bg-slate-50 border border-slate-100 rounded-2xl p-6 sm:p-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                                <div>
+                                    <p className="text-sm text-slate-900 font-black tracking-tight mb-1.5">
+                                        {roleText}
+                                    </p>
+                                    <p className="text-xs text-slate-500 font-medium">
+                                        {roleDesc}
+                                    </p>
+                                </div>
+                                <div className="flex items-center gap-2.5 px-4 py-2.5 bg-white rounded-lg border border-slate-100 shadow-sm text-[10px] font-black uppercase tracking-widest text-slate-400">
+                                    <Calendar size={14} className="text-[#6B3F69]" />
+                                    <span>Since {memberSince}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
                 </div>
-                <h2 className="text-xl font-bold text-white mb-1">{user.full_name}</h2>
-                <p className="text-xs text-blue-200 mb-4">{user.email}</p>
-                <div className="px-4 py-1 bg-white/20 rounded-full text-[10px] font-bold uppercase tracking-wider text-white flex items-center gap-1.5">
-                  <Shield size={12} /> {user.is_superadmin ? "Admin" : "User"}
-                </div>
-              </div>
-              <div className="p-6 text-center bg-white border-t border-slate-100">
-                <p className="text-[13px] text-slate-500 mb-4 leading-relaxed font-medium">
-                  {roleText} - {roleDesc}
-                </p>
-                <div className="flex items-center justify-center gap-1.5 text-[11px] font-semibold text-slate-400">
-                  <Calendar size={14} />
-                  <span>Member since: {memberSince}</span>
-                </div>
-              </div>
             </div>
-          </div>
-
-          {/* Right Column - Settings container */}
-          <div className="flex-1 bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
-            
-            <div className="p-8">
-              {/* Section Header */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-                <h3 className="text-lg font-bold text-[#1e293b]">Personal Information</h3>
-                <Link href={`/employees/${user.id}/edit`} className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-[#2a4d77] text-white text-xs font-semibold rounded-lg hover:bg-[#1f3855] transition-colors shadow-sm">
-                  <Edit2 size={14} /> Edit Profile
-                </Link>
-              </div>
-
-              {/* Grid Form Fields */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5 mb-8 border-b border-slate-100 pb-8">
-                <div>
-                  <label className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">
-                    <User size={12} /> Full Name
-                  </label>
-                  <div className="w-full bg-[#f8fafc] border border-slate-200 rounded-lg px-4 py-3 text-sm text-slate-700 font-medium">
-                    {user.full_name}
-                  </div>
-                </div>
-                <div>
-                  <label className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">
-                    <Mail size={12} /> Email Address
-                  </label>
-                  <div className="w-full bg-[#f8fafc] border border-slate-200 rounded-lg px-4 py-3 text-sm text-slate-700 font-medium">
-                    {user.email}
-                  </div>
-                </div>
-                <div>
-                  <label className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">
-                    <Building size={12} /> Department
-                  </label>
-                  <div className="w-full bg-[#f8fafc] border border-slate-200 rounded-lg px-4 py-3 text-sm text-slate-700 font-medium">
-                    {user.department || "Academic"}
-                  </div>
-                </div>
-                <div>
-                  <label className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">
-                    <Shield size={12} /> Role
-                  </label>
-                  <div className="w-full bg-blue-50/50 border border-blue-200 rounded-lg px-4 py-3 text-sm text-[#2a4d77] font-bold">
-                    {user.is_superadmin ? "Admin" : (user.designation || "User")}
-                  </div>
-                </div>
-              </div>
-
-              {/* Profile Picture Section */}
-              <div className="mb-8 border-b border-slate-100 pb-8">
-                <h3 className="text-[14px] font-bold text-slate-800 mb-4">Profile Picture</h3>
-                <div className="bg-[#f0f4f8] border border-slate-200 rounded-xl p-6 flex flex-col sm:flex-row items-center gap-6">
-                  <div className="h-16 w-16 shrink-0 rounded-full bg-white flex items-center justify-center text-xl font-bold text-[#2a4d77] shadow-sm border border-slate-100">
-                    {user.full_name?.charAt(0)}
-                  </div>
-                  <div>
-                    <p className="text-[11px] text-slate-500 mb-4 leading-relaxed font-medium max-w-md">
-                      Update your profile picture to help people recognize you easily. The image will appear in your navbar across all pages.
-                    </p>
-                    <button className="flex items-center justify-center gap-2 px-4 py-2 bg-[#2a4d77] text-white text-[11px] font-bold rounded-lg hover:bg-[#1f3855] transition-colors shadow-sm">
-                      <Camera size={14} /> Upload Profile Picture
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Role Information Section */}
-              <div className="mb-8 border-b border-slate-100 pb-8">
-                <h3 className="text-[14px] font-bold text-slate-800 mb-4">Role Information</h3>
-                <div className="bg-[#f0f4f8] border border-slate-200 rounded-xl p-5">
-                  <p className="text-[13px] text-slate-500 font-medium mb-3">
-                    {roleText} - {roleDesc}
-                  </p>
-                  <div className="flex items-center gap-2 text-[11px] text-slate-400 font-semibold">
-                    <Calendar size={14} />
-                    <span>Member since: {memberSince}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Update Contact Section */}
-              <div>
-                <h3 className="text-[14px] font-bold text-slate-800 mb-4">Update Contact</h3>
-                <div className="flex flex-col sm:flex-row gap-4 mb-5">
-                  <input 
-                    type="text" 
-                    placeholder="Phone number" 
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    className="flex-1 border border-slate-300 rounded-lg px-4 py-2.5 text-[13px] text-slate-700 font-medium placeholder-slate-400 focus:outline-none focus:border-[#2a4d77] focus:ring-1 focus:ring-[#2a4d77]"
-                  />
-                  <input 
-                    type="email" 
-                    placeholder="Alternate email" 
-                    value={altEmail}
-                    onChange={(e) => setAltEmail(e.target.value)}
-                    className="flex-1 border border-slate-300 rounded-lg px-4 py-2.5 text-[13px] text-slate-700 font-medium placeholder-slate-400 focus:outline-none focus:border-[#2a4d77] focus:ring-1 focus:ring-[#2a4d77]"
-                  />
-                </div>
-                <button className="px-6 py-2.5 bg-[#2a4d77] text-white text-[11px] font-bold rounded-lg hover:bg-[#1f3855] transition-colors shadow-sm">
-                  Save Contact
-                </button>
-              </div>
-
-            </div>
-          </div>
-        </div>
-      </div>
-    </ProtectedLayout>
-  );
+        </ProtectedLayout >
+    );
 }

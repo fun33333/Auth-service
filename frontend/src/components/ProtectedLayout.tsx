@@ -87,19 +87,23 @@ export default function ProtectedLayout({
 
           {/* User Card */}
           <div className="px-4 py-4 border-b border-slate-100 shrink-0">
-            <div className="flex items-center gap-3 bg-slate-50 rounded-xl p-3 hover:shadow-md transition-all cursor-pointer group">
-              <div className="w-10 h-10 bg-[#6B3F69] text-white flex items-center justify-center rounded-full text-sm font-black shrink-0 shadow-sm shadow-[#6B3F69]/20 group-hover:scale-110 transition-transform">
+            <Link 
+              href="/profile"
+              onClick={() => setSidebarOpen(false)}
+              className="flex items-center gap-3 bg-slate-50 rounded-2xl p-3 hover:bg-slate-100 hover:shadow-sm transition-all cursor-pointer group border border-slate-50 hover:border-slate-200"
+            >
+              <div className="w-10 h-10 bg-[#6B3F69] text-white flex items-center justify-center rounded-full text-sm font-black shrink-0 shadow-sm shadow-[#6B3F69]/20 group-hover:scale-105 transition-transform">
                 {initials}
               </div>
-              <div className="min-w-0">
-                <p className="font-black text-xs text-slate-800 truncate">
+              <div className="min-w-0 flex flex-col justify-center">
+                <p className="font-black text-[13px] text-[#1e293b] leading-tight truncate">
                   {user?.full_name || "User"}
                 </p>
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 truncate">
+                <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 truncate mt-0.5">
                   {user?.designation || user?.department || "Admin"}
                 </p>
               </div>
-            </div>
+            </Link>
           </div>
 
           {/* Nav Links */}
@@ -170,14 +174,19 @@ export default function ProtectedLayout({
               {/* Profile Link */}
               <Link
                 href="/profile"
-                className="flex items-center gap-2 border border-slate-200 rounded-xl pl-1 pr-3 py-1 hover:bg-white/50 transition-colors cursor-pointer group"
+                className="flex items-center gap-3 bg-slate-50 hover:bg-slate-100 rounded-[1.25rem] pl-1.5 pr-4 py-1.5 transition-colors cursor-pointer group border border-slate-100/50"
               >
-                <div className="w-7 h-7 bg-[#6B3F69] text-white flex items-center justify-center rounded-lg text-xs font-black group-hover:scale-105 transition-transform shadow-sm shadow-[#6B3F69]/20">
+                <div className="w-9 h-9 bg-[#6B3F69] text-white flex items-center justify-center rounded-full text-xs font-black shadow-sm group-hover:scale-105 transition-transform">
                   {initials}
                 </div>
-                <span className="text-xs font-bold text-slate-700 hidden sm:block max-w-30 truncate">
-                  {user?.full_name}
-                </span>
+                <div className="hidden sm:flex flex-col justify-center">
+                  <span className="text-[13px] font-black text-[#1e293b] leading-tight">
+                    {user?.full_name || "User"}
+                  </span>
+                  <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-tight mt-0.5">
+                    {user?.designation || user?.department || "Admin"}
+                  </span>
+                </div>
               </Link>
             </div>
           </header>

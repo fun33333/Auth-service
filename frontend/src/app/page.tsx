@@ -106,13 +106,38 @@ function StatCard({
   loading: boolean;
   color?: string;
 }) {
-  const colorMap: Record<string, string> = {
-    indigo: { text: "text-indigo-600", bg: "bg-indigo-50", shadow: "hover:shadow-indigo-500/20", blob: "bg-indigo-500/5" },
-    emerald: { text: "text-emerald-600", bg: "bg-emerald-50", shadow: "hover:shadow-emerald-500/20", blob: "bg-emerald-500/5" },
-    amber: { text: "text-amber-600", bg: "bg-amber-50", shadow: "hover:shadow-amber-500/20", blob: "bg-amber-500/5" },
-    rose: { text: "text-rose-600", bg: "bg-rose-50", shadow: "hover:shadow-rose-500/20", blob: "bg-rose-500/5" },
-    purple: { text: "text-[#6B3F69]", bg: "bg-[#6B3F69]/10", shadow: "hover:shadow-[#6B3F69]/20", blob: "bg-[#6B3F69]/5" },
-    blue: { text: "text-blue-600", bg: "bg-blue-50", shadow: "hover:shadow-blue-500/20", blob: "bg-blue-500/5" },
+  type ColorConfig = {
+    text: string;
+    bg: string;
+    shadow: string;
+    blob: string;
+  };
+
+  const colorMap: Record<string, ColorConfig> = {
+    indigo: {
+      text: "text-indigo-600",
+      bg: "bg-indigo-50",
+      shadow: "hover:shadow-indigo-500/20",
+      blob: "bg-indigo-400/30",
+    },
+    emerald: {
+      text: "text-emerald-600",
+      bg: "bg-emerald-50",
+      shadow: "hover:shadow-emerald-500/20",
+      blob: "bg-emerald-400/30",
+    },
+    amber: {
+      text: "text-amber-600",
+      bg: "bg-amber-50",
+      shadow: "hover:shadow-amber-500/20",
+      blob: "bg-amber-400/30",
+    },
+    rose: {
+      text: "text-rose-600",
+      bg: "bg-rose-50",
+      shadow: "hover:shadow-rose-500/20",
+      blob: "bg-rose-400/30",
+    },
   };
 
   const theme = colorMap[color] || colorMap.indigo;
@@ -229,7 +254,7 @@ function OrgMixRow({
         <span className="text-sm font-black text-slate-800">{count}</span>
       </div>
       <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
-        <div 
+        <div
           className={`h-full ${bg} rounded-full transition-all duration-1000 ease-out`}
           style={{ width: `${percentage}%` }}
         />
@@ -267,6 +292,33 @@ function AlertItem({
     </div>
   );
 }
+
+function EmployeeAlertItem({
+  employee,
+}: {
+  employee: any;
+}) {
+  return (
+    <a
+      href={`/employees/${employee.employee_id}`}
+      className="rounded-xl border border-slate-50 bg-slate-50/50 p-2.5 flex items-center gap-3 hover:bg-white hover:shadow-xl hover:shadow-[#6B3F69]/5 hover:-translate-y-0.5 transition-all duration-300 group"
+    >
+      <div className="w-10 h-10 rounded-xl bg-[#6B3F69]/10 flex items-center justify-center text-[#6B3F69] font-black text-sm group-hover:bg-[#6B3F69] group-hover:text-white transition-all duration-500 shadow-sm">
+        {employee.full_name?.charAt(0) || "E"}
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-[11px] font-black text-slate-900 truncate uppercase tracking-tight group-hover:text-[#6B3F69] transition-colors">
+          {employee.full_name}
+        </p>
+        <p className="text-[9px] text-slate-400 truncate uppercase tracking-widest font-black mt-0.5">
+          {employee.designation?.position_name || "Employee"} 
+        </p>
+      </div>
+      <ArrowRight size={14} className="shrink-0 text-slate-300 group-hover:text-[#6B3F69] group-hover:translate-x-1 transition-all" />
+    </a>
+  );
+}
+
 
 // ─── Stream Row ───────────────────────────────────────────────────────────────
 function StreamRow({ event }: { event: StreamEvent }) {
@@ -366,7 +418,9 @@ export default function Dashboard() {
     branches: 0,
   });
 
+  const [recentEmployees, setRecentEmployees] = useState<any[]>([]);
   const [streamEvents, setStreamEvents] = useState<StreamEvent[]>([]);
+
   const [deptMix, setDeptMix] = useState<{ name: string; count: number }[]>([]);
 
   // Monthly hiring trend (mock sparkline data)
@@ -417,12 +471,16 @@ export default function Dashboard() {
           branches: branchArr.length,
         });
 
+        // Set recent employees (first 5 from the sorted list)
+        setRecentEmployees(empArr.slice(0, 4));
+
         // Map audit logs to stream events
+
         const events: StreamEvent[] = auditLogs.map((log: any) => {
           const timestamp = new Date(log.timestamp);
           const now = new Date();
           const diffMin = Math.floor((now.getTime() - timestamp.getTime()) / 60000);
-          
+
           let timeMsg = "Just now";
           if (diffMin > 0) {
             if (diffMin < 60) timeMsg = `${diffMin}m ago`;
@@ -473,7 +531,7 @@ export default function Dashboard() {
 
   return (
     <ProtectedLayout>
-      <div className="p-2 sm:p-3 space-y-2 sm:space-y-3 max-w-[1400px] mx-auto animate-in fade-in duration-500">
+      <div className="p-2 sm:p-3 space-y-2 sm:space-y-3 max-w-350 mx-auto animate-in fade-in duration-500">
 
         {/* Page Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-5 bg-white p-3 sm:p-4 rounded-[1.2rem] border border-slate-100 backdrop-blur-md ">
@@ -486,7 +544,7 @@ export default function Dashboard() {
                 <span className="text-sm font-bold text-slate-400 uppercase tracking-widest">{greeting},</span>
                 <span className="text-sm font-black text-[#6B3F69] uppercase tracking-widest">{user?.full_name || "Guest"}</span>
               </div>
-            
+
             </div>
           </div>
           <div className="flex flex-col items-end">
@@ -496,7 +554,7 @@ export default function Dashboard() {
               </span>
               <span className="font-black text-slate-700">{today}</span>
             </div>
-           
+
           </div>
         </div>
 
@@ -511,7 +569,7 @@ export default function Dashboard() {
             color="purple"
           />
           <StatCard
-            title="Active Units"
+            title="Active Branchs"
             value={stats.departments}
             sub="Functional Hubs"
             icon={LayoutGrid}
@@ -519,7 +577,7 @@ export default function Dashboard() {
             color="amber"
           />
           <StatCard
-            title="Total Workforce"
+            title="Total Employees"
             value={stats.employees}
             sub="+1.2% growth"
             icon={Users}
@@ -537,7 +595,7 @@ export default function Dashboard() {
             <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/5 blur-[80px] rounded-full -mr-10 -mt-10" />
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-sm font-black text-slate-800 uppercase tracking-tighter">
-                Organization Mix
+               Per Department Employees
               </h2>
               <span className="text-[10px] font-black uppercase tracking-widest text-[#6B3F69] bg-[#6B3F69]/10 px-2 py-1 rounded-full">
                 Personnel Hubs
@@ -548,7 +606,7 @@ export default function Dashboard() {
                 {[...Array(5)].map((_, i) => (
                   <div
                     key={i}
-                    className="h-6 bg-slate-50 rounded-xl animate-pulse"
+                    className="h-6 bg-slate-50 rounded-lg animate-pulse"
                   />
                 ))}
               </div>
@@ -557,10 +615,10 @@ export default function Dashboard() {
                 {(() => {
                   const totalMix = deptMix.reduce((acc: number, d: { count: number }) => acc + d.count, 0);
                   return deptMix.map((d: { name: string; count: number; }, index: number) => (
-                    <OrgMixRow 
-                      key={index} 
-                      label={d.name} 
-                      count={d.count} 
+                    <OrgMixRow
+                      key={index}
+                      label={d.name}
+                      count={d.count}
                       total={totalMix}
                       color={["purple", "amber", "emerald", "blue", "rose", "violet"][index % 6]}
                     />
@@ -575,12 +633,12 @@ export default function Dashboard() {
             <div className="absolute top-0 right-0 w-24 h-24 bg-purple-500/5 blur-[80px] rounded-full -mr-10 -mt-10" />
             <div className="flex items-center justify-between mb-1">
               <h2 className="text-sm font-black text-slate-800 uppercase tracking-tighter">
-                Monthly Growth
+                Monthly Employees Growth
               </h2>
               <TrendingUp size={15} className="text-[#6B3F69]/60" />
             </div>
             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-4 opacity-60">
-              Hiring Trend & Forecast
+               New Hiring & Forecast
             </p>
             <div className="h-25">
               <LineChart data={monthlyTrend} />
@@ -597,30 +655,35 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Organization Alerts */}
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-2xl hover:shadow-amber-500/10 hover:-translate-y-1 transition-all duration-500 p-3 sm:p-4 relative overflow-hidden group">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/5 blur-[80px] rounded-full -mr-10 -mt-10" />
+          {/* Recently Added Employees */}
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-2xl hover:shadow-emerald-500/10 hover:-translate-y-1 transition-all duration-500 p-3 sm:p-4 relative overflow-hidden group">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/5 blur-[80px] rounded-full -mr-10 -mt-10" />
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-sm font-black text-slate-800 uppercase tracking-tighter">
-                Organization Alerts
+                Recently Added 
               </h2>
-              <AlertTriangle size={18} className="text-amber-500 shadow-lg shadow-amber-200" />
+              <Users size={18} className="text-emerald-500 shadow-lg shadow-emerald-200" />
             </div>
-            <div className="space-y-3">
-              <AlertItem
-                color="red"
-                icon={FileWarning}
-                title="Missing Data"
-                sub="72 employees missing CNIC"
-              />
-              <AlertItem
-                color="amber"
-                icon={Clock}
-                title="Expiring Contracts"
-                sub="3 Contracts end this month"
-              />
-            </div>
+            
+            {loading ? (
+              <div className="space-y-3">
+                {[...Array(4)].map((_, i) => (
+                  <div key={i} className="h-14 bg-slate-50 rounded-xl animate-pulse" />
+                ))}
+              </div>
+            ) : recentEmployees.length > 0 ? (
+              <div className="space-y-2">
+                {recentEmployees.map((emp, i) => (
+                  <EmployeeAlertItem key={i} employee={emp} />
+                ))}
+              </div>
+            ) : (
+              <div className="py-8 text-center">
+                <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">No recent data</p>
+              </div>
+            )}
           </div>
+
         </div>
 
         {/* ── Row 3: Intelligence Hub | Real-time Stream ── */}
@@ -633,7 +696,7 @@ export default function Dashboard() {
               <h2 className="text-2xl font-black text-slate-900 tracking-tighter uppercase">
                 Intelligence Hub
               </h2>
-              <Settings size={22} className="text-slate-300 hover:rotate-90 transition-transform cursor-pointer" />
+              {/* <Settings size={22} className="text-slate-300 hover:rotate-90 transition-transform cursor-pointer" /> */}
             </div>
             <p className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-400 mb-4 opacity-60 italic">
               Strategic Control & Monitoring
@@ -641,28 +704,28 @@ export default function Dashboard() {
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-3">
               <HubAction
                 icon={UserPlus}
-                label="Personnel"
+                label="Employees"
                 sub="Workforce"
                 color="purple"
                 href="/employees"
               />
               <HubAction
                 icon={FolderPlus}
-                label="Units"
+                label="Departments"
                 sub="Departments"
                 color="amber"
                 href="/departments"
               />
               <HubAction
                 icon={FilePlus}
-                label="Entities"
+                label="Institutions"
                 sub="Institutions"
                 color="emerald"
                 href="/institutions"
               />
               <HubAction
                 icon={Briefcase}
-                label="Roles"
+                label="Desingnations"
                 sub="Designation"
                 color="blue"
                 href="/designations"
@@ -670,7 +733,7 @@ export default function Dashboard() {
               <HubAction
                 icon={GitBranch}
                 label="Branches"
-                sub="Stations"
+                sub="Branches"
                 color="rose"
                 href="/institutions?view=branches"
               />
@@ -691,19 +754,19 @@ export default function Dashboard() {
             </div>
             {loading ? (
               <div className="space-y-4">
-                 {[...Array(6)].map((_, i) => (
-                    <div key={i} className="flex gap-4 p-2">
-                       <div className="w-9 h-9 bg-slate-50 rounded-xl animate-pulse" />
-                       <div className="flex-1 space-y-2 py-1">
-                          <div className="h-3 w-1/2 bg-slate-50 rounded animate-pulse" />
-                          <div className="h-2 w-1/3 bg-slate-50 rounded animate-pulse" />
-                       </div>
+                {[...Array(6)].map((_, i) => (
+                  <div key={i} className="flex gap-4 p-2">
+                    <div className="w-9 h-9 bg-slate-50 rounded-xl animate-pulse" />
+                    <div className="flex-1 space-y-2 py-1">
+                      <div className="h-3 w-1/2 bg-slate-50 rounded animate-pulse" />
+                      <div className="h-2 w-1/3 bg-slate-50 rounded animate-pulse" />
                     </div>
-                 ))}
+                  </div>
+                ))}
               </div>
             ) : streamEvents.length === 0 ? (
               <div className="py-12 text-center">
-                 <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">No activities detected</p>
+                <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">No activities detected</p>
               </div>
             ) : (
               <div className="space-y-1">

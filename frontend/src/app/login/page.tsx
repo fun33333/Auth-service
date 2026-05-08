@@ -1,9 +1,11 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { fetchWithAuth } from "@/utils/api";
-import { Lock, User, LogIn, AlertCircle, Eye, EyeOff } from "lucide-react";
+import {
+  Lock, User, LogIn, AlertCircle, Eye, EyeOff,
+  Building2, Layers, Briefcase, Users,
+} from "lucide-react";
 
 export default function LoginPage() {
   const [employeeCode, setEmployeeCode] = useState("");
@@ -11,134 +13,467 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const { login } = useAuth();
+
+  useEffect(() => {
+    const t = setTimeout(() => setMounted(true), 60);
+    return () => clearTimeout(t);
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setIsLoading(true);
-
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000/api'}/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          employee_code: employeeCode,
-          password: password
-        })
-      });
-
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000/api"}/auth/login`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ employee_code: employeeCode, password }),
+        }
+      );
       const data = await response.json();
-
       if (response.ok) {
-        // Backend returns: { access_token, refresh_token, employee: { ... } }
         login(data.access_token, data.employee);
       } else {
         setError(data.detail || data.error || "Invalid credentials");
       }
-    } catch (err) {
+    } catch {
       setError("Backend server se connection nahi ho paa raha.");
     } finally {
       setIsLoading(false);
     }
   };
 
+  /* stagger helper — same as your original */
+  const a = (delay: number) =>
+    `transition-all duration-500 ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
+    } [transition-delay:${delay}ms]`;
+
+  const features = [
+    { icon: Building2, label: "Institution Mgmt", sub: "Multi-branch" },
+    { icon: Layers, label: "Department Mgmt", sub: "Structured" },
+    { icon: Briefcase, label: "Designation Mgmt", sub: "Roles" },
+    { icon: Users, label: "Employee Mgmt", sub: "Full lifecycle" },
+  ];
+
   return (
-    <div className="flex bg-slate-100 min-h-screen items-center justify-center p-4">
-      <div className="md:w-full md:max-w-md bg-white rounded-2xl shadow-xl overflow-hidden shadow-slate-200/50">
-        <div className="bg-linear-to-r p-8 from-indigo-600 to-indigo-800 text-center text-white">
-          <div className="inline-flex h-16 w-16 bg-white/20 items-center justify-center rounded-full mb-4 shadow-inner">
-            <Lock className="h-8 w-8 text-white" />
-          </div>
-          <h1 className="font-bold text-3xl">Portal Login</h1>
-          <p className="mt-2 text-indigo-100">Employee Management System</p>
-        </div>
+    <>
+      <style>{`
+        /* ── keyframes ── */
+        @keyframes dotBlink {
+          0%, 80%, 100% { opacity: .25 }
+          40%            { opacity: 1   }
+        }
+        @keyframes orbDrift1 {
+          0%,100% { transform: translate(0,0) scale(1); }
+          50%     { transform: translate(22px,16px) scale(1.06); }
+        }
+        @keyframes orbDrift2 {
+          0%,100% { transform: translate(0,0) scale(1); }
+          50%     { transform: translate(-18px,12px) scale(1.08); }
+        }
+        @keyframes particleRise {
+          0%   { transform: translateY(105vh) scale(0); opacity:0; }
+          6%   { opacity:.7; }
+          94%  { opacity:.7; }
+          100% { transform: translateY(-8vh) scale(1); opacity:0; }
+        }
+        @keyframes wrapIn {
+          from { opacity:0; transform: scale(.96) translateY(20px); }
+          to   { opacity:1; transform: scale(1)   translateY(0); }
+        }
+        @keyframes logoIn {
+          from { transform: scale(.55) rotate(-12deg); opacity:0; }
+          to   { transform: scale(1)   rotate(0deg);  opacity:1; }
+        }
+        @keyframes blobPulse {
+          from { transform: scale(1)    rotate(0deg);  opacity:.08; }
+          to   { transform: scale(1.14) rotate(14deg); opacity:.14; }
+        }
+        @keyframes sweep {
+          0%   { left:-70%; }
+          55%  { left:130%; }
+          100% { left:130%; }
+        }
+        @keyframes topBar {
+          0%   { background-position: 200% center; }
+          100% { background-position:-200% center; }
+        }
 
-        <div className="p-8">
-          <form className="space-y-6" onSubmit={handleLogin}>
-            {error && (
-              <div className="flex text-sm bg-red-50 text-red-600 border border-red-200 p-3 items-center rounded-lg">
-                <AlertCircle className="mr-2 w-5 h-5 shrink-0" />
-                <span>{error}</span>
-              </div>
-            )}
+        /* ── bg scene ── */
+        .ems-scene {
+          position:fixed; inset:0; z-index:0; overflow:hidden; pointer-events:none;
+        }
+        .ems-orb {
+          position:absolute; border-radius:50%; filter:blur(70px);
+        }
+        .ems-orb-1 {
+          width:440px; height:440px; top:-130px; left:-100px;
+          background:rgba(107,63,105,.13);
+          animation: orbDrift1 13s ease-in-out infinite;
+        }
+        .ems-orb-2 {
+          width:300px; height:300px; bottom:-80px; right:-60px;
+          background:rgba(107,63,105,.10);
+          animation: orbDrift2 10s ease-in-out infinite;
+        }
+        .ems-grid {
+          position:fixed; inset:0; z-index:0; pointer-events:none;
+          background-image:
+            linear-gradient(rgba(107,63,105,.022) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(107,63,105,.022) 1px, transparent 1px);
+          background-size:44px 44px;
+        }
+        .ems-particle {
+          position:fixed; border-radius:50%; pointer-events:none; z-index:0;
+          animation: particleRise linear infinite;
+        }
 
-            <div>
-              <label
-                htmlFor="employeeCode"
-                className="font-medium text-sm text-slate-700 block mb-2"
-              >
-                Employee Code
-              </label>
-              <div className="relative">
-                <div className="flex absolute inset-y-0 left-0 pl-3 items-center pointer-events-none text-slate-400">
-                  <User size={20} />
-                </div>
-                <input
-                  id="employeeCode"
-                  type="text"
-                  required
-                  value={employeeCode}
-                  onChange={(e) => setEmployeeCode(e.target.value)}
-                  className="w-full text-slate-900 border-slate-300 py-2.5 rounded-lg border pl-10 pr-3 focus:ring-2 focus:ring-indigo-600/50 focus:border-indigo-600 transition outline-none"
-                  placeholder="e.g. EMP12345"
-                />
-              </div>
+        /* ── outer card ── */
+        .ems-wrap {
+          position:relative; z-index:1;
+          width:100%; max-width:860px;
+          background:#fff;
+          border-radius:24px;
+          display:flex;
+          overflow:hidden;
+          box-shadow: 0 28px 72px rgba(0,0,0,.12), 0 4px 20px rgba(0,0,0,.07);
+          min-height:520px;
+          animation: wrapIn .7s cubic-bezier(.22,1,.36,1) both;
+        }
+        /* top shimmer bar on whole card */
+        .ems-wrap::before {
+          content:'';
+          position:absolute; top:0; left:0; right:0; height:3px; z-index:10;
+          background: linear-gradient(90deg, #6B3F69 0%, #9b59b6 40%, #c084fc 60%, #6B3F69 100%);
+          background-size:200% auto;
+          animation: topBar 3.5s linear infinite;
+        }
+
+        /* ── LEFT panel ── */
+        .ems-left {
+          width:42%; flex-shrink:0;
+          background: linear-gradient(148deg, #7b3f91 0%, #6B3F69 48%, #4e2259 100%);
+          padding:44px 36px;
+          display:flex; flex-direction:column;
+          align-items:center; justify-content:center;
+          position:relative; overflow:hidden;
+          border-radius:20px;
+          margin:8px 0 8px 8px;
+        }
+        /* blobs inside left panel */
+        .ems-blob {
+          position:absolute; border-radius:50%;
+          background:rgba(255,255,255,.07);
+          animation: blobPulse ease-in-out infinite alternate;
+        }
+        .ems-blob-1 { width:200px; height:200px; top:-70px; left:-55px;  animation-duration:7s; }
+        .ems-blob-2 { width:140px; height:140px; bottom:-45px; right:-35px; animation-duration:9s; animation-delay:-3s; }
+        .ems-blob-3 { width:80px;  height:80px;  bottom:70px;  left:18px; animation-duration:5s; animation-delay:-1s; }
+        /* sweep shimmer on left */
+        .ems-left::after {
+          content:'';
+          position:absolute; top:0; bottom:0; width:55%;
+          background:linear-gradient(90deg,transparent,rgba(255,255,255,.07),transparent);
+          animation: sweep 5s ease-in-out infinite;
+          pointer-events:none;
+        }
+
+        /* logo icon */
+        .ems-logo-icon {
+          width:64px; height:64px; border-radius:18px;
+          background:rgba(255,255,255,.18);
+          border:1.5px solid rgba(255,255,255,.28);
+          display:flex; align-items:center; justify-content:center;
+          backdrop-filter:blur(8px);
+          margin-bottom:22px;
+          animation: logoIn .65s .2s cubic-bezier(.22,1,.36,1) both;
+          position:relative; overflow:hidden; flex-shrink:0;
+        }
+        .ems-logo-icon::after {
+          content:'';
+          position:absolute; top:-28%; left:-18%;
+          width:48%; height:48%;
+          background:rgba(255,255,255,.22); border-radius:50%;
+          filter:blur(8px);
+        }
+
+        /* feature rows */
+        .ems-feat {
+          display:flex; align-items:center; gap:12px;
+          width:100%;
+          padding:10px 14px;
+          background:rgba(255,255,255,.10);
+          border:1px solid rgba(255,255,255,.14);
+          border-radius:12px;
+          margin-bottom:8px;
+          cursor:default;
+          transition:background .25s, transform .25s;
+          backdrop-filter:blur(4px);
+        }
+        .ems-feat:hover { background:rgba(255,255,255,.18); transform:translateX(4px); }
+        .ems-feat-icon {
+          width:34px; height:34px; border-radius:9px;
+          background:rgba(255,255,255,.15);
+          display:flex; align-items:center; justify-content:center; flex-shrink:0;
+        }
+        .ems-feat-lbl  { font-size:13px; font-weight:600; color:#fff; }
+        .ems-feat-sub  { font-size:11px; color:rgba(255,255,255,.55); margin-left:auto; }
+
+        /* ghost button */
+        .ems-ghost {
+          margin-top:28px;
+          padding:11px 32px;
+          border:2px solid rgba(255,255,255,.72);
+          border-radius:9999px;
+          background:transparent;
+          color:#fff; font-size:12.5px; font-weight:700;
+          letter-spacing:1.4px; text-transform:uppercase;
+          cursor:pointer;
+          transition:background .25s, transform .2s;
+          position:relative; z-index:1;
+        }
+        .ems-ghost:hover { background:rgba(255,255,255,.14); transform:translateY(-2px); }
+
+        /* ── RIGHT panel ── */
+        .ems-right {
+          flex:1;
+          padding:52px 48px;
+          display:flex; flex-direction:column; justify-content:center;
+        }
+
+        /* social buttons */
+        .ems-soc {
+          display:flex; align-items:center; justify-content:center; gap:6px;
+          padding:11px 16px;
+          border:1.5px solid #e2e5ef;
+          border-radius:10px; background:#fff;
+          font-size:13px; font-weight:500; color:#374151;
+          cursor:pointer;
+          transition:border-color .2s, box-shadow .2s, transform .2s;
+          white-space:nowrap;
+        }
+        .ems-soc:hover {
+          border-color:#6B3F69; color:#6B3F69;
+          box-shadow:0 4px 14px rgba(107,63,105,.12);
+          transform:translateY(-2px);
+        }
+
+        /* or divider */
+        .ems-or {
+          display:flex; align-items:center; gap:12px;
+        }
+        .ems-or::before,.ems-or::after {
+          content:''; flex:1; height:1px; background:#e8eaf0;
+        }
+
+        /* inputs */
+        .ems-input {
+          width:100%; height:46px;
+          padding-left:40px; padding-right:14px;
+          border-radius:11px;
+          border:1.5px solid #e8eaf2;
+          background:#f4f6fb;
+          font-size:14px; color:#1a1a2e;
+          outline:none;
+          transition:border-color .22s, background .22s, box-shadow .22s;
+        }
+        .ems-input::placeholder { color:#c0c5d8; }
+        .ems-input:focus {
+          border-color:#6B3F69;
+          background:#f9f5fb;
+          box-shadow:0 0 0 3px rgba(107,63,105,.10);
+        }
+
+        /* submit btn */
+        .ems-btn {
+          width:100%; height:46px;
+          border-radius:12px; border:none;
+          background:#6B3F69; color:#fff;
+          font-size:15px; font-weight:600;
+          display:flex; align-items:center; justify-content:center; gap:8px;
+          cursor:pointer;
+          box-shadow:0 6px 20px rgba(107,63,105,.32);
+          transition:background .2s, transform .2s, box-shadow .2s;
+          position:relative; overflow:hidden;
+        }
+        .ems-btn::before {
+          content:'';
+          position:absolute; inset:0;
+          background:linear-gradient(135deg,rgba(255,255,255,.14),transparent 60%);
+          pointer-events:none;
+        }
+        .ems-btn:hover:not(:disabled) {
+          background:#7d4a7b; transform:translateY(-2px);
+          box-shadow:0 10px 28px rgba(107,63,105,.38);
+        }
+        .ems-btn:active:not(:disabled) { transform:translateY(0); }
+        .ems-btn:disabled { opacity:.6; cursor:not-allowed; }
+
+        /* dot loader */
+        .ems-dots span {
+          display:inline-block; width:5px; height:5px;
+          border-radius:50%; background:#fff; margin:0 2.5px;
+          animation: dotBlink 1.2s infinite;
+        }
+        .ems-dots span:nth-child(2) { animation-delay:.2s; }
+        .ems-dots span:nth-child(3) { animation-delay:.4s; }
+      `}</style>
+
+      {/* ── BG scene ── */}
+      <div className="ems-scene">
+        <div className="ems-orb ems-orb-1" />
+        <div className="ems-orb ems-orb-2" />
+      </div>
+      <div className="ems-grid" />
+
+      {/* particles */}
+      {mounted && Array.from({ length: 12 }).map((_, i) => (
+        <div
+          key={i}
+          className="ems-particle"
+          style={{
+            width: `${3 + Math.random() * 5}px`,
+            height: `${3 + Math.random() * 5}px`,
+            left: `${Math.random() * 100}%`,
+            background: `rgba(107,63,105,${.1 + Math.random() * .12})`,
+            animationDuration: `${14 + Math.random() * 18}s`,
+            animationDelay: `${Math.random() * 14}s`,
+          }}
+        />
+      ))}
+
+      {/* ── page shell ── */}
+      <div
+        className="min-h-screen flex items-center justify-center p-6"
+        style={{ background: "#dfdddd", position: "relative", zIndex: 1 }}
+      >
+        <div className="ems-wrap">
+
+          {/* ════════ LEFT ════════ */}
+          <div className="ems-left">
+            <div className="ems-blob ems-blob-1" />
+            <div className="ems-blob ems-blob-2" />
+            <div className="ems-blob ems-blob-3" />
+
+            {/* logo icon */}
+            <div className={`ems-logo-icon ${a(0)}`}>
+              <Lock className="w-7 h-7 text-white" />
             </div>
 
-            <div>
-              <label
-                htmlFor="password"
-                className="font-medium text-sm text-slate-700 block mb-2"
-              >
-                Password
-              </label>
-              <div className="relative">
-                <div className="flex absolute inset-y-0 left-0 pl-3 items-center pointer-events-none text-slate-400">
-                  <Lock size={20} />
+            <h2
+              className={`text-[22px] font-extrabold text-white text-center mb-3 ${a(80)}`}
+              style={{ position: "relative", zIndex: 1 }}
+            >
+              Welcome Back!
+            </h2>
+            <p
+              className={`text-[13px] text-white/70 text-center leading-relaxed mb-7 ${a(140)}`}
+              style={{ position: "relative", zIndex: 1 }}
+            >
+              Enter your personal details to use all of the EMS features and manage your workforce efficiently.
+            </p>
+
+            {/* feature list */}
+            <div className={`w-full ${a(200)}`} style={{ position: "relative", zIndex: 1 }}>
+              {features.map(({ icon: Icon, label, sub }, i) => (
+                <div key={label} className="ems-feat" style={{ transitionDelay: `${200 + i * 55}ms` }}>
+                  <div className="ems-feat-icon">
+                    <Icon className="w-4 h-4 text-white" />
+                  </div>
+                  <span className="ems-feat-lbl">{label}</span>
+                  <span className="ems-feat-sub">{sub}</span>
                 </div>
-                <input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full text-slate-900 border-slate-300 py-2.5 rounded-lg border pl-10 pr-10 focus:ring-2 focus:ring-indigo-600/50 focus:border-indigo-600 transition outline-none"
-                  placeholder="••••••••"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-indigo-600 transition-colors"
-                >
-                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+              ))}
+            </div>
+          </div>
+
+          {/* ════════ RIGHT ════════ */}
+          <div className="ems-right">
+
+            <div className={a(60)}>
+              <h1 className="text-[28px] font-bold text-[#1a1a2e] mb-1">LOGIN IN</h1>
+              <p className="text-[13.5px] text-slate-400 mb-7">Access your EMS dashboard</p>
+            </div>
+
+            {/* or */}
+            <div className={`ems-or mb-5 ${a(180)}`}>
+              <span className="text-[12px] text-slate-400 whitespace-nowrap"> use your employee credentials</span>
+            </div>
+
+            <form onSubmit={handleLogin} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+
+              {/* Error */}
+              {error && (
+                <div className="flex items-center gap-2 bg-red-50 border border-red-200
+                                text-red-600 text-[12.5px] rounded-lg px-3 py-2.5">
+                  <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                  <span>{error}</span>
+                </div>
+              )}
+
+              {/* Employee Code */}
+              <div className={a(240)}>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-3.75 h-3.75 text-slate-400" />
+                  <input
+                    type="text"
+                    required
+                    value={employeeCode}
+                    onChange={(e) => setEmployeeCode(e.target.value)}
+                    placeholder="Employee Code (e.g. AIT01-G-26-T-0001)"
+                    className="ems-input"
+                  />
+                </div>
+              </div>
+
+              {/* Password */}
+              <div className={a(300)}>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-3.75 h-3.75 text-slate-400" />
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Password"
+                    className="ems-input"
+                    style={{ paddingRight: 40 }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400
+                               hover:text-[#6B3F69] transition-colors"
+                  >
+                    {showPassword
+                      ? <EyeOff className="w-3.75 h-3.75" />
+                      : <Eye className="w-3.75 h-3.75" />}
+                  </button>
+                </div>
+              </div>
+
+
+              {/* Submit */}
+              <div className={a(420)}>
+                <button type="submit" disabled={isLoading} className="ems-btn">
+                  {isLoading ? (
+                    <div className="ems-dots"><span /><span /><span /></div>
+                  ) : (
+                    <>
+                      <LogIn className="w-3.75 h-3.75" />
+                      LOGIN IN
+                    </>
+                  )}
                 </button>
               </div>
-            </div>
-
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full bg-indigo-600 font-medium text-white shadow-lg py-3 rounded-lg hover:bg-indigo-700 flex justify-center items-center shadow-indigo-600/20 active:scale-[0.98] transition-all disabled:opacity-70 disabled:scale-100"
-            >
-              {isLoading ? (
-                <>
-                  <svg className="mr-3 w-5 h-5 text-white animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Authenticating...
-                </>
-              ) : (
-                <>
-                  <LogIn className="mr-2 w-5 h-5" />
-                  Sign In
-                </>
-              )}
-            </button>
-          </form>
+            </form>
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }

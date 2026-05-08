@@ -112,7 +112,7 @@ function DepartmentModal({
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-            <form onSubmit={handleSubmit(submit)} className="bg-white rounded-2xl shadow-2xl w-full max-w-xl mx-4 animate-in zoom-in-95 duration-200">
+            <form onSubmit={handleSubmit(submit)} className=" bg-white rounded-2xl shadow-2xl w-full max-w-xl mx-4 animate-in zoom-in-95 duration-200">
                 <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
                     <div>
                         <h2 className="text-lg font-semibold text-slate-900">{initial ? "Edit Department" : "Add Department"}</h2>
@@ -122,32 +122,13 @@ function DepartmentModal({
                 </div>
 
                 {submitError && (
-                    <div className="mx-6 mt-4 p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs font-bold text-rose-700">
+                    <div className="mx-6 mt-4 p-3 rounded-lg bg-[#dfdddd] border border-rose-200 text-xs font-bold text-rose-700">
                         {submitError}
                     </div>
                 )}
 
                 <div className="px-6 py-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="sm:col-span-2">
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Department Name</label>
-                        <input type="text" placeholder="e.g. Engineering" {...register("dept_name")} className={inputCls(errors.dept_name?.message)} />
-                        <FieldError msg={errors.dept_name?.message} />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Department Code</label>
-                        <input type="text" placeholder="e.g. ENG" disabled={!!initial} {...register("dept_code")} className={`${inputCls(errors.dept_code?.message)} ${initial ? "opacity-60 bg-slate-100 cursor-not-allowed" : ""}`} />
-                        <FieldError msg={errors.dept_code?.message} />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Institution</label>
-                        <select {...register("institution_code")} disabled={!!branchVal} className={`${inputCls(errors.institution_code?.message)} bg-white ${branchVal ? "opacity-50 cursor-not-allowed" : ""}`}>
-                            <option value="">— none —</option>
-                            {institutions.map(inst => (
-                                <option key={inst.inst_code} value={inst.inst_code}>{inst.name} ({inst.inst_code})</option>
-                            ))}
-                        </select>
-                        <FieldError msg={errors.institution_code?.message} />
-                    </div>
+                    {/* Branch */}
                     <div>
                         <label className="block text-sm font-medium text-slate-700 mb-1">Branch</label>
                         <select {...register("branch_code")} disabled={!!instVal} className={`${inputCls(errors.branch_code?.message)} bg-white ${instVal ? "opacity-50 cursor-not-allowed" : ""}`}>
@@ -159,6 +140,38 @@ function DepartmentModal({
                         <FieldError msg={errors.branch_code?.message} />
                         {!instVal && !branchVal && <p className="text-[10px] text-slate-400 mt-1 ml-1">Pick institution OR branch — not both</p>}
                     </div>
+                    {/* organization */}
+                    {/* <div className="col-span-2">
+                        <label className="block text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1.5 ml-1">Parent Organization </label>
+                        <select value={form.organization_code}
+                            onChange={e => { setForm(p => ({ ...p, organization_code: e.target.value })); setErrors(p => ({ ...p, organization_code: '' })); }}
+                            className={inp(errors.organization_code)}>
+                            <option value="">— Select Organization —</option>
+                            {organizations.map(org => <option key={org.id} value={org.org_code}>{org.name}</option>)}
+                        </select>
+                        {errors.organization_code && <p className="text-[9px] text-rose-500 font-bold mt-1 ml-1">{errors.organization_code}</p>}
+                    </div> */}
+                    {/* institution */}
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Institution</label>
+                        <select {...register("institution_code")} disabled={!!branchVal} className={`${inputCls(errors.institution_code?.message)} bg-white ${branchVal ? "opacity-50 cursor-not-allowed" : ""}`}>
+                            <option value="">— none —</option>
+                            {institutions.map(inst => (
+                                <option key={inst.inst_code} value={inst.inst_code}>{inst.name} ({inst.inst_code})</option>
+                            ))}
+                        </select>
+                        <FieldError msg={errors.institution_code?.message} />
+                    </div>
+                    <div className="sm:col-span-2">
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Department Name</label>
+                        <input type="text" placeholder="e.g. Academic" {...register("dept_name")} className={inputCls(errors.dept_name?.message)} />
+                        <FieldError msg={errors.dept_name?.message} />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Department Code</label>
+                        <input type="text" placeholder="e.g. AC" disabled={!!initial} {...register("dept_code")} className={`${inputCls(errors.dept_code?.message)} ${initial ? "opacity-60 bg-slate-100 cursor-not-allowed" : ""}`} />
+                        <FieldError msg={errors.dept_code?.message} />
+                    </div>
                     <div className="sm:col-span-2">
                         <label className="block text-sm font-medium text-slate-700 mb-1">Description</label>
                         <input type="text" placeholder="Brief description" {...register("description")} className={inputCls(errors.description?.message)} />
@@ -169,7 +182,7 @@ function DepartmentModal({
                 <div className="px-6 py-4 border-t border-slate-100 flex justify-end gap-3">
                     <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-xl hover:bg-slate-50 transition">Cancel</button>
                     <button type="submit" disabled={isSubmitting}
-                        className="px-5 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 shadow-md shadow-indigo-200 transition active:scale-95 disabled:opacity-50">
+                        className="px-5 py-2 text-sm font-medium text-white bg-[#6B3F69] rounded-lg hover:bg-[#5a3558] shadow-md shadow-[#6B3F69]/10 transition active:scale-95 disabled:opacity-50">
                         {isSubmitting ? "Saving…" : initial ? "Save Changes" : "Add Department"}
                     </button>
                 </div>
@@ -311,9 +324,9 @@ export default function DepartmentsPage() {
                 branches={branches}
             />
 
-            <div className="sm:p-3 lg:p-4 max-w-7xl mx-auto space-y-4 sm:space-y-6 animate-in fade-in duration-500">
+            <div className="sm:p-3 lg:p-10 max-w-8xl mx-auto space-y-4 sm:space-y-6 animate-in fade-in duration-500">
                 {/* Header */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 sm:p-5 rounded-3xl border border-slate-100 shadow-sm backdrop-blur-md ">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 sm:p-5 rounded-2xl border border-slate-100 shadow-sm backdrop-blur-md ">
                     <div className="flex items-center gap-4">
                         <div className="h-12 w-12 rounded-2xl bg-[#6B3F69] flex items-center justify-center text-white shadow-lg shadow-[#6B3F69]/20">
                             <LayoutGrid size={22} strokeWidth={2.5} />
