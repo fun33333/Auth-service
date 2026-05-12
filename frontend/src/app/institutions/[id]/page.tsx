@@ -6,6 +6,7 @@ import { fetchWithAuth } from '@/utils/api';
 import { useRouter, useParams } from 'next/navigation';
 import { ArrowLeft, Edit2, Trash2, MapPin, Phone, Building2 } from 'lucide-react';
 import Link from 'next/link';
+import toast from 'react-hot-toast';
 
 interface Institution {
   id: string;
@@ -56,6 +57,7 @@ export default function InstitutionDetails() {
     try {
       const response = await fetchWithAuth(`/employees/institutions/${id}`, { method: 'DELETE' });
       if (response.ok) {
+        toast.success("Institution Deleted Successfully", { style: { backgroundColor: '#ef4444', color: '#fff' }, icon: '🗑️' });
         router.push('/institutions');
       } else {
         const body = await response.json().catch(() => ({}));

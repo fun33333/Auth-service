@@ -15,6 +15,7 @@ import { fetchWithAuth } from "@/utils/api";
 import { Controller } from "react-hook-form";
 import PhoneInput from "@/components/PhoneInput";
 import CNICInput from "@/components/CNICInput";
+import toast from "react-hot-toast";
 
 // ----- Validators (mirror backend) -----
 const CNIC_RE = /^\d{5}-?\d{7}-?\d{1}$/;
@@ -250,6 +251,7 @@ export default function EditEmployeePage() {
         );
         return;
       }
+      toast.success("Employee Updated Successfully", { style: { backgroundColor: '#3b82f6', color: '#fff' } });
       router.push("/employees");
     } catch (e: any) {
       setSubmitError(e.message || "Network error");

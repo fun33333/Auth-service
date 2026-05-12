@@ -87,7 +87,7 @@ export default function ProtectedLayout({
 
           {/* User Card */}
           <div className="px-4 py-4 border-b border-slate-100 shrink-0">
-            <Link 
+            <Link
               href="/profile"
               onClick={() => setSidebarOpen(false)}
               className="flex items-center gap-3 bg-slate-50 rounded-2xl p-3 hover:bg-slate-100 hover:shadow-sm transition-all cursor-pointer group border border-slate-50 hover:border-slate-200"
@@ -118,8 +118,8 @@ export default function ProtectedLayout({
                   href={link.href}
                   onClick={() => setSidebarOpen(false)}
                   className={`flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-semibold transition-all duration-300 group hover:-translate-y-0.5 ${isActive
-                      ? "bg-[#6B3F69] text-white shadow-lg shadow-[#6B3F69]/20"
-                      : "text-slate-500 hover:bg-[#6B3F69]/10 hover:text-[#6B3F69]"
+                    ? "bg-[#6B3F69] text-white shadow-lg shadow-[#6B3F69]/20"
+                    : "text-slate-500 hover:bg-[#6B3F69]/10 hover:text-[#6B3F69]"
                     }`}
                 >
                   <Icon size={18} strokeWidth={isActive ? 2.5 : 2} className={isActive ? "" : "group-hover:scale-110 transition-transform duration-300"} />
@@ -166,10 +166,10 @@ export default function ProtectedLayout({
             {/* Right side */}
             <div className="flex items-center gap-3 ml-auto">
               {/* Bell */}
-              <button className="relative p-2 rounded-lg hover:bg-slate-100 transition-colors">
+              {/* <button className="relative p-2 rounded-lg hover:bg-slate-100 transition-colors">
                 <Bell size={18} className="text-slate-500" />
                 <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-400 rounded-full" />
-              </button>
+              </button> */}
 
               {/* Profile Link */}
               <Link

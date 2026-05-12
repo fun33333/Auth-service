@@ -3,13 +3,11 @@
 import React, { useEffect, useState } from "react";
 import ProtectedLayout from "@/components/ProtectedLayout";
 import { fetchWithAuth } from "@/utils/api";
-import {
-  Plus, Search, Edit2, Trash2, X,
-  Briefcase, CheckCircle2, XCircle, Star, Filter,
-} from "lucide-react";
+import { Plus, Search, Edit2, Trash2, X, Briefcase, CheckCircle2, XCircle, Star, Filter } from "lucide-react";
 import { useForm, SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import toast from "react-hot-toast";
 
 type Designation = {
   id: string;
@@ -233,7 +231,16 @@ export default function DesignationsPage() {
     try {
       const res = await fetchWithAuth(url, { method, body: JSON.stringify(payload) });
       const body = await res.json().catch(() => ({}));
-      if (res.ok) { loadData(); setEditTarget(null); return { ok: true }; }
+      if (res.ok) {
+        loadData();
+        setEditTarget(null);
+        if (editTarget) {
+          toast.success("Designation Updated Successfully", { style: { backgroundColor: '#3b82f6', color: '#fff' } });
+        } else {
+          toast.success("Designation Added Successfully", { style: { backgroundColor: '#22c55e', color: '#fff' } });
+        }
+        return { ok: true };
+      }
       if (body?.field_errors) return { ok: false, fieldErrors: body.field_errors };
       if (Array.isArray(body?.detail)) {
         return { ok: false, error: body.detail.map((d: any) => d?.msg || JSON.stringify(d)).join("; ") };
@@ -247,9 +254,11 @@ export default function DesignationsPage() {
   async function handleDelete(id: string) {
     setDeleteBusy(true);
     try {
-      const res = await fetchWithAuth(`/employees/designations/${id}`, { method: "DELETE" });
-      if (res.ok) loadData();
-      else {
+      const res = await fetchWithAuth(`/employees/designations/${id}/`, { method: "DELETE" });
+      if (res.ok) {
+        loadData();
+        toast.success("Designation Deleted Successfully", { style: { backgroundColor: '#ef4444', color: '#fff' }, icon: '🗑️' });
+      } else {
         const body = await res.json().catch(() => ({}));
         alert(body?.error || "Failed to purge node from registry.");
       }
@@ -270,7 +279,7 @@ export default function DesignationsPage() {
             <div className="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-4 text-red-500">
               <Trash2 size={20} />
             </div>
-            <h3 className="text-base font-black text-slate-900 uppercase tracking-tight">Decommission Position?</h3>
+            <h3 className="text-base font-black text-slate-900 uppercase tracking-tight">Delete Designation</h3>
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1.5">Soft-delete — recoverable.</p>
             <div className="flex gap-2.5 mt-5">
               <button onClick={() => setDeleteId(null)} disabled={deleteBusy}
@@ -320,13 +329,13 @@ export default function DesignationsPage() {
         {/* Stats */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           {stats.map((s) => (
-            <div key={s.label} className="bg-white p-3 px-4 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 group flex items-center justify-between">
+            <div key={s.label} className="bg-white p-6 px-7 rounded-3xl border border-slate-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 group flex items-center justify-between">
               <div>
                 <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1.5">{s.label}</p>
                 {loading ? <Skeleton width="44px" height="26px" /> : (
                   <div className="flex items-baseline gap-1.5">
                     <h3 className="text-3xl font-black text-slate-900 tracking-tighter leading-none">{s.value}</h3>
-                    <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest">Live</span>
+                    {/* <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest">Live</span> */}
                   </div>
                 )}
               </div>
@@ -337,19 +346,21 @@ export default function DesignationsPage() {
           ))}
         </div>
 
-        {/* Search */}
-        <div className="bg-white px-4 py-3 rounded-lg border border-zinc-100 shadow-sm">
-          <div className="relative group flex items-center gap-3">
-            <Search className="h-4 w-4 text-zinc-300 group-focus-within:text-zinc-700 transition-colors flex-shrink-0" />
+
+        {/* Search Bar */}
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-2 sm:p-3">
+          <div className="relative">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
             <input
               type="text"
-              placeholder="Search by role, code or department…"
-              className="w-full bg-transparent text-[10px] font-black text-zinc-900 uppercase tracking-widest outline-none placeholder:text-zinc-300"
+              placeholder="Quickly search by name, code, or Designation code..."
+              className="w-full pl-11 pr-4 py-3 border-0 bg-slate-50 rounded-lg text-xs font-bold uppercase tracking-widest placeholder:text-slate-400 focus:bg-white focus:ring-2 focus:ring-[#6B3F69]/20 outline-none transition"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
         </div>
+
 
         {/* Table */}
         <div className="bg-white rounded-2xl border border-zinc-100 overflow-hidden shadow-sm">
@@ -410,7 +421,7 @@ export default function DesignationsPage() {
                         <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-all">
                           <button
                             onClick={() => { setEditTarget(d); setModalOpen(true); }}
-                            className="h-8 w-8 flex items-center justify-center bg-white text-zinc-400 rounded-lg hover:bg-zinc-900 hover:text-white transition-all shadow-sm border border-zinc-100"
+                            className="h-8 w-8 flex items-center justify-center bg-white text-zinc-400 rounded-lg hover:bg-zinc-300 hover:text-white transition-all shadow-sm border border-zinc-100"
                           >
                             <Edit2 size={13} />
                           </button>

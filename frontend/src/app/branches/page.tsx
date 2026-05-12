@@ -11,6 +11,7 @@ import { useForm, SubmitHandler, Controller } from "react-hook-form";
 import PhoneInput from "@/components/PhoneInput";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import toast from "react-hot-toast";
 
 type Branch = {
   id?: string;
@@ -288,6 +289,11 @@ export default function BranchesPage() {
       if (res.ok) {
         loadData();
         setEditTarget(null);
+        if (editTarget) {
+          toast.success("Branch Updated Successfully", { style: { backgroundColor: '#3b82f6', color: '#fff' } });
+        } else {
+          toast.success("Branch Added Successfully", { style: { backgroundColor: '#22c55e', color: '#fff' } });
+        }
         return { ok: true };
       }
       if (body?.field_errors) return { ok: false, fieldErrors: body.field_errors };
@@ -304,8 +310,10 @@ export default function BranchesPage() {
     setDeleteBusy(true);
     try {
       const res = await fetchWithAuth(`/employees/branches/${id}`, { method: "DELETE" });
-      if (res.ok) loadData();
-      else {
+      if (res.ok) {
+        loadData();
+        toast.success("Branch Deleted Successfully", { style: { backgroundColor: '#ef4444', color: '#fff' }, icon: '🗑️' });
+      } else {
         const body = await res.json().catch(() => ({}));
         alert(body?.error || "Decommissioning failed.");
       }

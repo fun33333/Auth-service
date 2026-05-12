@@ -34,56 +34,58 @@ interface StreamEvent {
   type: string;
 }
 
-// ─── Simple SVG Line Chart ────────────────────────────────────────────────────
-function LineChart({ data }: { data: number[] }) {
+// ─── Simple SVG Bar Chart ────────────────────────────────────────────────────
+function BarChart({ data }: { data: number[] }) {
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const W = 220,
     H = 90;
   const max = Math.max(...data);
-  const min = Math.min(...data);
-  const range = max - min || 1;
-  const pts = data.map((v, i) => {
-    const x = (i / (data.length - 1)) * (W - 20) + 10;
-    const y = H - 10 - ((v - min) / range) * (H - 20);
-    return `${x},${y}`;
-  });
-  const polyline = pts.join(" ");
-  const area =
-    `M ${pts[0]} ` +
-    pts
-      .slice(1)
-      .map((p) => `L ${p}`)
-      .join(" ") +
-    ` L ${(data.length - 1 / (data.length - 1)) * (W - 20) + 10},${H - 10} L 10,${H - 10} Z`;
+  const range = max > 0 ? max : 1;
+  const barWidth = (W - 20) / data.length - 12;
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-full">
-      <defs>
-        <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#6B3F69" stopOpacity="0.25" />
-          <stop offset="100%" stopColor="#6B3F69" stopOpacity="0" />
-        </linearGradient>
-      </defs>
-      <path d={area} fill="url(#chartGrad)" />
-      <polyline
-        points={polyline}
-        fill="none"
-        stroke="#6B3F69"
-        strokeWidth="2"
-        strokeLinejoin="round"
-        strokeLinecap="round"
-      />
-      {pts.map((pt, i) => {
-        const [x, y] = pt.split(",");
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-full overflow-visible">
+      {data.map((v, i) => {
+        const barHeight = Math.max((v / range) * (H - 20), 4);
+        const x = 10 + i * ((W - 20) / data.length) + 6;
+        const y = H - 10 - barHeight;
         return (
-          <circle
-            key={i}
-            cx={x}
-            cy={y}
-            r="3.5"
-            fill="white"
-            stroke="#6B3F69"
-            strokeWidth="2"
-          />
+          <g key={i}>
+            <rect
+              x={x}
+              y={y}
+              width={barWidth}
+              height={barHeight}
+              rx={4}
+              fill="#6B3F69"
+              opacity={activeIndex === null ? 0.3 : (activeIndex === i ? 1 : 0.1)}
+              className="cursor-pointer transition-colors duration-300 hover:opacity-100"
+              onClick={() => setActiveIndex(activeIndex === i ? null : i)}
+            />
+            {/* Flat bottom for the bar */}
+            <rect
+              x={x}
+              y={y + barHeight - 4}
+              width={barWidth}
+              height={4}
+              fill="#6B3F69"
+              opacity={activeIndex === null ? 0.3 : (activeIndex === i ? 1 : 0.1)}
+              className="pointer-events-none transition-colors duration-300"
+            />
+            {activeIndex === i && (
+              <text
+                x={x + barWidth / 2}
+                y={y - 8}
+                textAnchor="middle"
+                fill="#6B3F69"
+                fontSize="12"
+                fontWeight="900"
+                className="pointer-events-none drop-shadow-sm"
+              >
+                {data[i]}
+              </text>
+            )}
+          </g>
         );
       })}
     </svg>
@@ -281,7 +283,7 @@ function AlertItem({
   };
   return (
     <div
-      className={`rounded-xl border p-3.5 flex items-start gap-3 ${palette[color]}`}
+      className={`rounded-lg border p-3.5 flex items-start gap-3 ${palette[color]}`}
     >
       <Icon size={18} className="mt-0.5 shrink-0" />
       <div className="flex-1 min-w-0">
@@ -324,22 +326,22 @@ function EmployeeAlertItem({
 function StreamRow({ event }: { event: StreamEvent }) {
   const iconMap = {
     create: (
-      <div className="w-9 h-9 rounded-xl bg-emerald-50 flex items-center justify-center border border-emerald-100">
+      <div className="w-9 h-9 rounded-lg bg-emerald-50 flex items-center justify-center border border-emerald-100">
         <FolderPlus size={16} className="text-emerald-500" />
       </div>
     ),
     update: (
-      <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center border border-blue-100">
+      <div className="w-9 h-9 rounded-lg bg-blue-50 flex items-center justify-center border border-blue-100">
         <Edit2 size={16} className="text-blue-500" />
       </div>
     ),
     delete: (
-      <div className="w-9 h-9 rounded-xl bg-rose-50 flex items-center justify-center border border-rose-100">
+      <div className="w-9 h-9 rounded-lg bg-rose-50 flex items-center justify-center border border-rose-100">
         <XCircle size={16} className="text-rose-500" />
       </div>
     ),
     system: (
-      <div className="w-9 h-9 rounded-xl bg-slate-50 flex items-center justify-center border border-slate-100">
+      <div className="w-9 h-9 rounded-lg bg-slate-50 flex items-center justify-center border border-slate-100">
         <Activity size={16} className="text-slate-400" />
       </div>
     ),
@@ -423,9 +425,10 @@ export default function Dashboard() {
 
   const [deptMix, setDeptMix] = useState<{ name: string; count: number }[]>([]);
 
-  // Monthly hiring trend (mock sparkline data)
-  const monthlyTrend = [14, 22, 18, 30, 26, 40];
-  const months = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN"];
+  const [trendData, setTrendData] = useState<{ trend: number[], labels: string[] }>({
+    trend: [0, 0, 0, 0, 0, 0, 0],
+    labels: ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"]
+  });
 
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good Morning" : hour < 17 ? "Good Afternoon" : "Good Evening";
@@ -489,7 +492,7 @@ export default function Dashboard() {
           }
 
           return {
-            name: log.user_name || "System",
+            name: log.changed_by || "System",
             action: log.action,
             time: timeMsg,
             icon: log.action.toLowerCase() === 'created' ? 'create' : (log.action.toLowerCase() === 'deleted' ? 'delete' : 'update'),
@@ -497,6 +500,26 @@ export default function Dashboard() {
           };
         });
         setStreamEvents(events);
+        // Calculate daily hiring trend for the last 7 days
+        const now = new Date();
+        const last7Days = [];
+        for (let i = 6; i >= 0; i--) {
+          const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
+          last7Days.push(d);
+        }
+        const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+        const computedLabels = last7Days.map(d => dayNames[d.getDay()]);
+        
+        const computedTrend = last7Days.map(dayDate => {
+          return empArr.filter((emp: any) => {
+            if (!emp.created_at) return false;
+            const empDate = new Date(emp.created_at);
+            return empDate.getDate() === dayDate.getDate() && 
+                   empDate.getMonth() === dayDate.getMonth() && 
+                   empDate.getFullYear() === dayDate.getFullYear();
+          }).length;
+        });
+        setTrendData({ trend: computedTrend, labels: computedLabels });
 
         // Build org mix from departments by counting employees in frontend
         if (deptArr.length > 0) {
@@ -548,7 +571,7 @@ export default function Dashboard() {
             </div>
           </div>
           <div className="flex flex-col items-end">
-            <div className="flex items-center gap-1 text-xs text-slate-500 bg-white border border-slate-100 rounded-xl px-4 py-2.5 shadow-sm">
+            <div className="flex items-center gap-1 text-xs text-slate-500 bg-white border border-slate-100 rounded-lg px-4 py-2.5 shadow-sm">
               <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mr-1">
                 Registry Sync
               </span>
@@ -597,9 +620,9 @@ export default function Dashboard() {
               <h2 className="text-sm font-black text-slate-800 uppercase tracking-tighter">
                Per Department Employees
               </h2>
-              <span className="text-[10px] font-black uppercase tracking-widest text-[#6B3F69] bg-[#6B3F69]/10 px-2 py-1 rounded-full">
+              {/* <span className="text-[10px] font-black uppercase tracking-widest text-[#6B3F69] bg-[#6B3F69]/10 px-2 py-1 rounded-full">
                 Personnel Hubs
-              </span>
+              </span> */}
             </div>
             {loading ? (
               <div className="space-y-4">
@@ -629,25 +652,21 @@ export default function Dashboard() {
           </div>
 
           {/* Monthly Growth */}
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-2xl hover:shadow-purple-500/10 hover:-translate-y-1 transition-all duration-500 p-3 sm:p-4 relative overflow-hidden group">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-purple-500/5 blur-[80px] rounded-full -mr-10 -mt-10" />
-            <div className="flex items-center justify-between mb-1">
-              <h2 className="text-sm font-black text-slate-800 uppercase tracking-tighter">
-                Monthly Employees Growth
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-2xl hover:shadow-blue-500/10 hover:-translate-y-1 transition-all duration-500 p-3 sm:p-4 relative overflow-hidden group">
+            <div className="flex items-center gap-2 mb-8">
+              <TrendingUp size={20} className="text-slate-600" />
+              <h2 className="text-lg font-bold text-slate-800">
+                Last 7 Days
               </h2>
-              <TrendingUp size={15} className="text-[#6B3F69]/60" />
             </div>
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-4 opacity-60">
-               New Hiring & Forecast
-            </p>
-            <div className="h-25">
-              <LineChart data={monthlyTrend} />
+            <div className="h-32">
+              <BarChart data={trendData.trend} />
             </div>
-            <div className="flex justify-between mt-2 px-1">
-              {months.map((m) => (
+            <div className="flex justify-between mt-3 px-1">
+              {trendData.labels.map((m, i) => (
                 <span
-                  key={m}
-                  className="text-[9px] font-black uppercase tracking-widest text-slate-300"
+                  key={i}
+                  className="text-xs font-semibold text-slate-400"
                 >
                   {m}
                 </span>

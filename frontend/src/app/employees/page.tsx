@@ -14,6 +14,7 @@ import {
 import IDCard from '@/components/IDCard';
 import Skeleton from '@/components/Skeleton';
 import { fetchWithAuth } from '@/utils/api';
+import toast from "react-hot-toast";
 
 // --- Types ---
 interface Employee {
@@ -199,24 +200,24 @@ const EmployeeTable = ({ employees, onDetailClick, onDelete, loading }: { employ
                   <div className="flex items-center justify-center gap-2">
                     <Link
                       href={`/employees/${emp.employee_id}`}
-                      className="h-9 w-9 rounded-xl bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 hover:text-slate-900 transition-all"
+                      className="h-9 w-9 rounded-lg hover:bg-slate-200 flex items-center justify-center text-slate-600 hover:text-slate-900 transition-all"
                       title="Edit Employee"
                     >
                       <Edit2 size={16} />
                     </Link>
                     <button
                       onClick={(e) => { e.stopPropagation(); onDelete(emp.employee_id); }}
-                      className="h-9 w-9 rounded-xl bg-rose-50 hover:bg-rose-100 flex items-center justify-center text-rose-400 hover:text-rose-600 transition-all"
+                      className="h-9 w-9 rounded-lg hover:bg-rose-100 flex items-center justify-center text-rose-400 hover:text-rose-600 transition-all"
                       title="Delete Employee"
                     >
                       <Trash2 size={16} />
                     </button>
-                    <button
+                    {/* <button
                       onClick={(e) => { e.stopPropagation(); onDetailClick(emp); }}
-                      className="h-9 w-9 rounded-xl hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-900 transition-all"
+                      className="h-9 w-9 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-900 transition-all"
                     >
                       <Dots size={18} />
-                    </button>
+                    </button> */}
                   </div>
                 </td>
               </tr>
@@ -244,13 +245,13 @@ const DetailModal = ({ employee, open, onClose }: { employee: Employee | null, o
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
       <div className="fixed inset-0 bg-zinc-900/80 backdrop-blur-xl animate-in fade-in duration-500" onClick={onClose} />
-      <div className="bg-white w-full max-w-2xl rounded-[3rem] shadow-2xl relative z-70 overflow-hidden animate-in zoom-in-95 duration-500">
+      <div className="bg-white w-full max-w-2xl rounded-2xl shadow-2xl relative z-70 overflow-hidden animate-in zoom-in-95 duration-500">
         <div className="p-12 relative flex flex-col items-center max-h-[90vh] overflow-y-auto custom-scrollbar">
-          <button onClick={onClose} className="absolute top-10 right-10 text-zinc-400 hover:text-zinc-900 border border-zinc-100 p-2 rounded-xl transition-all print:hidden"><X size={24} /></button>
+          <button onClick={onClose} className="absolute top-10 right-10 text-zinc-400 hover:text-zinc-900 border border-zinc-100 p-2 rounded-lg transition-all print:hidden"><X size={24} /></button>
 
           {!showCard ? (
             <>
-              <div className="h-32 w-32 rounded-[2.5rem] bg-blue-600 flex items-center justify-center text-white text-5xl font-black mb-6 shadow-2xl shadow-blue-600/20">
+              <div className="h-32 w-32 rounded-3xl bg-[#6B3F69] flex items-center justify-center text-white text-5xl font-black mb-6 shadow-2xl shadow-blue-600/20">
                 {employee.full_name.charAt(0)}
               </div>
               <h3 className="text-3xl font-black text-zinc-900 tracking-tight">{employee.full_name}</h3>
@@ -270,7 +271,7 @@ const DetailModal = ({ employee, open, onClose }: { employee: Employee | null, o
               <div className="mt-10 w-full flex gap-4">
                 <button
                   onClick={() => setShowCard(true)}
-                  className="flex-1 h-14 bg-zinc-900 text-white rounded-2xl flex items-center justify-center gap-3 text-[10px] font-black uppercase tracking-widest hover:bg-blue-600 transition-all shadow-xl active:scale-95"
+                  className="flex-1 h-14 bg-[#6B3F69] text-white rounded-2xl flex items-center justify-center gap-3 text-[10px] font-black uppercase tracking-widest hover:[#6B3F69] transition-all shadow-xl active:scale-95"
                 >
                   <CreditCard size={18} /> Generate ID Card
                 </button>
@@ -294,7 +295,7 @@ const DetailModal = ({ employee, open, onClose }: { employee: Employee | null, o
                 </button>
                 <button
                   onClick={handlePrint}
-                  className="flex-1 h-14 bg-blue-600 text-white rounded-2xl flex items-center justify-center gap-3 text-[10px] font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-xl shadow-blue-600/20 active:scale-95"
+                  className="flex-1 h-14 bg-[#6B3F69] text-white rounded-2xl flex items-center justify-center gap-3 text-[10px] font-black uppercase tracking-widest hover:bg-[#6B3F69] transition-all shadow-xl shadow-blue-600/20 active:scale-95"
                 >
                   <Download size={18} /> Print Card
                 </button>
@@ -358,6 +359,7 @@ export default function EmployeesPage() {
       });
       if (res.ok) {
         setEmployees(employees.filter(emp => emp.employee_id !== id));
+        toast.success("Employee Deleted Successfully", { style: { backgroundColor: '#ef4444', color: '#fff' }, icon: '🗑️' });
       } else {
         const error = await res.json();
         alert(`Failed to delete employee: ${error.error || 'Unknown error'}`);

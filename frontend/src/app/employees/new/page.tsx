@@ -14,6 +14,7 @@ import ProtectedLayout from "@/components/ProtectedLayout";
 import { fetchWithAuth } from "@/utils/api";
 import PhoneInput from "@/components/PhoneInput";
 import CNICInput from "@/components/CNICInput";
+import toast from "react-hot-toast";
 
 // ----- Validators (mirror backend) -----
 const CNIC_RE = /^\d{5}-?\d{7}-?\d{1}$/;
@@ -134,8 +135,8 @@ export default function NewEmployeePage() {
     (async () => {
       const [oRes, iRes, dRes] = await Promise.all([
         fetchWithAuth("/employees/organizations"),
-        fetchWithAuth("employees/employees/institutions"),
-        fetchWithAuth("employees/employees/departments"),
+        fetchWithAuth("/employees/institutions"),
+        fetchWithAuth("/employees/departments"),
       ]);
       if (oRes.ok) {
         const orgs = await oRes.json();
@@ -199,6 +200,7 @@ export default function NewEmployeePage() {
         );
         return;
       }
+      toast.success("Employee Added Successfully", { style: { backgroundColor: '#22c55e', color: '#fff' } });
       router.push("/employees");
     } catch (e: any) {
       setSubmitError(e.message || "Network error");
@@ -264,7 +266,7 @@ export default function NewEmployeePage() {
           {/* ── Step 1: Identity ── */}
           {step === 1 && (
             <>
-              <Field label="Full name *" error={errors.fullName?.message}>
+              <Field label="Full name" error={errors.fullName?.message}>
                 <input
                   {...register("fullName")}
                   placeholder="Ahmed Ali"
@@ -298,7 +300,7 @@ export default function NewEmployeePage() {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-                <Field label="Gender *" error={errors.gender?.message}>
+                <Field label="Gender" error={errors.gender?.message}>
                   <select
                     {...register("gender")}
                     className={inputCls(errors.gender)}
@@ -401,7 +403,7 @@ export default function NewEmployeePage() {
           {step === 3 && (
             <>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Field label="Organization *" error={errors.organizationCode?.message}>
+                <Field label="Organization" error={errors.organizationCode?.message}>
                   <select {...register("organizationCode")} className={inputCls(errors.organizationCode)}>
                     <option value="">— select org —</option>
                     {organizations.map((o) => (
@@ -428,7 +430,7 @@ export default function NewEmployeePage() {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Field label="Department *" error={errors.departmentCode?.message}>
+                <Field label="Department" error={errors.departmentCode?.message}>
                   <select {...register("departmentCode")} className={inputCls(errors.departmentCode)}>
                     <option value="">— select —</option>
                     {departments.map((d) => (
@@ -436,7 +438,7 @@ export default function NewEmployeePage() {
                     ))}
                   </select>
                 </Field>
-                <Field label="Designation *" error={errors.designationCode?.message}>
+                <Field label="Designation" error={errors.designationCode?.message}>
                   <select {...register("designationCode")} disabled={!deptCode} className={inputCls(errors.designationCode)}>
                     <option value="">— select —</option>
                     {designations.map((d) => (
@@ -447,7 +449,7 @@ export default function NewEmployeePage() {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Field label="Joining date *" error={errors.joiningDate?.message}>
+                <Field label="Joining date" error={errors.joiningDate?.message}>
                   <input type="date" {...register("joiningDate")} className={inputCls(errors.joiningDate)} />
                 </Field>
                 <Field label="Shift" error={errors.shift?.message}>

@@ -23,9 +23,9 @@ const IDCard: React.FC<IDCardProps> = ({ employee }) => {
       <div className="id-card w-87.5 h-137.5 bg-white rounded-4xl shadow-2xl relative overflow-hidden border border-zinc-200 flex flex-col items-center p-0 font-sans print:shadow-none print:border-zinc-300">
         
         {/* Top Accent */}
-        <div className="absolute top-0 left-0 w-full h-45 bg-zinc-900 flex flex-col items-center pt-8">
+        <div className="absolute top-0 left-0 w-full h-45 bg-[#6B3F69] flex flex-col items-center pt-8">
            <div className="flex items-center gap-2 mb-4">
-              <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center">
+              <div className="w-8 h-8 rounded-lg bg-[#6B3F69] flex items-center justify-center">
                  <ShieldCheck className="text-white" size={18} />
               </div>
               <span className="text-white font-black tracking-tighter text-lg">AL-KHIDMAT</span>
@@ -34,14 +34,14 @@ const IDCard: React.FC<IDCardProps> = ({ employee }) => {
 
         {/* Photo Container */}
         <div className="relative mt-25 z-10">
-          <div className="w-32 h-32 rounded-[2.5rem] bg-indigo-50 border-4 border-white shadow-xl flex items-center justify-center text-zinc-900 text-4xl font-black overflow-hidden ring-1 ring-zinc-100">
+          <div className="w-32 h-32 rounded-3xl bg-indigo-50 border-4 border-white shadow-xl flex items-center justify-center text-zinc-900 text-4xl font-black overflow-hidden ring-1 ring-zinc-100">
             {employee.image ? (
               <img src={employee.image} alt={employee.full_name} className="w-full h-full object-cover" />
             ) : (
               employee.full_name.charAt(0)
             )}
           </div>
-          <div className="absolute -bottom-2 -right-2 bg-blue-600 text-white p-2 rounded-xl shadow-lg border-2 border-white">
+          <div className="absolute -bottom-2 -right-2 bg-black text-white p-2 rounded-xl shadow-lg border-2 border-white">
             <ShieldCheck size={16} />
           </div>
         </div>
@@ -53,7 +53,7 @@ const IDCard: React.FC<IDCardProps> = ({ employee }) => {
           
           <div className="space-y-4 w-full">
             <div className="flex items-center gap-4 bg-zinc-50 p-3 rounded-2xl border border-zinc-100">
-               <div className="w-8 h-8 rounded-xl bg-white border border-zinc-200 flex items-center justify-center text-zinc-400">
+               <div className="w-8 h-8 rounded-lg bg-white border border-zinc-200 flex items-center justify-center text-zinc-400">
                   <Mail size={14} />
                </div>
                <div className="text-left">
@@ -63,7 +63,7 @@ const IDCard: React.FC<IDCardProps> = ({ employee }) => {
             </div>
 
             <div className="flex items-center gap-4 bg-zinc-50 p-3 rounded-2xl border border-zinc-100">
-               <div className="w-8 h-8 rounded-xl bg-white border border-zinc-200 flex items-center justify-center text-zinc-400">
+               <div className="w-8 h-8 rounded-lg bg-white border border-zinc-200 flex items-center justify-center text-zinc-400">
                   <Phone size={14} />
                </div>
                <div className="text-left">

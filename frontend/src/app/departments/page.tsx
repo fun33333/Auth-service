@@ -11,6 +11,7 @@ import {
 import { useForm, SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import toast from "react-hot-toast";
 
 type Department = {
     id: string;
@@ -180,7 +181,7 @@ function DepartmentModal({
                 </div>
 
                 <div className="px-6 py-4 border-t border-slate-100 flex justify-end gap-3">
-                    <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-xl hover:bg-slate-50 transition">Cancel</button>
+                    <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition">Cancel</button>
                     <button type="submit" disabled={isSubmitting}
                         className="px-5 py-2 text-sm font-medium text-white bg-[#6B3F69] rounded-lg hover:bg-[#5a3558] shadow-md shadow-[#6B3F69]/10 transition active:scale-95 disabled:opacity-50">
                         {isSubmitting ? "Saving…" : initial ? "Save Changes" : "Add Department"}
@@ -269,7 +270,16 @@ export default function DepartmentsPage() {
         try {
             const res = await fetchWithAuth(url, { method, body: JSON.stringify(payload) });
             const body = await res.json().catch(() => ({}));
-            if (res.ok) { loadData(); setEditTarget(null); return { ok: true }; }
+            if (res.ok) { 
+                loadData(); 
+                setEditTarget(null); 
+                if (editTarget) {
+                    toast.success("Department Updated Successfully", { style: { backgroundColor: '#3b82f6', color: '#fff' } });
+                } else {
+                    toast.success("Department Added Successfully", { style: { backgroundColor: '#22c55e', color: '#fff' } });
+                }
+                return { ok: true }; 
+            }
             if (body?.field_errors) return { ok: false, fieldErrors: body.field_errors };
             if (Array.isArray(body?.detail)) {
                 return { ok: false, error: body.detail.map((d: any) => d?.msg || JSON.stringify(d)).join("; ") };
@@ -283,9 +293,11 @@ export default function DepartmentsPage() {
     async function handleDelete(deptCode: string) {
         setDeleteBusy(true);
         try {
-            const res = await fetchWithAuth(`/employees/departments/${deptCode}`, { method: "DELETE" });
-            if (res.ok) loadData();
-            else {
+            const res = await fetchWithAuth("/employees/departments/${deptCode}", { method: "DELETE" });
+            if (res.ok) {
+                loadData();
+                toast.success("Department Deleted Successfully", { style: { backgroundColor: '#ef4444', color: '#fff' }, icon: '🗑️' });
+            } else {
                 const body = await res.json().catch(() => ({}));
                 alert(body?.error || "Failed to delete");
             }
@@ -371,7 +383,7 @@ export default function DepartmentsPage() {
                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                         <input
                             type="text"
-                            placeholder="Quickly search by name, code, or institution code..."
+                            placeholder="Quickly search by name, code, or  Department code..."
                             className="w-full pl-11 pr-4 py-3 border-0 bg-slate-50 rounded-lg text-xs font-bold uppercase tracking-widest placeholder:text-slate-400 focus:bg-white focus:ring-2 focus:ring-[#6B3F69]/20 outline-none transition"
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
@@ -413,17 +425,17 @@ export default function DepartmentsPage() {
                                                 </span>
                                             </div>
                                             <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all transform translate-x-2 group-hover:translate-x-0">
-                                                <button onClick={() => { setEditTarget(d); setModalOpen(true); }} className="p-2 text-slate-400 hover:text-[#6B3F69] hover:bg-[#6B3F69]/10 rounded-xl transition-all">
+                                                <button onClick={() => { setEditTarget(d); setModalOpen(true); }} className="p-2 text-slate-400  hover:bg-[#6B3F69]/10 rounded-lg transition-all">
                                                     <Edit2 size={14} strokeWidth={2.5} />
                                                 </button>
-                                                <button onClick={() => setDeleteId(d.dept_code)} className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all">
+                                                <button onClick={() => setDeleteId(d.dept_code)} className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-all">
                                                     <Trash2 size={14} strokeWidth={2.5} />
                                                 </button>
                                             </div>
                                         </div>
 
                                         <div className="mb-4">
-                                            <h3 className="font-black text-slate-900 text-sm uppercase tracking-tight truncate group-hover:text-[#6B3F69] transition-colors">{d.dept_name}</h3>
+                                            <h3 className="font-black text-slate-900 text-sm uppercase tracking-tight truncate transition-colors">{d.dept_name}</h3>
                                             <div className="flex items-center gap-2 mt-0.5">
                                                 <span className={`text-[10px] font-black uppercase tracking-[0.2em] ${colors.text}`}>
                                                     {d.dept_code}
@@ -443,11 +455,11 @@ export default function DepartmentsPage() {
 
                                         <div className="mt-auto pt-4 border-t border-slate-50 grid grid-cols-2 gap-3">
                                             <div className="bg-slate-50/50 rounded-lg p-2 border border-slate-100/50">
-                                                <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Entity</p>
+                                                <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Ins code</p>
                                                 <p className="text-[10px] font-black text-slate-700 truncate">{d.institution_code || "—"}</p>
                                             </div>
                                             <div className="bg-slate-50/50 rounded-lg p-2 border border-slate-100/50">
-                                                <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Station</p>
+                                                <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Bran code</p>
                                                 <p className="text-[10px] font-black text-slate-700 truncate">{d.branch_code || "—"}</p>
                                             </div>
                                         </div>

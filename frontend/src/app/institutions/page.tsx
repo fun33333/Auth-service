@@ -19,6 +19,7 @@ import {
 import { useSearchParams } from "next/navigation";
 import { fetchWithAuth } from "@/utils/api";
 import { Suspense } from "react";
+import toast from "react-hot-toast";
 
 // ==========================================================================
 // 1. TYPES & INTERFACES
@@ -483,7 +484,16 @@ function InstitutionsPage() {
       const url = editInst ? `/employees/institutions/${editInst.id}` : "/employees/institutions";
       const res = await fetchWithAuth(url, { method, body: JSON.stringify(data) });
       const body = await res.json().catch(() => ({}));
-      if (res.ok) { setInstModal(false); await loadInitialData(); return { ok: true }; }
+      if (res.ok) { 
+        setInstModal(false); 
+        await loadInitialData(); 
+        if (editInst) {
+          toast.success("Institution Updated Successfully", { style: { backgroundColor: '#3b82f6', color: '#fff' } });
+        } else {
+          toast.success("Institution Added Successfully", { style: { backgroundColor: '#22c55e', color: '#fff' } });
+        }
+        return { ok: true }; 
+      }
       if (body?.field_errors) return { ok: false, fieldErrors: body.field_errors };
       if (Array.isArray(body?.detail)) return { ok: false, error: body.detail.map((d: any) => d?.msg || JSON.stringify(d)).join('; ') };
       return { ok: false, error: body?.error || 'Failed to save institution' };
@@ -498,7 +508,16 @@ function InstitutionsPage() {
       const url = editBranch ? `/employees/branches/${editBranch.branch_id}` : "/employees/branches";
       const res = await fetchWithAuth(url, { method, body: JSON.stringify(data) });
       const body = await res.json().catch(() => ({}));
-      if (res.ok) { setBranchModal(false); await loadInitialData(); return { ok: true }; }
+      if (res.ok) { 
+        setBranchModal(false); 
+        await loadInitialData(); 
+        if (editBranch) {
+          toast.success("Branch Updated Successfully", { style: { backgroundColor: '#3b82f6', color: '#fff' } });
+        } else {
+          toast.success("Branch Added Successfully", { style: { backgroundColor: '#22c55e', color: '#fff' } });
+        }
+        return { ok: true }; 
+      }
       if (body?.field_errors) return { ok: false, fieldErrors: body.field_errors };
       if (Array.isArray(body?.detail)) return { ok: false, error: body.detail.map((d: any) => d?.msg || JSON.stringify(d)).join('; ') };
       return { ok: false, error: body?.error || 'Failed to save branch' };
@@ -511,7 +530,10 @@ function InstitutionsPage() {
     if (!confirm("Confirm dissolution?")) return;
     try {
       const res = await fetchWithAuth(`/employees/institutions/${id}`, { method: "DELETE" });
-      if (res.ok) { await loadInitialData(); }
+      if (res.ok) { 
+        await loadInitialData(); 
+        toast.success("Institution Deleted Successfully", { style: { backgroundColor: '#ef4444', color: '#fff' }, icon: '🗑️' });
+      }
       else { const b = await res.json().catch(() => ({})); alert(b?.error || 'Failed to delete institution'); }
     } catch { alert('Network error'); }
   }
@@ -520,7 +542,10 @@ function InstitutionsPage() {
     if (!confirm("Confirm decommissioning?")) return;
     try {
       const res = await fetchWithAuth(`/employees/branches/${id}`, { method: "DELETE" });
-      if (res.ok) { await loadInitialData(); }
+      if (res.ok) { 
+        await loadInitialData(); 
+        toast.success("Branch Deleted Successfully", { style: { backgroundColor: '#ef4444', color: '#fff' }, icon: '🗑️' });
+      }
       else { const b = await res.json().catch(() => ({})); alert(b?.error || 'Failed to delete branch'); }
     } catch { alert('Network error'); }
   }
@@ -560,11 +585,6 @@ function InstitutionsPage() {
               </div>
 
               <div className="flex flex-wrap gap-3 w-full sm:w-auto">
-                <div className="flex-1 sm:w-64 relative group">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-[#6B3F69] transition-colors" />
-                  <input type="text" placeholder="QUICK SEARCH..." value={search} onChange={e => setSearch(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 bg-slate-50 border-0 focus:bg-white focus:ring-2 focus:ring-[#6B3F69]/20 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none transition-all" />
-                </div>
                 <button onClick={() => { setEditInst(null); setInstModal(true); }}
                   className="h-11 px-6 bg-[#6B3F69] text-white rounded-xl flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest hover:bg-[#5A3458] transition-all shadow-lg shadow-[#6B3F69]/20 active:scale-95">
                   <Plus size={16} strokeWidth={3} /> Add Institution
@@ -591,6 +611,20 @@ function InstitutionsPage() {
                   </div>
                 </div>
               ))}
+            </div>
+
+            {/* Search Bar */}
+            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-2 sm:p-3">
+              <div className="relative">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Quickly search by name, code, or type..."
+                  className="w-full pl-11 pr-4 py-3 border-0 bg-slate-50 rounded-lg text-xs font-bold uppercase tracking-widest placeholder:text-slate-400 focus:bg-white focus:ring-2 focus:ring-[#6B3F69]/20 outline-none transition"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+              </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
