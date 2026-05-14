@@ -395,7 +395,7 @@ export default function DesignationsPage() {
                     <tr key={d.id} className="hover:bg-zinc-50/60 transition-all group">
                       <td className="p-4">
                         <div className="flex items-center gap-3">
-                          <div className="h-9 w-9 rounded-lg bg-zinc-900 flex items-center justify-center text-white text-xs font-black transition-transform group-hover:scale-105 shadow-md shadow-zinc-900/10 flex-shrink-0">
+                          <div className="h-12 w-12 rounded-2xl bg-[#d6d6e2] flex items-center justify-center text-white shadow-lg group-hover:bg-[#6B3F69] transition-all shrink-0">
                             {d.position_name?.charAt(0)}
                           </div>
                           <div>

@@ -133,7 +133,7 @@ export default function ProtectedLayout({
           <div className="px-3 pb-5 shrink-0 border-t border-slate-100 pt-3">
             <button
               onClick={logout}
-              className="flex items-center gap-3 px-3 py-2 w-full rounded-xl text-sm font-semibold text-slate-500 hover:bg-red-50 hover:text-red-500 transition-all duration-150"
+              className="flex items-center gap-3 px-3 py-2 w-full rounded-lg text-sm font-semibold text-slate-500 hover:bg-red-50 hover:text-red-500 transition-all duration-150"
             >
               <LogOut size={17} />
               <span>Sign Out</span>
@@ -174,7 +174,7 @@ export default function ProtectedLayout({
               {/* Profile Link */}
               <Link
                 href="/profile"
-                className="flex items-center gap-3 bg-slate-50 hover:bg-slate-100 rounded-[1.25rem] pl-1.5 pr-4 py-1.5 transition-colors cursor-pointer group border border-slate-100/50"
+                className="flex items-center gap-3 bg-slate-50 hover:bg-slate-100 rounded-2xl pl-1.5 pr-4 py-1.5 transition-colors cursor-pointer group border border-slate-100/50"
               >
                 <div className="w-9 h-9 bg-[#6B3F69] text-white flex items-center justify-center rounded-full text-xs font-black shadow-sm group-hover:scale-105 transition-transform">
                   {initials}

@@ -200,14 +200,14 @@ function InstitutionModal({ open, onClose, onSave, initial, organizations }: {
     `w-full px-5 py-3.5 bg-zinc-50 border focus:bg-white rounded-lg text-[10px] uppercase font-black tracking-widest outline-none transition-all ${err ? 'border-rose-400' : 'border-transparent focus:border-[#6B3F69]'}`;
 
   if (!open) return null;
-//////// add institution from ////
+  //////// add institution from ////
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/60 backdrop-blur-sm p-2 animate-in fade-in duration-200">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xl border border-zinc-100 animate-in zoom-in-95 duration-200 overflow-hidden">
-        <div className="px-10 py-10 border-b border-zinc-50 flex items-center justify-between">
+        <div className="px-5 py-5 border-b border-zinc-50 flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-black text-zinc-900 tracking-tighter uppercase">{initial ? 'Update Entity' : 'Department Registry'}</h2>
-            <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mt-1.5">Core Institutional Record</p>
+            <h2 className="text-xl font-black text-zinc-900 tracking-tighter uppercase">{initial ? 'Update Entity' : 'Institution Registry'}</h2>
+            <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mt-1">Core Institutional Record</p>
           </div>
           <button onClick={onClose} className="p-2 text-zinc-300 hover:text-zinc-900 transition-all"><X size={20} /></button>
         </div>
@@ -217,47 +217,83 @@ function InstitutionModal({ open, onClose, onSave, initial, organizations }: {
               {submitError}
             </div>
           )}
+
+          {/* Parent Organization */}
           <div className="col-span-2">
-            <label className="block text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1.5 ml-1">Full Name </label>
-            <input type="text" placeholder="e.g. Al-Khidmat Foundation" value={form.name}
-              onChange={e => { setForm(p => ({ ...p, name: e.target.value })); setErrors(p => ({ ...p, name: '' })); }}
-              className={inp(errors.name)} />
-            {errors.name && <p className="text-[9px]  text-rose-500 font-bold mt-1 ml-1">{errors.name}</p>}
+            <label className="block text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-1 ml-1">Parent Organization</label>
+            <select value={form.organization_code}
+              onChange={e => { setForm(p => ({ ...p, organization_code: e.target.value })); setErrors(p => ({ ...p, organization_code: '' })); }}
+              className={inp(errors.organization_code)}>
+              {organizations.map(org => <option key={org.id} value={org.org_code}>{org.name} ({org.org_code})</option>)}
+            </select>
+            {errors.organization_code && <p className="text-[9px] text-rose-500 font-bold mt-1 ml-1">{errors.organization_code}</p>}
           </div>
-          <div>
-            <label className="block text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1.5 ml-1">Assigned Code </label>
-            <input type="text" placeholder="AKS-01" value={form.inst_code}
+
+          {/* Inst Code */}
+          <div className="col-span-2">
+            <label className="block text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-1 ml-1">Inst Code</label>
+            <input type="text" placeholder="Unique code (e.g., AIT01, AMC01)" value={form.inst_code}
               onChange={e => { setForm(p => ({ ...p, inst_code: e.target.value })); setErrors(p => ({ ...p, inst_code: '' })); }}
               className={inp(errors.inst_code)} />
             {errors.inst_code && <p className="text-[9px] text-rose-500 font-bold mt-1 ml-1">{errors.inst_code}</p>}
           </div>
-          <div>
-            <label className="block text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1.5 ml-1">Department</label>
+
+          {/* Name */}
+          <div className="col-span-2">
+            <label className="block text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-1 ml-1"> Inst Name</label>
+            <input type="text" placeholder="e.g. Al-Khidmat Foundation" value={form.name}
+              onChange={e => { setForm(p => ({ ...p, name: e.target.value })); setErrors(p => ({ ...p, name: '' })); }}
+              className={inp(errors.name)} />
+            {errors.name && <p className="text-[9px] text-rose-500 font-bold mt-1 ml-1">{errors.name}</p>}
+          </div>
+
+          {/* Inst Type */}
+          <div className="col-span-2">
+            <label className="block text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-1 ml-1">Inst Type</label>
             <select value={form.inst_type} onChange={e => setForm(p => ({ ...p, inst_type: e.target.value }))}
               className={inp()}>
-              <option value="educational">Educational</option>
-              <option value="healthcare">Healthcare</option>
-              <option value="social_welfare">Social Welfare</option>
-              <option value="administrative">Administrative</option>
-              <option value="technical">Technical</option>
-              <option value="operational">Operational</option>
+              <option value="educational">Educational (School, College, University)</option>
+              <option value="healthcare">Healthcare (Hospital, Clinic, Lab)</option>
+              <option value="social_welfare">Social Welfare (Kitchen, Shelter, Center)</option>
+              <option value="administrative">Administrative (Office, Branch)</option>
+              <option value="technical">Technical / Vocational</option>
+              <option value="operational">Operational / Project Site</option>
               <option value="other">Other</option>
             </select>
           </div>
+
+          {/* Address */}
           <div className="col-span-2">
-            <label className="block text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1.5 ml-1">Parent Organization </label>
-            <select value={form.organization_code}
-              onChange={e => { setForm(p => ({ ...p, organization_code: e.target.value })); setErrors(p => ({ ...p, organization_code: '' })); }}
-              className={inp(errors.organization_code)}>
-              <option value="">— Select Organization —</option>
-              {organizations.map(org => <option key={org.id} value={org.org_code}>{org.name}</option>)}
-            </select>
-            {errors.organization_code && <p className="text-[9px] text-rose-500 font-bold mt-1 ml-1">{errors.organization_code}</p>}
+            <label className="block text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-1 ml-1">Address</label>
+            <input type="text" placeholder="Street address" value={form.address ?? ''}
+              onChange={e => { setForm(p => ({ ...p, address: e.target.value })); setErrors(p => ({ ...p, address: '' })); }}
+              className={inp(errors.address)} />
+            {errors.address && <p className="text-[9px] text-rose-500 font-bold mt-1 ml-1">{errors.address}</p>}
           </div>
+
+          {/* City */}
+          <div>
+            <label className="block text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-1 ml-1">City</label>
+            <input type="text" placeholder="e.g. Karachi" value={form.city ?? ''}
+              onChange={e => { setForm(p => ({ ...p, city: e.target.value })); setErrors(p => ({ ...p, city: '' })); }}
+              className={inp(errors.city)} />
+            {errors.city && <p className="text-[9px] text-rose-500 font-bold mt-1 ml-1">{errors.city}</p>}
+          </div>
+
+          {/* Contact Number */}
+          <div>
+            <label className="block text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-1 ml-1">Contact Number</label>
+            <input type="tel" placeholder="e.g. 0300-1234567" value={form.contact_number ?? ''}
+              onChange={e => { setForm(p => ({ ...p, contact_number: e.target.value })); setErrors(p => ({ ...p, contact_number: '' })); }}
+              className={inp(errors.contact_number)} />
+            {errors.contact_number && <p className="text-[9px] text-rose-500 font-bold mt-1 ml-1">{errors.contact_number}</p>}
+          </div>
+
+          {/* Actions */}
           <div className="col-span-2 pt-6 flex justify-end gap-2">
-            <button onClick={onClose} disabled={saving} className="px-6 py-3 text-[10px] font-black text-zinc-400  hover:text-zinc-700 uppercase tracking-widest">Cancel</button>
+            <button onClick={onClose} disabled={saving} className="px-6 py-3 text-[10px] font-black text-zinc-500 rounded-lg hover:bg-[#dce0e4] bg-[#f1f5f9] hover:text-zinc-700 uppercase tracking-widest">Cancel</button>
             <button onClick={handleSubmit} disabled={saving}
-              className="px-8 py-3.5 bg-zinc-900 text-white rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-[#6B3F69] transition-all active:scale-95 shadow-xl disabled:opacity-50">
+              className="px-8 py-3.5 bg-[#6B3F69] text-white rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-[#6B3F69] transition-all active:scale-95 shadow-xl disabled:opacity-50">
               {saving ? 'Saving...' : initial ? 'Finalize Changes' : 'Department Registration'}
             </button>
           </div>
@@ -328,14 +364,14 @@ function BranchModal({ open, onClose, onSave, initial, institutionCode }: {
     `w-full px-5 py-3.5 bg-zinc-50 border focus:bg-white rounded-lg text-[10px] uppercase font-black tracking-widest outline-none transition-all ${err ? 'border-rose-400' : 'border-transparent focus:border-[#6B3F69]'}`;
 
   if (!open) return null;
-
+  ////branch from code///////
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xl border border-zinc-100 animate-in zoom-in-95 duration-200 overflow-hidden">
-        <div className="px-10 py-10 border-b border-zinc-50 flex items-center justify-between">
+        <div className="px-5 py-5 border-b border-zinc-50 flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-black text-zinc-900 tracking-tighter uppercase">{initial ? 'Update Station' : 'Deploy Operational Unit'}</h2>
-            <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mt-0.5">Full Deployment Registry</p>
+            <h2 className="text-lg font-black text-zinc-900 tracking-tighter uppercase">{initial ? 'Update Branch' : 'Deploy Operational Branch'}</h2>
+            <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mt-0.5">Full Deployment Registry</p>
           </div>
           <button onClick={onClose} className="p-2 text-zinc-300 hover:text-zinc-900 transition-all"><X size={20} /></button>
         </div>
@@ -346,61 +382,61 @@ function BranchModal({ open, onClose, onSave, initial, institutionCode }: {
             </div>
           )}
           <div className="col-span-2">
-            <label className="block text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1.5 ml-1">Branch Name </label>
+            <label className="block text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-1.5 ml-1">Branch Name </label>
             <input type="text" placeholder="e.g. Area Command Hub" value={form.branch_name}
               onChange={e => { setForm(p => ({ ...p, branch_name: e.target.value })); setErrors(p => ({ ...p, branch_name: '' })); }}
               className={inp(errors.branch_name)} />
             {errors.branch_name && <p className="text-[9px] text-rose-500 font-bold mt-1 ml-1">{errors.branch_name}</p>}
           </div>
           <div>
-            <label className="block text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1.5 ml-1">Branch Code </label>
+            <label className="block text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-1.5 ml-1">Branch Code </label>
             <input type="text" placeholder="ISL-01" value={form.branch_code}
               onChange={e => { setForm(p => ({ ...p, branch_code: e.target.value })); setErrors(p => ({ ...p, branch_code: '' })); }}
               className={inp(errors.branch_code)} />
             {errors.branch_code && <p className="text-[9px] text-rose-500 font-bold mt-1 ml-1">{errors.branch_code}</p>}
           </div>
           <div>
-            <label className="block text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1.5 ml-1">Deployment Status</label>
+            <label className="block text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-1.5 ml-1">Deployment Status</label>
             <select value={form.status} onChange={e => setForm(p => ({ ...p, status: e.target.value }))} className={inp()}>
               <option value="active">Active</option>
               <option value="inactive">Inactive</option>
               <option value="closed">Closed</option>
-              <option value="under_construction">Under Construction</option>
+              {/* <option value="under_construction">Under Construction</option> */}
             </select>
           </div>
           <div className="col-span-2">
-            <label className="block text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1.5 ml-1">Branch Head / CO</label>
+            <label className="block text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-1.5 ml-1">Branch Head / CO</label>
             <input type="text" placeholder="e.g. Dr. Salman Khan" value={form.branch_head_name}
               onChange={e => setForm(p => ({ ...p, branch_head_name: e.target.value }))} className={inp()} />
           </div>
           <div>
-            <label className="block text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1.5 ml-1">Contact Phone</label>
+            <label className="block text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-1.5 ml-1">Contact Phone</label>
             <input type="tel" placeholder="03001234567" value={form.contact_number}
               onChange={e => { setForm(p => ({ ...p, contact_number: e.target.value })); setErrors(p => ({ ...p, contact_number: '' })); }}
               className={inp(errors.contact_number)} />
             {errors.contact_number && <p className="text-[9px] text-rose-500 font-bold mt-1 ml-1">{errors.contact_number}</p>}
           </div>
           <div>
-            <label className="block text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1.5 ml-1">Deployment Email</label>
+            <label className="block text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-1.5 ml-1">Deployment Email</label>
             <input type="email" placeholder="unit@inst.pk" value={form.email}
               onChange={e => { setForm(p => ({ ...p, email: e.target.value })); setErrors(p => ({ ...p, email: '' })); }}
               className={`${inp(errors.email)} lowercase`} />
             {errors.email && <p className="text-[9px] text-rose-500 font-bold mt-1 ml-1">{errors.email}</p>}
           </div>
           <div className="col-span-2">
-            <label className="block text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1.5 ml-1">Station City</label>
+            <label className="block text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-1.5 ml-1">Station City</label>
             <input type="text" placeholder="e.g. Islamabad" value={form.city}
               onChange={e => setForm(p => ({ ...p, city: e.target.value }))} className={inp()} />
           </div>
           <div className="col-span-2">
-            <label className="block text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1.5 ml-1">Full Physical Address</label>
+            <label className="block text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-1.5 ml-1">Full Physical Address</label>
             <input type="text" placeholder="Plot 123, Sector G-10..." value={form.address}
               onChange={e => setForm(p => ({ ...p, address: e.target.value }))} className={inp()} />
           </div>
           <div className="col-span-2 pt-6 flex justify-end gap-2">
-            <button onClick={onClose} disabled={saving} className="px-6 py-3 text-[10px] font-black text-zinc-400 hover:text-zinc-700 uppercase tracking-widest">Cancel</button>
+            <button onClick={onClose} disabled={saving} className="px-6 py-3 text-[10px] font-black bg-[#e4e4f0] rounded-lg text-zinc-600 hover:text-zinc-700 uppercase tracking-widest">Cancel</button>
             <button onClick={handleSubmit} disabled={saving}
-              className="px-8 py-3.5 bg-zinc-900 text-white rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-[#6B3F69] transition-all active:scale-95 shadow-xl disabled:opacity-50">
+              className="px-8 py-3.5 bg-[#6B3F69] text-white rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-[#6B3F69] transition-all active:scale-95 shadow-xl disabled:opacity-50">
               {saving ? 'Saving...' : initial ? 'Apply Command' : 'Initialize Deployment'}
             </button>
           </div>
@@ -484,15 +520,15 @@ function InstitutionsPage() {
       const url = editInst ? `/employees/institutions/${editInst.id}` : "/employees/institutions";
       const res = await fetchWithAuth(url, { method, body: JSON.stringify(data) });
       const body = await res.json().catch(() => ({}));
-      if (res.ok) { 
-        setInstModal(false); 
-        await loadInitialData(); 
+      if (res.ok) {
+        setInstModal(false);
+        await loadInitialData();
         if (editInst) {
           toast.success("Institution Updated Successfully", { style: { backgroundColor: '#3b82f6', color: '#fff' } });
         } else {
           toast.success("Institution Added Successfully", { style: { backgroundColor: '#22c55e', color: '#fff' } });
         }
-        return { ok: true }; 
+        return { ok: true };
       }
       if (body?.field_errors) return { ok: false, fieldErrors: body.field_errors };
       if (Array.isArray(body?.detail)) return { ok: false, error: body.detail.map((d: any) => d?.msg || JSON.stringify(d)).join('; ') };
@@ -508,15 +544,15 @@ function InstitutionsPage() {
       const url = editBranch ? `/employees/branches/${editBranch.branch_id}` : "/employees/branches";
       const res = await fetchWithAuth(url, { method, body: JSON.stringify(data) });
       const body = await res.json().catch(() => ({}));
-      if (res.ok) { 
-        setBranchModal(false); 
-        await loadInitialData(); 
+      if (res.ok) {
+        setBranchModal(false);
+        await loadInitialData();
         if (editBranch) {
           toast.success("Branch Updated Successfully", { style: { backgroundColor: '#3b82f6', color: '#fff' } });
         } else {
           toast.success("Branch Added Successfully", { style: { backgroundColor: '#22c55e', color: '#fff' } });
         }
-        return { ok: true }; 
+        return { ok: true };
       }
       if (body?.field_errors) return { ok: false, fieldErrors: body.field_errors };
       if (Array.isArray(body?.detail)) return { ok: false, error: body.detail.map((d: any) => d?.msg || JSON.stringify(d)).join('; ') };
@@ -530,8 +566,8 @@ function InstitutionsPage() {
     if (!confirm("Confirm dissolution?")) return;
     try {
       const res = await fetchWithAuth(`/employees/institutions/${id}`, { method: "DELETE" });
-      if (res.ok) { 
-        await loadInitialData(); 
+      if (res.ok) {
+        await loadInitialData();
         toast.success("Institution Deleted Successfully", { style: { backgroundColor: '#ef4444', color: '#fff' }, icon: '🗑️' });
       }
       else { const b = await res.json().catch(() => ({})); alert(b?.error || 'Failed to delete institution'); }
@@ -542,8 +578,8 @@ function InstitutionsPage() {
     if (!confirm("Confirm decommissioning?")) return;
     try {
       const res = await fetchWithAuth(`/employees/branches/${id}`, { method: "DELETE" });
-      if (res.ok) { 
-        await loadInitialData(); 
+      if (res.ok) {
+        await loadInitialData();
         toast.success("Branch Deleted Successfully", { style: { backgroundColor: '#ef4444', color: '#fff' }, icon: '🗑️' });
       }
       else { const b = await res.json().catch(() => ({})); alert(b?.error || 'Failed to delete branch'); }
@@ -596,7 +632,7 @@ function InstitutionsPage() {
               {[
                 { label: 'Total Institutions', val: institutions.length, icon: Building2, color: 'text-purple-600', bg: 'bg-purple-50/50', shadow: 'hover:shadow-purple-500/20', blob: 'bg-purple-500/5' },
                 { label: 'Total Branches', val: totalUnits, icon: GitBranch, color: 'text-blue-600', bg: 'bg-blue-50/50', shadow: 'hover:shadow-blue-500/20', blob: 'bg-blue-500/5' },
-                
+
               ].map((stat, i) => (
                 <div key={i} className={`bg-white p-5 rounded-3xl border border-slate-100 shadow-sm flex items-center justify-between group hover:shadow-2xl ${stat.shadow} hover:-translate-y-1 transition-all duration-300 relative overflow-hidden`}>
                   <div className={`absolute top-0 right-0 w-24 h-24 ${stat.blob} blur-[60px] rounded-full -mr-8 -mt-8 transition-transform group-hover:scale-150`} />
@@ -641,7 +677,7 @@ function InstitutionsPage() {
           <div className="space-y-7 ">
             <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-5">
               <div className="space-y-4">
-                <button onClick={() => setView("list")} className="flex items-center gap-2 text-zinc-500 hover:text-zinc-900 text-[10px] font-black uppercase tracking-[0.3em] transition-all group py-3">
+                <button onClick={() => setView("list")} className="flex items-center gap-2 text-zinc-500 hover:text-zinc-900 text-[10px] font-black uppercase tracking-[0.3em] transition-all group py-2">
                   <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" /> Back To catalog
                 </button>
                 <div className="flex items-center gap-5">
@@ -659,7 +695,7 @@ function InstitutionsPage() {
                   </div>
                 </div>
               </div>
-              <button onClick={() => { setEditBranch(null); setBranchModal(true); }} className="h-15 px-4 bg-[#6B3F69] text-white rounded-2xl flex items-center gap-2 text-[10px] font-black uppercase tracking-widest hover:bg-[#6B3F69] transition-all shadow-2xl active:scale-95">
+              <button onClick={() => { setEditBranch(null); setBranchModal(true); }} className="h-14 px-2 bg-[#6B3F69] text-white rounded-2xl flex items-center gap-2 text-[10px] font-black uppercase tracking-widest hover:bg-[#6B3F69] transition-all shadow-2xl active:scale-95">
                 <Plus size={20} /> Add New Branch
               </button>
             </div>
@@ -714,7 +750,7 @@ function InstitutionsPage() {
                       <tr key={b.branch_id} className="hover:bg-zinc-50/50 transition-all group">
                         <td className="py-6 px-8">
                           <div className="flex items-center gap-4">
-                            <div className="h-12 w-12 rounded-2xl bg-zinc-900 flex items-center justify-center text-white shadow-lg group-hover:bg-[#6B3F69] transition-all shrink-0">
+                            <div className="h-12 w-12 rounded-2xl bg-[#d6d6e2] flex items-center justify-center text-white shadow-lg group-hover:bg-[#6B3F69] transition-all shrink-0">
                               <GitBranch size={20} />
                             </div>
                             <div>
@@ -760,7 +796,7 @@ function InstitutionsPage() {
                         </td>
                         <td className="py-6 px-8 text-right">
                           <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300">
-                            <button onClick={() => { setEditBranch(b); setBranchModal(true); }} className="h-9 w-9 flex items-center justify-center bg-white text-zinc-400 rounded-lg hover:bg-zinc-900 hover:text-white transition-all border border-zinc-100 shadow-sm">
+                            <button onClick={() => { setEditBranch(b); setBranchModal(true); }} className="h-9 w-9 flex items-center justify-center bg-white text-zinc-400 rounded-lg hover:bg[#a1a1aa] transition-all border border-zinc-100 shadow-sm">
                               <Edit2 size={12} />
                             </button>
                             <button onClick={() => deleteUnit(b.branch_id)} className="h-9 w-9 flex items-center justify-center bg-white text-zinc-400 rounded-xl hover:bg-rose-500 hover:text-white transition-all border border-zinc-100 shadow-sm">

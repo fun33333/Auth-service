@@ -60,7 +60,7 @@ const Skeleton = ({ className, height, width }: any) => (
 );
 
 const inputCls = (err?: string) =>
-  `w-full px-5 py-3.5 bg-zinc-50 border rounded-xl text-[11px] font-black uppercase tracking-widest outline-none transition-all ${
+  `w-full px-5 py-3.5 bg-zinc-50 border rounded-lg text-[11px] font-black uppercase tracking-widest outline-none transition-all ${
     err ? "border-rose-400 bg-rose-50/40" : "border-transparent focus:border-indigo-500 focus:bg-white"
   }`;
 
@@ -132,17 +132,17 @@ function BranchModal({
 
     
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <form onSubmit={handleSubmit(submit)} className="bg-white rounded-[2rem] shadow-2xl w-full max-w-2xl mx-4 animate-in zoom-in-95 duration-200 overflow-hidden border border-zinc-100">
+      <form onSubmit={handleSubmit(submit)} className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-4 animate-in zoom-in-95 duration-200 overflow-hidden border border-zinc-100">
         <div className="flex items-center justify-between px-8 py-6 border-b border-zinc-50">
           <div>
-            <h2 className="text-xl font-black text-zinc-900 tracking-tighter uppercase">{initial ? "Update Branch" : "Establish New Unit"}</h2>
+            <h2 className="text-lg font-black text-zinc-800 tracking-tighter uppercase">{initial ? "Update Branch" : "Establish New Unit"}</h2>
             <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mt-0.5">Physical Hub & Operational Registry</p>
           </div>
           <button type="button" onClick={onClose} className="p-2 text-zinc-300 hover:text-zinc-900 rounded-lg transition"><X size={24} /></button>
         </div>
 
         {submitError && (
-          <div className="mx-8 mt-4 p-4 rounded-xl bg-rose-50 border border-rose-200 text-[11px] font-black text-rose-700 uppercase tracking-wider">
+          <div className="mx-8 mt-4 p-4 rounded-lg bg-rose-50 border border-rose-200 text-[11px] font-black text-rose-700 uppercase tracking-wider">
             {submitError}
           </div>
         )}
@@ -210,7 +210,7 @@ function BranchModal({
         <div className="px-8 py-6 border-t border-zinc-50 flex justify-end gap-3 bg-zinc-50/30">
           <button type="button" onClick={onClose} className="px-6 py-3 text-[10px] font-black text-zinc-400 uppercase tracking-widest hover:text-zinc-600 transition">Cancel</button>
           <button type="submit" disabled={isSubmitting}
-            className="px-10 py-3.5 bg-zinc-900 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-indigo-600 shadow-xl transition-all active:scale-95 disabled:opacity-50">
+            className="px-10 py-3.5 bg-[#6B3F69] text-white rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-[#6B3F69]  shadow-lg transition-all active:scale-95 disabled:opacity-50">
             {isSubmitting ? "Saving…" : initial ? "Confirm Changes" : "Deploy Unit"}
           </button>
         </div>
@@ -329,7 +329,7 @@ export default function BranchesPage() {
     <ProtectedLayout>
       {deleteId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/60 backdrop-blur-sm">
-          <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-sm mx-4 p-8 animate-in zoom-in-95 duration-200 text-center border border-zinc-100">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 p-8 animate-in zoom-in-95 duration-200 text-center border border-zinc-100">
             <div className="w-16 h-16 rounded-full bg-rose-50 flex items-center justify-center mx-auto mb-6 text-rose-500 shadow-inner"><Trash2 size={24} /></div>
             <h3 className="text-xl font-black text-zinc-900 uppercase tracking-tighter">Decommission Unit?</h3>
             <p className="text-xs font-bold text-zinc-400 uppercase tracking-widest mt-2 px-4 leading-relaxed">This branch will be marked inactive in the registry (recoverable).</p>
@@ -351,14 +351,14 @@ export default function BranchesPage() {
         institutions={institutions}
       />
 
-      <div className="p-4 sm:p-6 lg:p-10 max-w-[1600px] mx-auto space-y-12 animate-in fade-in duration-1000">
+      <div className="p-4 sm:p-6 lg:p-10 max-w-400 mx-auto space-y-12 animate-in fade-in duration-1000">
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-8 border-b border-zinc-100 pb-12">
           <div className="space-y-4">
             <h1 className="text-4xl font-black text-zinc-900 tracking-tighter uppercase leading-none">Operational Branches</h1>
             <p className="text-[11px] font-black text-zinc-400 uppercase tracking-[0.5em] italic opacity-60">Physical Deployment & Station Registry</p>
           </div>
           <button onClick={() => { setEditTarget(null); setModalOpen(true); }}
-            className="h-16 px-10 bg-zinc-900 text-white rounded-[2rem] flex items-center justify-center gap-3 text-[11px] font-black uppercase tracking-widest hover:bg-indigo-600 transition-all active:scale-95 shadow-2xl shadow-zinc-900/10">
+            className="h-16 px-10 bg-zinc-900 text-white rounded-2xl flex items-center justify-center gap-3 text-[11px] font-black uppercase tracking-widest hover:bg-indigo-600 transition-all active:scale-95 shadow-2xl shadow-zinc-900/10">
             <Plus size={20} strokeWidth={3} /> Initialize Unit
           </button>
         </div>
@@ -367,7 +367,7 @@ export default function BranchesPage() {
           {stats.map((s, idx) => {
             const Icon = s.icon;
             return (
-              <div key={idx} className="bg-white p-6 sm:p-8 rounded-[2.5rem] border border-zinc-100 shadow-sm hover:shadow-xl transition-all duration-500 group relative overflow-hidden">
+              <div key={idx} className="bg-white p-6 sm:p-8 rounded-2xl border border-zinc-100 shadow-sm hover:shadow-lg transition-all duration-500 group relative overflow-hidden">
                 <div className={`absolute top-6 right-6 p-4 rounded-2xl ${s.bg} ${s.color} group-hover:scale-110 transition-transform`}><Icon size={24} strokeWidth={2.5} /></div>
                 <div className="relative z-10">
                   <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1">{s.label}</p>
@@ -383,7 +383,7 @@ export default function BranchesPage() {
           })}
         </div>
 
-        <div className="bg-white p-6 rounded-[2.5rem] border border-zinc-100 shadow-2xl shadow-zinc-200/20">
+        <div className="bg-white p-6 rounded-2xl border border-zinc-100 shadow-2xl shadow-zinc-200/20">
           <div className="relative group">
             <Search className="absolute left-6 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-300 group-focus-within:text-zinc-900 transition-colors" />
             <input type="text" placeholder="FILTER BY UNIT NAME, REGISTRY CODE OR CITY BASE..." value={search} onChange={e => setSearch(e.target.value)}
@@ -392,7 +392,7 @@ export default function BranchesPage() {
         </div>
 
         <div className="relative pb-20">
-          <div className="bg-white rounded-[3rem] border border-zinc-100 overflow-hidden shadow-2xl shadow-zinc-200/20">
+          <div className="bg-white rounded-2xl border border-zinc-100 overflow-hidden shadow-2xl shadow-zinc-200/20">
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-zinc-50/50 text-left">
                 <thead>
@@ -435,7 +435,7 @@ export default function BranchesPage() {
                             <MapPin size={12} className="text-rose-400" />
                             <span className="text-[11px] font-black uppercase tracking-tight">{b.city || "Central Base"}</span>
                           </div>
-                          <p className="text-[9px] font-bold text-zinc-400 uppercase truncate max-w-[150px] ml-5">{b.address}</p>
+                          <p className="text-[9px] font-bold text-zinc-400 uppercase truncate max-w-37.5 ml-5">{b.address}</p>
                         </div>
                       </td>
                       <td className="p-8">

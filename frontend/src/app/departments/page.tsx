@@ -111,85 +111,163 @@ function DepartmentModal({
         onClose();
     };
 
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-            <form onSubmit={handleSubmit(submit)} className=" bg-white rounded-2xl shadow-2xl w-full max-w-xl mx-4 animate-in zoom-in-95 duration-200">
-                <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+    // Department Modal Form - Styled like Institution Registry Form
+return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+        <form onSubmit={handleSubmit(submit)} className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl mx-4 animate-in zoom-in-95 duration-200 overflow-hidden">
+            
+            {/* ━━━ HEADER ━━━ */}
+            <div className="px-8 py-6 border-b border-slate-100 bg-gradient-to-br from-white to-slate-50/50">
+                <div className="flex items-start justify-between gap-4">
                     <div>
-                        <h2 className="text-lg font-semibold text-slate-900">{initial ? "Edit Department" : "Add Department"}</h2>
-                        <p className="text-sm text-slate-400 mt-0.5">Fill in the department details.</p>
+                        <h2 className="text-2xl font-black text-slate-900 tracking-tight uppercase">
+                            {initial ? "Edit Department" : "Add Department"}
+                        </h2>
+                        <p className="text-xs font-bold text-slate-400 mt-2 tracking-widest uppercase">
+                            {initial ? "Update department information" : "Fill in the department details"}
+                        </p>
                     </div>
-                    <button type="button" onClick={onClose} className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition"><X size={20} /></button>
-                </div>
-
-                {submitError && (
-                    <div className="mx-6 mt-4 p-3 rounded-lg bg-[#dfdddd] border border-rose-200 text-xs font-bold text-rose-700">
-                        {submitError}
-                    </div>
-                )}
-
-                <div className="px-6 py-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {/* Branch */}
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Branch</label>
-                        <select {...register("branch_code")} disabled={!!instVal} className={`${inputCls(errors.branch_code?.message)} bg-white ${instVal ? "opacity-50 cursor-not-allowed" : ""}`}>
-                            <option value="">— none —</option>
-                            {branches.map(b => (
-                                <option key={b.branch_code} value={b.branch_code}>{b.branch_name} ({b.branch_code})</option>
-                            ))}
-                        </select>
-                        <FieldError msg={errors.branch_code?.message} />
-                        {!instVal && !branchVal && <p className="text-[10px] text-slate-400 mt-1 ml-1">Pick institution OR branch — not both</p>}
-                    </div>
-                    {/* organization */}
-                    {/* <div className="col-span-2">
-                        <label className="block text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1.5 ml-1">Parent Organization </label>
-                        <select value={form.organization_code}
-                            onChange={e => { setForm(p => ({ ...p, organization_code: e.target.value })); setErrors(p => ({ ...p, organization_code: '' })); }}
-                            className={inp(errors.organization_code)}>
-                            <option value="">— Select Organization —</option>
-                            {organizations.map(org => <option key={org.id} value={org.org_code}>{org.name}</option>)}
-                        </select>
-                        {errors.organization_code && <p className="text-[9px] text-rose-500 font-bold mt-1 ml-1">{errors.organization_code}</p>}
-                    </div> */}
-                    {/* institution */}
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Institution</label>
-                        <select {...register("institution_code")} disabled={!!branchVal} className={`${inputCls(errors.institution_code?.message)} bg-white ${branchVal ? "opacity-50 cursor-not-allowed" : ""}`}>
-                            <option value="">— none —</option>
-                            {institutions.map(inst => (
-                                <option key={inst.inst_code} value={inst.inst_code}>{inst.name} ({inst.inst_code})</option>
-                            ))}
-                        </select>
-                        <FieldError msg={errors.institution_code?.message} />
-                    </div>
-                    <div className="sm:col-span-2">
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Department Name</label>
-                        <input type="text" placeholder="e.g. Academic" {...register("dept_name")} className={inputCls(errors.dept_name?.message)} />
-                        <FieldError msg={errors.dept_name?.message} />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Department Code</label>
-                        <input type="text" placeholder="e.g. AC" disabled={!!initial} {...register("dept_code")} className={`${inputCls(errors.dept_code?.message)} ${initial ? "opacity-60 bg-slate-100 cursor-not-allowed" : ""}`} />
-                        <FieldError msg={errors.dept_code?.message} />
-                    </div>
-                    <div className="sm:col-span-2">
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Description</label>
-                        <input type="text" placeholder="Brief description" {...register("description")} className={inputCls(errors.description?.message)} />
-                        <FieldError msg={errors.description?.message} />
-                    </div>
-                </div>
-
-                <div className="px-6 py-4 border-t border-slate-100 flex justify-end gap-3">
-                    <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition">Cancel</button>
-                    <button type="submit" disabled={isSubmitting}
-                        className="px-5 py-2 text-sm font-medium text-white bg-[#6B3F69] rounded-lg hover:bg-[#5a3558] shadow-md shadow-[#6B3F69]/10 transition active:scale-95 disabled:opacity-50">
-                        {isSubmitting ? "Saving…" : initial ? "Save Changes" : "Add Department"}
+                    <button 
+                        type="button" 
+                        onClick={onClose} 
+                        className="p-2 text-slate-300 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition flex-shrink-0"
+                    >
+                        <X size={22} />
                     </button>
                 </div>
-            </form>
-        </div>
-    );
+            </div>
+
+            {/* ━━━ ERROR MESSAGE ━━━ */}
+            {submitError && (
+                <div className="mx-8 mt-6 p-4 rounded-xl bg-rose-50 border border-rose-200 text-xs font-bold text-rose-700 tracking-wide">
+                    {submitError}
+                </div>
+            )}
+
+            {/* ━━━ FORM CONTENT ━━━ */}
+            <div className="px-8 py-8 space-y-6">
+
+                {/* Branch */}
+                <div>
+                    <label className="block text-xs font-black text-slate-700 mb-2 tracking-widest uppercase">
+                        Branch
+                    </label>
+                    <select 
+                        {...register("branch_code")} 
+                        disabled={!!instVal} 
+                        className={`w-full px-4 py-3 bg-white border rounded-lg text-slate-900 font-medium placeholder:text-slate-400 transition focus:outline-none focus:ring-2 focus:ring-[#6B3F69]/20 focus:border-[#6B3F69] disabled:opacity-50 disabled:bg-slate-50 disabled:cursor-not-allowed ${
+                            errors.branch_code ? "border-rose-300" : "border-slate-200"
+                        }`}
+                    >
+                        <option value="">---------</option>
+                        {branches.map(b => (
+                            <option key={b.branch_code} value={b.branch_code}>
+                                {b.branch_name} ({b.branch_code})
+                            </option>
+                        ))}
+                    </select>
+                    <FieldError msg={errors.branch_code?.message} />
+                    {!instVal && !branchVal && (
+                        <p className="text-xs text-slate-400 mt-2">
+                            Pick institution OR branch — not both
+                        </p>
+                    )}
+                </div>
+
+                {/* Institution */}
+                <div>
+                    <label className="block text-xs font-black text-slate-700 mb-2 tracking-widest uppercase">
+                        Institution
+                    </label>
+                    <select 
+                        {...register("institution_code")} 
+                        disabled={!!branchVal} 
+                        className={`w-full px-4 py-3 bg-white border rounded-lg text-slate-900 font-medium placeholder:text-slate-400 transition focus:outline-none focus:ring-2 focus:ring-[#6B3F69]/20 focus:border-[#6B3F69] disabled:opacity-50 disabled:bg-slate-50 disabled:cursor-not-allowed ${
+                            errors.institution_code ? "border-rose-300" : "border-slate-200"
+                        }`}
+                    >
+                        <option value="">---------</option>
+                        {institutions.map(inst => (
+                            <option key={inst.inst_code} value={inst.inst_code}>
+                                {inst.name} ({inst.inst_code})
+                            </option>
+                        ))}
+                    </select>
+                    <FieldError msg={errors.institution_code?.message} />
+                </div>
+
+                {/* Department Code & Name (2 Column) */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    <div>
+                        <label className="block text-xs font-black text-slate-700 mb-2 tracking-widest uppercase">
+                            Department Code
+                        </label>
+                        <input 
+                            type="text" 
+                            placeholder="E.G. HR, FIN, ACAD" 
+                            disabled={!!initial} 
+                            {...register("dept_code")} 
+                            className={`w-full px-4 py-3 bg-white border rounded-lg text-slate-900 font-medium placeholder:text-slate-400 transition focus:outline-none focus:ring-2 focus:ring-[#6B3F69]/20 focus:border-[#6B3F69] disabled:opacity-50 disabled:bg-slate-50 disabled:cursor-not-allowed ${
+                                errors.dept_code ? "border-rose-300" : "border-slate-200"
+                            }`}
+                        />
+                        <FieldError msg={errors.dept_code?.message} />
+                    </div>
+
+                    <div>
+                        <label className="block text-xs font-black text-slate-700 mb-2 tracking-widest uppercase">
+                            Department Name
+                        </label>
+                        <input 
+                            type="text" 
+                            placeholder="E.G. ACADEMIC" 
+                            {...register("dept_name")} 
+                            className={`w-full px-4 py-3 bg-white border rounded-lg text-slate-900 font-medium placeholder:text-slate-400 transition focus:outline-none focus:ring-2 focus:ring-[#6B3F69]/20 focus:border-[#6B3F69] ${
+                                errors.dept_name ? "border-rose-300" : "border-slate-200"
+                            }`}
+                        />
+                        <FieldError msg={errors.dept_name?.message} />
+                    </div>
+                </div>
+
+                {/* Description */}
+                <div>
+                    <label className="block text-xs font-black text-slate-700 mb-2 tracking-widest uppercase">
+                        Description
+                    </label>
+                    <input 
+                        type="text" 
+                        placeholder="BRIEF DESCRIPTION" 
+                        {...register("description")} 
+                        className={`w-full px-4 py-3 bg-white border rounded-lg text-slate-900 font-medium placeholder:text-slate-400 transition focus:outline-none focus:ring-2 focus:ring-[#6B3F69]/20 focus:border-[#6B3F69] ${
+                            errors.description ? "border-rose-300" : "border-slate-200"
+                        }`}
+                    />
+                    <FieldError msg={errors.description?.message} />
+                </div>
+
+            </div>
+
+            {/* ━━━ FOOTER ━━━ */}
+            <div className="px-8 py-6 border-t border-slate-100 bg-slate-50 flex justify-end gap-3">
+                <button 
+                    type="button" 
+                    onClick={onClose} 
+                    className="px-6 py-3 text-sm font-black text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-100 transition uppercase tracking-wider"
+                >
+                    Cancel
+                </button>
+                <button 
+                    type="submit" 
+                    disabled={isSubmitting}
+                    className="px-8 py-3 text-sm font-black text-white bg-[#6B3F69] rounded-lg hover:bg-[#5a3558] shadow-lg shadow-[#6B3F69]/20 transition active:scale-95 disabled:opacity-60 uppercase tracking-wider"
+                >
+                    {isSubmitting ? "Saving…" : initial ? "Save Changes" : "Add Department"}
+                </button>
+            </div>
+        </form>
+    </div>
+);
 }
 
 export default function DepartmentsPage() {
@@ -270,15 +348,15 @@ export default function DepartmentsPage() {
         try {
             const res = await fetchWithAuth(url, { method, body: JSON.stringify(payload) });
             const body = await res.json().catch(() => ({}));
-            if (res.ok) { 
-                loadData(); 
-                setEditTarget(null); 
+            if (res.ok) {
+                loadData();
+                setEditTarget(null);
                 if (editTarget) {
                     toast.success("Department Updated Successfully", { style: { backgroundColor: '#3b82f6', color: '#fff' } });
                 } else {
                     toast.success("Department Added Successfully", { style: { backgroundColor: '#22c55e', color: '#fff' } });
                 }
-                return { ok: true }; 
+                return { ok: true };
             }
             if (body?.field_errors) return { ok: false, fieldErrors: body.field_errors };
             if (Array.isArray(body?.detail)) {
@@ -313,14 +391,14 @@ export default function DepartmentsPage() {
         <ProtectedLayout>
             {deleteId && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm">
-                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 p-6 animate-in zoom-in-95 duration-200">
-                        <div className="flex items-center justify-center w-12 h-12 rounded-full bg-red-100 mx-auto mb-4"><Trash2 className="text-red-600 h-6 w-6" /></div>
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-3 p-3 animate-in zoom-in-95 duration-200">
+                        <div className="flex items-center justify-center w-10 h-12 rounded-full bg-red-100 mx-auto mb-4"><Trash2 className="text-red-600 h-6 w-6" /></div>
                         <h3 className="text-center text-lg font-semibold text-slate-900">Delete Department?</h3>
-                        <p className="text-center text-sm text-slate-500 mt-1">Soft-delete — recoverable from backend.</p>
+                        {/* <p className="text-center text-sm text-slate-500 mt-1">Soft-delete — recoverable from backend.</p> */}
                         <div className="flex gap-3 mt-6">
-                            <button onClick={() => setDeleteId(null)} disabled={deleteBusy} className="flex-1 px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-xl hover:bg-slate-50 transition disabled:opacity-50">Cancel</button>
+                            <button onClick={() => setDeleteId(null)} disabled={deleteBusy} className="flex-1 px-2 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-200 transition disabled:opacity-50">Cancel</button>
                             <button onClick={() => handleDelete(deleteId)} disabled={deleteBusy}
-                                className="flex-1 px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-xl hover:bg-red-700 transition disabled:opacity-50">
+                                className="flex-1 px-2 py-2 text-sm font-medium text-white bg-red-400 rounded-lg hover:bg-red-500 transition disabled:opacity-50">
                                 {deleteBusy ? "…" : "Delete"}
                             </button>
                         </div>

@@ -557,7 +557,7 @@ export default function Dashboard() {
       <div className="p-2 sm:p-3 space-y-2 sm:space-y-3 max-w-350 mx-auto animate-in fade-in duration-500">
 
         {/* Page Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-5 bg-white p-3 sm:p-4 rounded-[1.2rem] border border-slate-100 backdrop-blur-md ">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-5 bg-white p-3 sm:p-4 rounded-2xl border border-slate-100 backdrop-blur-md ">
           <div className="flex items-center gap-4">
             <div className="h-14 w-14 rounded-2xl bg-[#6B3F69] flex items-center justify-center text-white shadow-lg shadow-[#6B3F69]/20 font-black text-xl">
               {user?.full_name?.charAt(0) || "U"}
@@ -687,7 +687,7 @@ export default function Dashboard() {
             {loading ? (
               <div className="space-y-3">
                 {[...Array(4)].map((_, i) => (
-                  <div key={i} className="h-14 bg-slate-50 rounded-xl animate-pulse" />
+                  <div key={i} className="h-14 bg-slate-50 rounded-lg animate-pulseimate-puls" />
                 ))}
               </div>
             ) : recentEmployees.length > 0 ? (
@@ -706,20 +706,21 @@ export default function Dashboard() {
         </div>
 
         {/* ── Row 3: Intelligence Hub | Real-time Stream ── */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-2 sm:gap-3">
+       <div className="grid grid-cols-1 lg:grid-cols-3 gap-2 sm:gap-3">
+
 
           {/* Intelligence Hub */}
-          <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-2xl hover:shadow-[#6B3F69]/10 hover:-translate-y-1 transition-all duration-500 p-4 sm:p-5 relative overflow-hidden group/hub">
+          <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-2xl hover:shadow-[#6B3F69]/10 hover:-translate-y-1 transition-all duration-500 p-4 sm:p-5 relative overflow-hidden group/hub h-fit">
             <div className="absolute top-0 right-0 w-30 h-30 bg-[#6B3F69]/5 blur-[100px] rounded-full " />
             <div className="flex items-center justify-between mb-2">
-              <h2 className="text-2xl font-black text-slate-900 tracking-tighter uppercase">
+              <h2 className="text-1xl font-black text-slate-900 tracking-tighter uppercase">
                 Intelligence Hub
               </h2>
               {/* <Settings size={22} className="text-slate-300 hover:rotate-90 transition-transform cursor-pointer" /> */}
             </div>
-            <p className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-400 mb-4 opacity-60 italic">
+            {/* <p className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-400 mb-4 opacity-60 italic">
               Strategic Control & Monitoring
-            </p>
+            </p> */}
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-3">
               <HubAction
                 icon={UserPlus}
@@ -760,7 +761,7 @@ export default function Dashboard() {
           </div>
 
           {/* Real-time Stream */}
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-2xl hover:shadow-emerald-500/10 hover:-translate-y-1 transition-all duration-500 p-3 sm:p-4 relative overflow-hidden group">
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-2xl hover:shadow-emerald-500/10 hover:-translate-y-1 transition-all duration-500 p-3 sm:p-4 relative overflow-hidden group h-fit">
             <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/5 blur-[80px] rounded-full -mr-10 -mt-10" />
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-sm font-black text-slate-800 uppercase tracking-tighter">

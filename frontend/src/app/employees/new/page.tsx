@@ -354,7 +354,7 @@ export default function NewEmployeePage() {
                     className={inputCls(errors.personalEmail)}
                   />
                 </Field>
-                <Field label="Mobile *" error={errors.mobile?.message}>
+                <Field label="Mobile" error={errors.mobile?.message}>
                   <Controller name="mobile" control={control} render={({ field }) => (
                     <PhoneInput value={field.value} onChange={field.onChange} onBlur={field.onBlur} className={inputCls(errors.mobile)} />
                   )} />
@@ -383,7 +383,7 @@ export default function NewEmployeePage() {
                 </Field>
               </div>
 
-              <Field label="Residential address *" error={errors.residentialAddress?.message}>
+              <Field label="Residential address" error={errors.residentialAddress?.message}>
                 <textarea {...register("residentialAddress")} rows={2} className={inputCls(errors.residentialAddress)} />
               </Field>
 

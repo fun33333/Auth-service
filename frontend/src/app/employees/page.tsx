@@ -49,7 +49,7 @@ const getDeptColor = (deptName: string = '') => {
 // --- Components ---
 
 const StatsCard = ({ title, count, icon: Icon, color, bgColor, loading }: any) => (
-  <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group flex items-center justify-between">
+  <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group flex items-center justify-between">
     <div>
       <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">{title}</p>
       {loading ? (
@@ -69,13 +69,13 @@ const StatsCard = ({ title, count, icon: Icon, color, bgColor, loading }: any) =
 
 const EmployeeCard = ({ employee, onClick, onDelete }: { employee: Employee, onClick: () => void, onDelete: (id: string) => void }) => (
   <div
-    className="bg-white rounded-2xl border border-zinc-100 p-8 shadow-sm hover:shadow-xl transition-all duration-300 group flex flex-col items-center text-center relative"
+    className="bg-white rounded-2xl border border-zinc-100 p-5 shadow-sm hover:shadow-xl transition-all duration-300 group flex flex-col items-center text-center relative"
   >
     {/* Status Indicator Dot */}
     <div className={`absolute top-6 right-6 h-2 w-2 rounded-full ${employee.is_active ? 'bg-emerald-400' : 'bg-rose-500'}`} />
 
     {/* Profile Initial */}
-    <div onClick={onClick} className="h-16 w-16 rounded-full bg-blue-600 flex items-center justify-center text-white text-xl font-black mb-4 shadow-lg shadow-blue-600/20 cursor-pointer transition-transform hover:scale-110">
+    <div onClick={onClick} className="h-13 w-13 rounded-2xl hover:bg-[#6B3F69] bg-gray-400  flex items-center justify-center text-white text-lg font-black mb-4 shadow-lg shadow-blue-600/20 cursor-pointer transition-transform hover:scale-110">
       {employee.full_name.charAt(0)}
     </div>
 
@@ -83,7 +83,7 @@ const EmployeeCard = ({ employee, onClick, onDelete }: { employee: Employee, onC
     <div className="mb-6 cursor-pointer flex flex-col items-center" onClick={onClick}>
       <h4 className="text-[14px] font-black text-zinc-900 tracking-tight">{employee.full_name}</h4>
       <div className="flex items-center gap-2 mt-2">
-        <p className={`text-[9px] font-black uppercase tracking-[0.2em] px-3 py-1.5 rounded-full border ${getDeptColor(employee.department?.dept_name)}`}>
+        <p className={`text-[9px] font-black uppercase tracking-[0.2em] px-2 py-1 rounded-full border ${getDeptColor(employee.department?.dept_name)}`}>
           {employee.designation?.position_name || 'Personnel'}
         </p>
         <span className={`px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border ${employee.gender === 'male' ? 'bg-blue-50 text-blue-600 border-blue-100' : employee.gender === 'female' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-slate-50 text-slate-600 border-slate-100'}`}>
@@ -93,12 +93,12 @@ const EmployeeCard = ({ employee, onClick, onDelete }: { employee: Employee, onC
     </div>
 
     {/* Metrics Pills */}
-    <div className="flex gap-2 w-full mb-8">
+    <div className="flex gap-2 w-full mb-5">
       <div className="flex-1 bg-emerald-50 border border-emerald-100/50 rounded-lg p-2 text-center">
         <p className="text-[7px] font-black text-emerald-400 uppercase tracking-widest mb-1">Emp ID</p>
         <p className="text-[9px] font-black text-emerald-600">{employee.employee_code}</p>
       </div>
-      <div className="flex-1 bg-zinc-50 border border-zinc-100/50 rounded-lg p-2 text-center">
+      <div className="flex-1 bg-zinc-50 border border-zinc-100/50 rounded-lg p-1 text-center">
         <p className="text-[7px] font-black text-zinc-400 uppercase tracking-widest mb-1">Join Date</p>
         <p className="text-[9px] font-black text-zinc-900">{new Date(employee.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
       </div>
@@ -106,18 +106,18 @@ const EmployeeCard = ({ employee, onClick, onDelete }: { employee: Employee, onC
 
     {/* Action Footer */}
     <div className="flex items-center gap-3 w-full">
-      <Link href={`/employees/${employee.employee_id}`} className="h-12 w-12 bg-zinc-900 text-white rounded-xl flex items-center justify-center hover:bg-blue-600 transition-all active:scale-95 shadow-lg shadow-zinc-900/10">
+      <Link href={`/employees/${employee.employee_id}`} className="h-12 w-12 bg-white text-black rounded-xl flex items-center justify-center hover:bg-gray-300 transition-all active:scale-95 shadow-lg shadow-zinc-900/10">
         <Edit2 size={16} />
       </Link>
       <button 
         onClick={() => onDelete(employee.employee_id)}
-        className="h-12 w-12 bg-rose-50 text-rose-500 rounded-xl flex items-center justify-center hover:bg-rose-100 transition-all active:scale-95 border border-rose-100"
+        className="h-12 w-12 bg-rose-50 text-rose-500 rounded-lg flex items-center justify-center hover:bg-rose-100 transition-all active:scale-95 border border-rose-100"
       >
         <Trash2 size={16} />
       </button>
       <button
         onClick={onClick}
-        className="flex-1 h-12 bg-white border border-zinc-100 text-zinc-400 rounded-xl flex items-center justify-center hover:text-zinc-900 hover:border-zinc-300 transition-all active:scale-95 shadow-sm"
+        className="flex-1 h-12 bg-white border border-zinc-100 text-zinc-400 rounded-lg flex items-center justify-center hover:text-zinc-900 hover:border-zinc-300 transition-all active:scale-95 shadow-sm"
       >
         <ShieldCheck size={18} />
       </button>
@@ -324,7 +324,7 @@ export default function EmployeesPage() {
   async function loadData() {
     try {
       setLoading(true);
-      const res = await fetchWithAuth('/employees/employees');
+      const res = await fetchWithAuth('/employees/employees')
       if (res.ok) {
         const data = await res.json();
         // Handle both Array response and { employees: Array } response
