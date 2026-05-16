@@ -1,0 +1,12 @@
+# Ignore Service repos
+Auth-service/
+HDMS/
+
+# Ignore local environment files
+
+.env.local
+.DS_Store (for macOS devs)
+
+# Ignore volumes (if any)
+postgres_data/
+
