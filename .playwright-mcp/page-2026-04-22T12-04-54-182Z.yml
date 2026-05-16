@@ -1,0 +1,166 @@
+- generic [active] [ref=e1]:
+  - button "Open Next.js Dev Tools" [ref=e7] [cursor=pointer]:
+    - img [ref=e8]
+  - alert [ref=e11]
+  - generic [ref=e13]:
+    - complementary [ref=e14]:
+      - generic [ref=e15]:
+        - link "EMS Portal" [ref=e16] [cursor=pointer]:
+          - /url: /
+          - img [ref=e18]
+          - generic [ref=e23]: EMS Portal
+        - button [ref=e24]:
+          - img [ref=e25]
+      - generic [ref=e29]:
+        - generic [ref=e30]: U
+        - generic [ref=e31]:
+          - paragraph [ref=e32]: Ubaid
+          - paragraph [ref=e33]: Teacher
+      - navigation [ref=e34]:
+        - link "Dashboard" [ref=e35] [cursor=pointer]:
+          - /url: /
+          - img [ref=e36]
+          - generic [ref=e41]: Dashboard
+        - link "Institutions" [ref=e42] [cursor=pointer]:
+          - /url: /institutions
+          - img [ref=e43]
+          - generic [ref=e47]: Institutions
+        - link "Departments" [ref=e48] [cursor=pointer]:
+          - /url: /departments
+          - img [ref=e49]
+          - generic [ref=e54]: Departments
+        - link "Designations" [ref=e55] [cursor=pointer]:
+          - /url: /designations
+          - img [ref=e56]
+          - generic [ref=e59]: Designations
+        - link "Employees" [ref=e60] [cursor=pointer]:
+          - /url: /employees
+          - img [ref=e61]
+          - generic [ref=e66]: Employees
+      - button "Sign Out" [ref=e68]:
+        - img [ref=e69]
+        - generic [ref=e72]: Sign Out
+    - generic [ref=e73]:
+      - banner [ref=e74]:
+        - button [ref=e75]:
+          - img [ref=e76]
+        - generic [ref=e77]:
+          - img [ref=e78]
+          - textbox "Quick search..." [ref=e81]
+        - generic [ref=e82]:
+          - button [ref=e83]:
+            - img [ref=e84]
+          - button "U Ubaid" [ref=e89] [cursor=pointer]:
+            - generic [ref=e90]: U
+            - generic [ref=e91]: Ubaid
+            - img [ref=e92]
+      - main [ref=e94]:
+        - generic [ref=e308]:
+          - generic [ref=e309]:
+            - generic [ref=e310]:
+              - heading "Update Designation" [level=2] [ref=e311]
+              - paragraph [ref=e312]: Define role parameters and authority levels.
+            - button [ref=e313]:
+              - img [ref=e314]
+          - generic [ref=e334]: Input should be a valid string
+          - generic [ref=e317]:
+            - generic [ref=e318]:
+              - generic [ref=e319]: Position / Title
+              - textbox "e.g. Senior Surgeon, Head Teacher" [ref=e320]: Test Position T001 Edited
+            - generic [ref=e321]:
+              - generic [ref=e322]:
+                - generic [ref=e323]: Registry Code
+                - textbox "e.g. SRG, TCH" [disabled] [ref=e324]: TPT001
+              - generic [ref=e325]:
+                - generic [ref=e326]: Unit Assignment
+                - combobox [disabled] [ref=e327]:
+                  - option "Select Department"
+                  - option "Academic [ACAD]" [selected]
+                  - option "department code [HR]"
+                  - option "Testing Dept T001 [TDT001]"
+            - generic [ref=e328]:
+              - generic [ref=e329]: Role Description
+              - textbox "Outline key responsibilities..." [ref=e330]
+          - generic [ref=e331]:
+            - button "Cancel" [ref=e332]
+            - button "Apply Changes" [ref=e333]
+        - generic [ref=e95]:
+          - generic [ref=e96]:
+            - generic [ref=e97]:
+              - heading "Position Registry" [level=1] [ref=e98]
+              - paragraph [ref=e99]: job roles, hierarchies & functional authority
+            - button "Add Position" [ref=e101]:
+              - img [ref=e102]
+              - text: Add Position
+          - generic [ref=e103]:
+            - generic [ref=e104]:
+              - img [ref=e106]
+              - generic [ref=e109]:
+                - paragraph [ref=e110]: Total Designations
+                - generic [ref=e223]:
+                  - heading "2" [level=3] [ref=e224]
+                  - generic [ref=e225]: Live
+            - generic [ref=e112]:
+              - img [ref=e114]
+              - generic [ref=e117]:
+                - paragraph [ref=e118]: Active Roles
+                - generic [ref=e226]:
+                  - heading "2" [level=3] [ref=e227]
+                  - generic [ref=e228]: Live
+            - generic [ref=e120]:
+              - img [ref=e122]
+              - generic [ref=e124]:
+                - paragraph [ref=e125]: Unit Mix
+                - generic [ref=e229]:
+                  - heading "1" [level=3] [ref=e230]
+                  - generic [ref=e231]: Live
+            - generic [ref=e127]:
+              - img [ref=e129]
+              - generic [ref=e131]:
+                - paragraph [ref=e132]: System Nodes
+                - generic [ref=e232]:
+                  - heading "2" [level=3] [ref=e233]
+                  - generic [ref=e234]: Live
+          - generic [ref=e135]:
+            - img [ref=e136]
+            - textbox "SEARCH BY ROLE, CODE OR DEPARTMENT HUB..." [ref=e139]
+          - table [ref=e143]:
+            - rowgroup [ref=e144]:
+              - row "Position / Role Registry Code Unit Hub Actions" [ref=e145]:
+                - columnheader "Position / Role" [ref=e146]
+                - columnheader "Registry Code" [ref=e147]
+                - columnheader "Unit Hub" [ref=e148]
+                - columnheader "Actions" [ref=e149]
+            - rowgroup [ref=e150]:
+              - row "T Test Position T001 Professional Grade Record TPT001 Academic" [ref=e235]:
+                - cell "T Test Position T001 Professional Grade Record" [ref=e236]:
+                  - generic [ref=e237]:
+                    - generic [ref=e238]: T
+                    - generic [ref=e239]:
+                      - heading "Test Position T001" [level=5] [ref=e240]
+                      - paragraph [ref=e241]: Professional Grade Record
+                - cell "TPT001" [ref=e242]
+                - cell "Academic" [ref=e243]:
+                  - generic [ref=e246]: Academic
+                - cell [ref=e247]:
+                  - generic [ref=e248]:
+                    - button [ref=e249]:
+                      - img [ref=e250]
+                    - button [ref=e252]:
+                      - img [ref=e253]
+              - row "T Teacher Professional Grade Record T Academic" [ref=e256]:
+                - cell "T Teacher Professional Grade Record" [ref=e257]:
+                  - generic [ref=e258]:
+                    - generic [ref=e259]: T
+                    - generic [ref=e260]:
+                      - heading "Teacher" [level=5] [ref=e261]
+                      - paragraph [ref=e262]: Professional Grade Record
+                - cell "T" [ref=e263]
+                - cell "Academic" [ref=e264]:
+                  - generic [ref=e267]: Academic
+                - cell [ref=e268]:
+                  - generic [ref=e269]:
+                    - button [ref=e270]:
+                      - img [ref=e271]
+                    - button [ref=e273]:
+                      - img [ref=e274]

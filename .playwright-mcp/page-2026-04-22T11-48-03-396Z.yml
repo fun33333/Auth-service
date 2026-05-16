@@ -1,0 +1,102 @@
+- generic [active] [ref=e1]:
+  - alert [ref=e2]
+  - generic [ref=e4]:
+    - complementary [ref=e5]:
+      - generic [ref=e6]:
+        - link "EMS Portal" [ref=e7] [cursor=pointer]:
+          - /url: /
+          - img [ref=e9]
+          - generic [ref=e14]: EMS Portal
+        - button [ref=e15]:
+          - img [ref=e16]
+      - generic [ref=e20]:
+        - generic [ref=e21]: U
+        - generic [ref=e22]:
+          - paragraph [ref=e23]: Ubaid
+          - paragraph [ref=e24]: Teacher
+      - navigation [ref=e25]:
+        - link "Dashboard" [ref=e26] [cursor=pointer]:
+          - /url: /
+          - img [ref=e27]
+          - generic [ref=e32]: Dashboard
+        - link "Institutions" [ref=e33] [cursor=pointer]:
+          - /url: /institutions
+          - img [ref=e34]
+          - generic [ref=e38]: Institutions
+        - link "Branches" [ref=e39] [cursor=pointer]:
+          - /url: /branches
+          - img [ref=e40]
+          - generic [ref=e44]: Branches
+        - link "Departments" [ref=e45] [cursor=pointer]:
+          - /url: /departments
+          - img [ref=e46]
+          - generic [ref=e51]: Departments
+        - link "Designations" [ref=e52] [cursor=pointer]:
+          - /url: /designations
+          - img [ref=e53]
+          - generic [ref=e56]: Designations
+        - link "Employees" [ref=e57] [cursor=pointer]:
+          - /url: /employees
+          - img [ref=e58]
+          - generic [ref=e63]: Employees
+      - button "Sign Out" [ref=e65]:
+        - img [ref=e66]
+        - generic [ref=e69]: Sign Out
+    - generic [ref=e70]:
+      - banner [ref=e71]:
+        - button [ref=e72]:
+          - img [ref=e73]
+        - generic [ref=e74]:
+          - img [ref=e75]
+          - textbox "Quick search..." [ref=e78]
+        - generic [ref=e79]:
+          - button [ref=e80]:
+            - img [ref=e81]
+          - button "U Ubaid" [ref=e86] [cursor=pointer]:
+            - generic [ref=e87]: U
+            - generic [ref=e88]: Ubaid
+            - img [ref=e89]
+      - main [ref=e91]:
+        - generic [ref=e92]:
+          - generic [ref=e93]:
+            - generic [ref=e94]:
+              - heading "Branches" [level=1] [ref=e95]
+              - paragraph [ref=e96]: Manage all branch offices across institutions.
+            - button "Add Branch" [ref=e97]:
+              - img [ref=e98]
+              - text: Add Branch
+          - generic [ref=e99]:
+            - generic [ref=e100]:
+              - img [ref=e102]
+              - paragraph [ref=e106]: Total Branches
+              - paragraph [ref=e107]: "0"
+            - generic [ref=e108]:
+              - img [ref=e110]
+              - paragraph [ref=e113]: Active
+              - paragraph [ref=e114]: "0"
+            - generic [ref=e115]:
+              - img [ref=e117]
+              - paragraph [ref=e121]: Inactive
+              - paragraph [ref=e122]: "0"
+            - generic [ref=e123]:
+              - img [ref=e125]
+              - paragraph [ref=e130]: Total Branches
+              - paragraph [ref=e131]: "0"
+          - generic [ref=e132]:
+            - generic [ref=e134]:
+              - img [ref=e135]
+              - textbox "Search branch, city, institution..." [ref=e138]
+            - table [ref=e140]:
+              - rowgroup [ref=e141]:
+                - row "Branch Institution Location Contact Status" [ref=e142]:
+                  - columnheader "Branch" [ref=e143]
+                  - columnheader "Institution" [ref=e144]
+                  - columnheader "Location" [ref=e145]
+                  - columnheader "Contact" [ref=e146]
+                  - columnheader "Status" [ref=e147]
+                  - columnheader [ref=e148]
+              - rowgroup [ref=e149]:
+                - row "No branches found." [ref=e150]:
+                  - cell "No branches found." [ref=e151]:
+                    - img [ref=e152]
+                    - paragraph [ref=e156]: No branches found.

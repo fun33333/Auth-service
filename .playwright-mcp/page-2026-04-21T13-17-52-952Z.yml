@@ -1,0 +1,208 @@
+- generic [active] [ref=e1]:
+  - button "Open Next.js Dev Tools" [ref=e7] [cursor=pointer]:
+    - img [ref=e8]
+  - alert [ref=e11]
+  - generic [ref=e231]:
+    - complementary [ref=e232]:
+      - generic [ref=e233]:
+        - link "EMS Portal" [ref=e234] [cursor=pointer]:
+          - /url: /
+          - img [ref=e236]
+          - generic [ref=e241]: EMS Portal
+        - button [ref=e242]:
+          - img [ref=e243]
+      - generic [ref=e247]:
+        - generic [ref=e248]: U
+        - generic [ref=e249]:
+          - paragraph [ref=e250]: Ubaid
+          - paragraph [ref=e251]: Teacher
+      - navigation [ref=e252]:
+        - link "Dashboard" [ref=e253] [cursor=pointer]:
+          - /url: /
+          - img [ref=e254]
+          - generic [ref=e259]: Dashboard
+        - link "Institutions" [ref=e260] [cursor=pointer]:
+          - /url: /institutions
+          - img [ref=e261]
+          - generic [ref=e265]: Institutions
+        - link "Departments" [ref=e266] [cursor=pointer]:
+          - /url: /departments
+          - img [ref=e267]
+          - generic [ref=e272]: Departments
+        - link "Designations" [ref=e273] [cursor=pointer]:
+          - /url: /designations
+          - img [ref=e274]
+          - generic [ref=e277]: Designations
+        - link "Employees" [ref=e278] [cursor=pointer]:
+          - /url: /employees
+          - img [ref=e279]
+          - generic [ref=e284]: Employees
+      - button "Sign Out" [ref=e286]:
+        - img [ref=e287]
+        - generic [ref=e290]: Sign Out
+    - generic [ref=e291]:
+      - banner [ref=e292]:
+        - button [ref=e293]:
+          - img [ref=e294]
+        - generic [ref=e295]:
+          - img [ref=e296]
+          - textbox "Quick search..." [ref=e299]
+        - generic [ref=e300]:
+          - button [ref=e301]:
+            - img [ref=e302]
+          - button "U Ubaid" [ref=e307] [cursor=pointer]:
+            - generic [ref=e308]: U
+            - generic [ref=e309]: Ubaid
+            - img [ref=e310]
+      - main [ref=e312]:
+        - generic [ref=e313]:
+          - heading "Employee" [level=1] [ref=e315]
+          - generic [ref=e316]:
+            - generic [ref=e317]:
+              - img [ref=e319]
+              - generic [ref=e324]:
+                - paragraph [ref=e325]: Total Employee
+                - heading "6" [level=3] [ref=e326]
+            - generic [ref=e327]:
+              - img [ref=e329]
+              - generic [ref=e332]:
+                - paragraph [ref=e333]: New Employee
+                - heading "6" [level=3] [ref=e334]
+            - generic [ref=e335]:
+              - img [ref=e337]
+              - generic [ref=e340]:
+                - paragraph [ref=e341]: Male
+                - heading "0" [level=3] [ref=e342]
+            - generic [ref=e343]:
+              - img [ref=e345]
+              - generic [ref=e348]:
+                - paragraph [ref=e349]: Female
+                - heading "0" [level=3] [ref=e350]
+          - generic [ref=e351]:
+            - generic [ref=e352]:
+              - text: Employee Name
+              - textbox "Search here..." [ref=e354]
+            - generic [ref=e355]:
+              - text: Select Status
+              - combobox [ref=e356] [cursor=pointer]:
+                - option "All" [selected]
+                - option "Active"
+                - option "Inactive"
+            - generic [ref=e357]:
+              - text: Select Priority
+              - combobox [ref=e358] [cursor=pointer]:
+                - option "All" [selected]
+                - option "High"
+                - option "Medium"
+                - option "Low"
+            - generic [ref=e359]:
+              - button [ref=e360]:
+                - img [ref=e361]
+              - link "+ Add Employee" [ref=e364] [cursor=pointer]:
+                - /url: /employees/new
+          - generic [ref=e365]:
+            - generic [ref=e366]:
+              - paragraph [ref=e367]: Show Entries
+              - combobox [ref=e368] [cursor=pointer]:
+                - option "10" [selected]
+                - option "25"
+                - option "50"
+            - generic [ref=e369]:
+              - button [ref=e370]:
+                - img [ref=e371]
+              - button [ref=e376]:
+                - img [ref=e377]
+          - table [ref=e380]:
+            - rowgroup [ref=e381]:
+              - row "Name Employee ID Phone Join Date Department Action" [ref=e382]:
+                - columnheader "Name" [ref=e383]
+                - columnheader "Employee ID" [ref=e384]
+                - columnheader "Phone" [ref=e385]
+                - columnheader "Join Date" [ref=e386]
+                - columnheader "Department" [ref=e387]
+                - columnheader "Action" [ref=e388]
+            - rowgroup [ref=e389]:
+              - row "T Test Smoke User (Edited) smoke@test.com AIT01-G-26-T-0006 03001234567 21 Apr 2026 Academic" [ref=e390] [cursor=pointer]:
+                - cell "T Test Smoke User (Edited) smoke@test.com" [ref=e391]:
+                  - generic [ref=e392]:
+                    - generic [ref=e393]: T
+                    - generic [ref=e394]:
+                      - heading "Test Smoke User (Edited)" [level=5] [ref=e395]
+                      - paragraph [ref=e396]: smoke@test.com
+                - cell "AIT01-G-26-T-0006" [ref=e397]
+                - cell "03001234567" [ref=e398]
+                - cell "21 Apr 2026" [ref=e399]
+                - cell "Academic" [ref=e400]
+                - cell [ref=e401]:
+                  - button [ref=e402]:
+                    - img [ref=e403]
+              - row "U Ubaid internfun33@gmail.com AIT01-M-26-T-0005 03122134810 21 Apr 2026 Academic" [ref=e407] [cursor=pointer]:
+                - cell "U Ubaid internfun33@gmail.com" [ref=e408]:
+                  - generic [ref=e409]:
+                    - generic [ref=e410]: U
+                    - generic [ref=e411]:
+                      - heading "Ubaid" [level=5] [ref=e412]
+                      - paragraph [ref=e413]: internfun33@gmail.com
+                - cell "AIT01-M-26-T-0005" [ref=e414]
+                - cell "03122134810" [ref=e415]
+                - cell "21 Apr 2026" [ref=e416]
+                - cell "Academic" [ref=e417]
+                - cell [ref=e418]:
+                  - button [ref=e419]:
+                    - img [ref=e420]
+              - row "A Anoosh bbbbbbb@gmmail.com AIT01-G-26-T-0004 09 Apr 2026 Academic" [ref=e424] [cursor=pointer]:
+                - cell "A Anoosh bbbbbbb@gmmail.com" [ref=e425]:
+                  - generic [ref=e426]:
+                    - generic [ref=e427]: A
+                    - generic [ref=e428]:
+                      - heading "Anoosh" [level=5] [ref=e429]
+                      - paragraph [ref=e430]: bbbbbbb@gmmail.com
+                - cell "AIT01-G-26-T-0004" [ref=e431]
+                - cell [ref=e432]
+                - cell "09 Apr 2026" [ref=e433]
+                - cell "Academic" [ref=e434]
+                - cell [ref=e435]:
+                  - button [ref=e436]:
+                    - img [ref=e437]
+              - row "F Faizan AIT01-G-26-T-0003 09 Apr 2026 Academic" [ref=e441] [cursor=pointer]:
+                - cell "F Faizan" [ref=e442]:
+                  - generic [ref=e443]:
+                    - generic [ref=e444]: F
+                    - generic [ref=e445]:
+                      - heading "Faizan" [level=5] [ref=e446]
+                      - paragraph
+                - cell "AIT01-G-26-T-0003" [ref=e447]
+                - cell [ref=e448]
+                - cell "09 Apr 2026" [ref=e449]
+                - cell "Academic" [ref=e450]
+                - cell [ref=e451]:
+                  - button [ref=e452]:
+                    - img [ref=e453]
+              - row "N Noman AIT01-G-26-T-0002 09 Apr 2026 Academic" [ref=e457] [cursor=pointer]:
+                - cell "N Noman" [ref=e458]:
+                  - generic [ref=e459]:
+                    - generic [ref=e460]: "N"
+                    - generic [ref=e461]:
+                      - heading "Noman" [level=5] [ref=e462]
+                      - paragraph
+                - cell "AIT01-G-26-T-0002" [ref=e463]
+                - cell [ref=e464]
+                - cell "09 Apr 2026" [ref=e465]
+                - cell "Academic" [ref=e466]
+                - cell [ref=e467]:
+                  - button [ref=e468]:
+                    - img [ref=e469]
+              - row "U Ubaid AIT01-G-26-T-0001 07 Apr 2026 Academic" [ref=e473] [cursor=pointer]:
+                - cell "U Ubaid" [ref=e474]:
+                  - generic [ref=e475]:
+                    - generic [ref=e476]: U
+                    - generic [ref=e477]:
+                      - heading "Ubaid" [level=5] [ref=e478]
+                      - paragraph
+                - cell "AIT01-G-26-T-0001" [ref=e479]
+                - cell [ref=e480]
+                - cell "07 Apr 2026" [ref=e481]
+                - cell "Academic" [ref=e482]
+                - cell [ref=e483]:
+                  - button [ref=e484]:
+                    - img [ref=e485]

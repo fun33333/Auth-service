@@ -1,0 +1,164 @@
+- generic [active] [ref=e1]:
+  - alert [ref=e29]
+  - generic [ref=e31]:
+    - complementary [ref=e32]:
+      - generic [ref=e33]:
+        - link "EMS Portal" [ref=e34] [cursor=pointer]:
+          - /url: /
+          - img [ref=e36]
+          - generic [ref=e41]: EMS Portal
+        - button [ref=e42]:
+          - img [ref=e43]
+      - generic [ref=e47]:
+        - generic [ref=e48]: U
+        - generic [ref=e49]:
+          - paragraph [ref=e50]: Ubaid
+          - paragraph [ref=e51]: Teacher
+      - navigation [ref=e52]:
+        - link "Dashboard" [ref=e53] [cursor=pointer]:
+          - /url: /
+          - img [ref=e54]
+          - generic [ref=e59]: Dashboard
+        - link "Institutions" [ref=e60] [cursor=pointer]:
+          - /url: /institutions
+          - img [ref=e61]
+          - generic [ref=e65]: Institutions
+        - link "Branches" [ref=e66] [cursor=pointer]:
+          - /url: /branches
+          - img [ref=e67]
+          - generic [ref=e71]: Branches
+        - link "Departments" [ref=e72] [cursor=pointer]:
+          - /url: /departments
+          - img [ref=e73]
+          - generic [ref=e78]: Departments
+        - link "Designations" [ref=e79] [cursor=pointer]:
+          - /url: /designations
+          - img [ref=e80]
+          - generic [ref=e83]: Designations
+        - link "Employees" [ref=e84] [cursor=pointer]:
+          - /url: /employees
+          - img [ref=e85]
+          - generic [ref=e90]: Employees
+      - button "Sign Out" [ref=e92]:
+        - img [ref=e93]
+        - generic [ref=e96]: Sign Out
+    - generic [ref=e97]:
+      - banner [ref=e98]:
+        - button [ref=e99]:
+          - img [ref=e100]
+        - generic [ref=e101]:
+          - img [ref=e102]
+          - textbox "Quick search..." [ref=e105]
+        - generic [ref=e106]:
+          - button [ref=e107]:
+            - img [ref=e108]
+          - button "U Ubaid" [ref=e113] [cursor=pointer]:
+            - generic [ref=e114]: U
+            - generic [ref=e115]: Ubaid
+            - img [ref=e116]
+      - main [ref=e118]:
+        - generic [ref=e119]:
+          - generic [ref=e120]:
+            - generic [ref=e121]:
+              - heading "Dashboard" [level=1] [ref=e122]
+              - paragraph [ref=e123]: Organizational Overview & Intelligence
+            - generic [ref=e124]:
+              - generic [ref=e125]: Current Date
+              - generic [ref=e126]: 22 April 2026
+          - generic [ref=e127]:
+            - generic [ref=e128]:
+              - paragraph [ref=e130]: Total Institutions
+              - img [ref=e133]
+            - generic [ref=e137]:
+              - paragraph [ref=e139]: Total Departments
+              - img [ref=e142]
+            - generic [ref=e147]:
+              - paragraph [ref=e149]: Total Employees
+              - img [ref=e152]
+            - generic [ref=e157]:
+              - paragraph [ref=e158]: System Status
+              - generic [ref=e159]:
+                - generic [ref=e160]: ACTIVE 0
+                - generic [ref=e161]: INACTIVE 15
+                - generic [ref=e162]: IS
+              - generic [ref=e164]:
+                - img [ref=e165]
+                - text: ALL SYSTEMS OPERATIONAL
+          - generic [ref=e168]:
+            - generic [ref=e170]:
+              - heading "Organization Mix" [level=2] [ref=e171]
+              - generic [ref=e172]: Employees Per Dept
+            - generic [ref=e179]:
+              - generic [ref=e180]:
+                - heading "Monthly Growth" [level=2] [ref=e181]
+                - img [ref=e182]
+              - paragraph [ref=e185]: Hiring Trend (2026)
+              - img [ref=e187]
+              - generic [ref=e196]:
+                - generic [ref=e197]: JAN
+                - generic [ref=e198]: FEB
+                - generic [ref=e199]: MAR
+                - generic [ref=e200]: APR
+                - generic [ref=e201]: MAY
+                - generic [ref=e202]: JUN
+            - generic [ref=e203]:
+              - generic [ref=e204]:
+                - heading "Organization Alerts" [level=2] [ref=e205]
+                - img [ref=e206]
+              - generic [ref=e208]:
+                - generic [ref=e209]:
+                  - img [ref=e210]
+                  - generic [ref=e212]:
+                    - paragraph [ref=e213]: Missing Data
+                    - paragraph [ref=e214]: 72 employees missing CNIC
+                  - img [ref=e215]
+                - generic [ref=e217]:
+                  - img [ref=e218]
+                  - generic [ref=e221]:
+                    - paragraph [ref=e222]: Expiring Contracts
+                    - paragraph [ref=e223]: 3 Contracts end this month
+                  - img [ref=e224]
+          - generic [ref=e226]:
+            - generic [ref=e227]:
+              - generic [ref=e228]:
+                - heading "Intelligence Hub" [level=2] [ref=e229]
+                - img [ref=e230]
+              - paragraph [ref=e233]: Manage Your Organization's Core
+              - generic [ref=e234]:
+                - link "Add Employee New personnel profile" [ref=e235] [cursor=pointer]:
+                  - /url: /employees
+                  - img [ref=e237]
+                  - paragraph [ref=e240]: Add Employee
+                  - paragraph [ref=e241]: New personnel profile
+                - link "Add Dept Register department" [ref=e242] [cursor=pointer]:
+                  - /url: /departments
+                  - img [ref=e244]
+                  - paragraph [ref=e246]: Add Dept
+                  - paragraph [ref=e247]: Register department
+                - link "Add Institution Register organization" [ref=e248] [cursor=pointer]:
+                  - /url: /institutions
+                  - img [ref=e250]
+                  - paragraph [ref=e253]: Add Institution
+                  - paragraph [ref=e254]: Register organization
+            - generic [ref=e255]:
+              - generic [ref=e256]:
+                - heading "Real-time Stream" [level=2] [ref=e257]
+                - img [ref=e258]
+              - generic [ref=e260]:
+                - img [ref=e262]
+                - generic [ref=e267]:
+                  - paragraph [ref=e268]: James Smith
+                  - paragraph [ref=e269]: Joined Engineering
+                - generic [ref=e270]: 2 HOURS AGO
+              - generic [ref=e271]:
+                - img [ref=e273]
+                - generic [ref=e278]:
+                  - paragraph [ref=e279]: Sarah Doe
+                  - paragraph [ref=e280]: Moved to Marketing
+                - generic [ref=e281]: 3 HOURS AGO
+              - generic [ref=e282]:
+                - img [ref=e284]
+                - generic [ref=e288]:
+                  - paragraph [ref=e289]: Mark Wilson
+                  - paragraph [ref=e290]: Resigned from Sales
+                - generic [ref=e291]: 1 DAY AGO

@@ -1,0 +1,126 @@
+- generic [active] [ref=e1]:
+  - button "Open Next.js Dev Tools" [ref=e7] [cursor=pointer]:
+    - img [ref=e8]
+  - alert [ref=e11]
+  - generic [ref=e13]:
+    - complementary [ref=e14]:
+      - generic [ref=e15]:
+        - link "EMS Portal" [ref=e16] [cursor=pointer]:
+          - /url: /
+          - img [ref=e18]
+          - generic [ref=e23]: EMS Portal
+        - button [ref=e24]:
+          - img [ref=e25]
+      - generic [ref=e29]:
+        - generic [ref=e30]: U
+        - generic [ref=e31]:
+          - paragraph [ref=e32]: Ubaid
+          - paragraph [ref=e33]: Teacher
+      - navigation [ref=e34]:
+        - link "Dashboard" [ref=e35] [cursor=pointer]:
+          - /url: /
+          - img [ref=e36]
+          - generic [ref=e41]: Dashboard
+        - link "Institutions" [ref=e42] [cursor=pointer]:
+          - /url: /institutions
+          - img [ref=e43]
+          - generic [ref=e47]: Institutions
+        - link "Departments" [ref=e48] [cursor=pointer]:
+          - /url: /departments
+          - img [ref=e49]
+          - generic [ref=e54]: Departments
+        - link "Designations" [ref=e55] [cursor=pointer]:
+          - /url: /designations
+          - img [ref=e56]
+          - generic [ref=e59]: Designations
+        - link "Employees" [ref=e60] [cursor=pointer]:
+          - /url: /employees
+          - img [ref=e61]
+          - generic [ref=e66]: Employees
+      - button "Sign Out" [ref=e68]:
+        - img [ref=e69]
+        - generic [ref=e72]: Sign Out
+    - generic [ref=e73]:
+      - banner [ref=e74]:
+        - button [ref=e75]:
+          - img [ref=e76]
+        - generic [ref=e77]:
+          - img [ref=e78]
+          - textbox "Quick search..." [ref=e81]
+        - generic [ref=e82]:
+          - button [ref=e83]:
+            - img [ref=e84]
+          - button "U Ubaid" [ref=e89] [cursor=pointer]:
+            - generic [ref=e90]: U
+            - generic [ref=e91]: Ubaid
+            - img [ref=e92]
+      - main [ref=e94]:
+        - generic [ref=e96]:
+          - generic [ref=e98]:
+            - link [ref=e99] [cursor=pointer]:
+              - /url: /institutions
+              - img [ref=e100]
+            - generic [ref=e102]:
+              - heading "Register Institution" [level=1] [ref=e103]
+              - paragraph [ref=e104]: Configure a new functional entity within the system.
+          - generic [ref=e105]:
+            - generic [ref=e106]:
+              - generic [ref=e108]:
+                - img [ref=e109]
+                - heading "Institutional Integrity" [level=3] [ref=e112]
+                - paragraph [ref=e113]: Ensure the Institution Code matches your internal registry. It is used across financial and employee mappings.
+              - generic [ref=e115]:
+                - heading "Guidelines" [level=4] [ref=e116]
+                - list [ref=e117]:
+                  - listitem [ref=e118]: Unique Institution Code
+                  - listitem [ref=e120]: Valid Physical Address
+                  - listitem [ref=e122]: Assigned Organization
+            - generic [ref=e125]:
+              - generic [ref=e126]:
+                - generic [ref=e127]:
+                  - img [ref=e129]
+                  - heading "Identity & Governance" [level=3] [ref=e133]
+                - generic [ref=e134]:
+                  - generic [ref=e135]:
+                    - generic [ref=e136]: Parent Organization
+                    - generic [ref=e137]:
+                      - button "Alkhair (IAK)" [ref=e138]
+                      - button "Edhi Foundation (EDHI)" [ref=e139]
+                      - button "Saylani (SMIT)" [ref=e140]
+                      - button "Bano Qabil (BQ)" [ref=e141]
+                  - generic [ref=e142]:
+                    - generic [ref=e143]:
+                      - generic [ref=e144]: Institution Code
+                      - generic [ref=e145]:
+                        - img [ref=e146]
+                        - textbox "IAK-001" [ref=e155]
+                    - generic [ref=e156]:
+                      - generic [ref=e157]: Formal Name
+                      - textbox "Public School System" [ref=e158]
+                  - generic [ref=e159]:
+                    - generic [ref=e160]: Institution Type
+                    - combobox [ref=e161]:
+                      - option "Educational" [selected]
+                      - option "Healthcare"
+                      - option "Social Welfare"
+                      - option "Administrative"
+                      - option "Technical / Vocational"
+                      - option "Operational / Project Site"
+                      - option "Other"
+              - generic [ref=e162]:
+                - generic [ref=e163]:
+                  - img [ref=e165]
+                  - heading "Communication & Reach" [level=3] [ref=e168]
+                - generic [ref=e169]:
+                  - generic [ref=e170]:
+                    - generic [ref=e172]:
+                      - img [ref=e173]
+                      - textbox "City" [ref=e176]
+                    - generic [ref=e178]:
+                      - img [ref=e179]
+                      - textbox "03001234567" [ref=e181]
+                  - textbox "Full Physical Address..." [ref=e182]
+              - generic [ref=e183]:
+                - link "Discard" [ref=e184] [cursor=pointer]:
+                  - /url: /institutions
+                - button "Deploy Institution" [ref=e185]

@@ -1,0 +1,134 @@
+- generic [active] [ref=e1]:
+  - button "Open Next.js Dev Tools" [ref=e7] [cursor=pointer]:
+    - img [ref=e8]
+  - alert [ref=e11]
+  - generic [ref=e13]:
+    - complementary [ref=e14]:
+      - generic [ref=e15]:
+        - link "EMS Portal" [ref=e16] [cursor=pointer]:
+          - /url: /
+          - img [ref=e18]
+          - generic [ref=e23]: EMS Portal
+        - button [ref=e24]:
+          - img [ref=e25]
+      - generic [ref=e29]:
+        - generic [ref=e30]: U
+        - generic [ref=e31]:
+          - paragraph [ref=e32]: Ubaid
+          - paragraph [ref=e33]: Teacher
+      - navigation [ref=e34]:
+        - link "Dashboard" [ref=e35] [cursor=pointer]:
+          - /url: /
+          - img [ref=e36]
+          - generic [ref=e41]: Dashboard
+        - link "Institutions" [ref=e42] [cursor=pointer]:
+          - /url: /institutions
+          - img [ref=e43]
+          - generic [ref=e47]: Institutions
+        - link "Departments" [ref=e48] [cursor=pointer]:
+          - /url: /departments
+          - img [ref=e49]
+          - generic [ref=e54]: Departments
+        - link "Designations" [ref=e55] [cursor=pointer]:
+          - /url: /designations
+          - img [ref=e56]
+          - generic [ref=e59]: Designations
+        - link "Employees" [ref=e60] [cursor=pointer]:
+          - /url: /employees
+          - img [ref=e61]
+          - generic [ref=e66]: Employees
+      - button "Sign Out" [ref=e68]:
+        - img [ref=e69]
+        - generic [ref=e72]: Sign Out
+    - generic [ref=e73]:
+      - banner [ref=e74]:
+        - button [ref=e75]:
+          - img [ref=e76]
+        - generic [ref=e77]:
+          - img [ref=e78]
+          - textbox "Quick search..." [ref=e81]
+        - generic [ref=e82]:
+          - button [ref=e83]:
+            - img [ref=e84]
+          - button "U Ubaid" [ref=e89] [cursor=pointer]:
+            - generic [ref=e90]: U
+            - generic [ref=e91]: Ubaid
+            - img [ref=e92]
+      - main [ref=e94]:
+        - generic [ref=e121]:
+          - generic [ref=e122]:
+            - generic [ref=e123]:
+              - heading "Departments" [level=1] [ref=e124]
+              - paragraph [ref=e125]: organizational units & functional segments
+            - button "Add Department" [ref=e127]:
+              - img [ref=e128]
+              - text: Add Department
+          - generic [ref=e129]:
+            - generic [ref=e130]:
+              - img [ref=e132]
+              - generic [ref=e137]:
+                - paragraph [ref=e138]: Total Departments
+                - generic [ref=e218]:
+                  - heading "3" [level=3] [ref=e219]
+                  - generic [ref=e220]: Live
+            - generic [ref=e142]:
+              - img [ref=e144]
+              - generic [ref=e147]:
+                - paragraph [ref=e148]: Active
+                - generic [ref=e221]:
+                  - heading "3" [level=3] [ref=e222]
+                  - generic [ref=e223]: Live
+            - generic [ref=e152]:
+              - img [ref=e154]
+              - generic [ref=e158]:
+                - paragraph [ref=e159]: Sectors
+                - generic [ref=e224]:
+                  - heading "1" [level=3] [ref=e225]
+                  - generic [ref=e226]: Live
+            - generic [ref=e163]:
+              - img [ref=e165]
+              - generic [ref=e170]:
+                - paragraph [ref=e171]: Institutions
+                - generic [ref=e227]:
+                  - heading "1" [level=3] [ref=e228]
+                  - generic [ref=e229]: Live
+          - generic [ref=e177]:
+            - img [ref=e178]
+            - textbox "search by name, code or institution..." [ref=e181]
+          - generic [ref=e183]:
+            - generic [ref=e230]:
+              - generic [ref=e233]: A
+              - generic [ref=e234]:
+                - heading "Academic" [level=4] [ref=e235]
+                - generic [ref=e236]:
+                  - generic [ref=e237]: ACAD
+                  - generic [ref=e238]: IT
+              - generic [ref=e239]:
+                - button [ref=e240]:
+                  - img [ref=e241]
+                - button [ref=e243]:
+                  - img [ref=e244]
+            - generic [ref=e247]:
+              - generic [ref=e250]: d
+              - generic [ref=e251]:
+                - heading "department code" [level=4] [ref=e252]
+                - generic [ref=e253]:
+                  - generic [ref=e254]: HR
+                  - generic [ref=e255]: IT
+              - generic [ref=e256]:
+                - button [ref=e257]:
+                  - img [ref=e258]
+                - button [ref=e260]:
+                  - img [ref=e261]
+            - generic [ref=e264]:
+              - generic [ref=e267]: T
+              - generic [ref=e268]:
+                - heading "Testing Dept T001" [level=4] [ref=e269]
+                - generic [ref=e270]:
+                  - generic [ref=e271]: TDT001
+                  - generic [ref=e272]: IT
+              - generic [ref=e273]:
+                - button [ref=e274]:
+                  - img [ref=e275]
+                - button [ref=e277]:
+                  - img [ref=e278]
