@@ -6,18 +6,13 @@ on:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
-      - name: Deploy to VM
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.VM_HOST }}
-          username: ${{ secrets.VM_USER }}
-          key: ${{ secrets.VM_SSH_KEY }}
-          script: |
-            cd /var/www/erp_new/Auth-service
-            git pull origin main
-            docker compose build --no-cache
-            docker compose up -d
-            docker exec auth_service python manage.py collectstatic --noinput || true
-            echo "Auth-service deployed successfully"
+      - name: Deploy
+        run: |
+          cd /var/www/erp_new/Auth-service
+          git pull origin main
+          docker compose build --no-cache
+          docker compose up -d
+          docker exec -u root auth_service python manage.py collectstatic --noinput || true
+          echo "Auth-service deployed successfully"
