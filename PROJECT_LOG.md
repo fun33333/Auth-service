@@ -26,6 +26,17 @@
 
 ## Change History
 
+### 2026-05-16 — Staging hardening + production deploy
+
+- `ALLOWED_HOSTS`, `CORS_ALLOWED_ORIGINS`, `CSRF_TRUSTED_ORIGINS` — all env-driven. Was hardcoded `*` before.
+- `employee_code` model: added `null=True` — migration `0015`. Fix: unique constraint crash when adding employee without assignment.
+- `NEXT_PUBLIC_API_URL=https://hrms.idaraalkhair.sbs/api` — auth-frontend compose env. Fixes CORS error (was falling back to `http://127.0.0.1:8000`).
+- `docker-compose.yml`: ports → expose. Auth-service no longer exposed on host.
+- WhiteNoise confirmed working for static files in production (`DEBUG=False`). Collectstatic: 134 files.
+- `CSRF_TRUSTED_ORIGINS` fix: Django admin login was 403 — domain not in trusted origins.
+- GitHub Actions deploy workflow added (`.github/workflows/deploy.yml`). Blocker: self-hosted runner needed (VM port 22 not internet-accessible).
+- VM deployed at `/var/www/erp_new/Auth-service/`. Migrations applied. Superuser created.
+
 ### 2026-04-27 (Validation hardening + masked inputs + assignment endpoints + E2E verification)
 
 **Scope:** Multi-part forms+API hardening pass across employees/institutions/branches.

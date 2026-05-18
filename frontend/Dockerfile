@@ -23,6 +23,8 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 # Disable telemetry during build
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV NEXT_PUBLIC_API_URL=https://hrms.idaraalkhair.sbs/api
+
 RUN npm run build
 
 # Stage 4: Minimal production runner
