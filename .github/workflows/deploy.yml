@@ -8,12 +8,11 @@ jobs:
   deploy:
     runs-on: self-hosted
     steps:
-      - name: Configure git auth
-        run: |
-          git config --global url."https://x-access-token:${{ github.token }}@github.com/".insteadOf "https://github.com/"
-
       - name: Deploy
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
+          git config --global url."https://x-access-token:${GH_TOKEN}@github.com/".insteadOf "https://github.com/"
           cd /var/www/erp_new/Auth-service
           git pull origin main
           docker compose build --no-cache
