@@ -1028,6 +1028,7 @@ def list_employees(
                 } if primary else None,
                 'employment_type': emp.get_employment_type_display(),
                 'is_active': emp.is_active,
+                'gender': emp.gender,
                 'created_at': emp.created_at.isoformat()
             })
         

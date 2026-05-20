@@ -14,6 +14,7 @@ import ProtectedLayout from "@/components/ProtectedLayout";
 import { fetchWithAuth } from "@/utils/api";
 import PhoneInput from "@/components/PhoneInput";
 import CNICInput from "@/components/CNICInput";
+import toast from "react-hot-toast";
 
 // ----- Validators (mirror backend) -----
 const CNIC_RE = /^\d{5}-?\d{7}-?\d{1}$/;
@@ -75,7 +76,6 @@ const schema = z.object({
 type FormInput = z.input<typeof schema>;
 type FormOutput = z.output<typeof schema>;
 
-type Opt = { value: string; label: string };
 type Institution = { inst_code: string; name: string };
 type Branch = { branch_code: string; branch_name: string };
 type Department = { dept_code: string; dept_name: string };
@@ -189,18 +189,18 @@ export default function NewEmployeePage() {
           setSubmitError("Please fix the highlighted fields.");
           return;
         }
-        // Ninja/Pydantic default shape: { detail: [{type, loc, msg}, ...] }
         if (Array.isArray(data?.detail)) {
           setSubmitError(data.detail.map((d: any) => d?.msg || JSON.stringify(d)).join("; "));
           return;
         }
         setSubmitError(
           typeof data?.error === "string" ? data.error :
-          typeof data?.detail === "string" ? data.detail :
-          `Request failed (${res.status})`
+            typeof data?.detail === "string" ? data.detail :
+              `Request failed (${res.status})`
         );
         return;
       }
+      toast.success("Employee Added Successfully", { style: { backgroundColor: '#22c55e', color: '#fff' } });
       router.push("/employees");
     } catch (e: any) {
       setSubmitError(e.message || "Network error");
@@ -209,33 +209,45 @@ export default function NewEmployeePage() {
 
   return (
     <ProtectedLayout>
-      <div className="max-w-4xl mx-auto px-6 py-8">
-        <div className="flex items-center justify-between mb-8">
-          <Link href="/employees" className="inline-flex items-center gap-2 text-sm text-slate-600 hover:text-slate-900">
+      <div className="max-w-4xl mx-auto px-4 sm:px-5 py-6 sm:py-8">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-4">
+          <Link href="/employees" className="inline-flex items-center gap-2 text-sm sm:text-lg text-slate-700 hover:text-slate-900">
             <ArrowLeft size={16} /> Back to employees
           </Link>
         </div>
 
-        <h1 className="text-2xl font-semibold text-slate-900">Add new employee</h1>
-        <p className="text-sm text-slate-500 mt-1">Fill all required fields. Step {step} of 4.</p>
+        <h1 className="text-xl sm:text-2xl font-bold text-slate-900 text-center">Add new employee</h1>
+        <p className="text-sm sm:text-lg text-slate-900 mt-1 py-2 text-center">Fill all required fields. Step {step} of 4.</p>
 
-        {/* Stepper */}
-        <ol className="flex items-center gap-2 mt-6 mb-8">
+        {/* Stepper — icon-only on mobile, full label on sm+ */}
+        <ol className="flex items-center gap-1 sm:gap-3 mt-5 mb-8 sm:mb-10">
           {STEPS.map((s, i) => {
             const Icon = s.icon;
             const active = step === s.id;
             const done = step > s.id;
             return (
-              <li key={s.id} className="flex items-center flex-1">
-                <div className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm ${
-                  active ? "bg-slate-900 text-white border-slate-900" :
-                  done ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
-                  "bg-white text-slate-500 border-slate-200"
+              <li key={s.id} className="flex items-center flex-1 group">
+                <div className={`flex items-center gap-1.5 sm:gap-3 px-2 sm:px-4 py-2 sm:py-3 rounded-xl sm:rounded-2xl border transition-all duration-500 w-full justify-center sm:justify-start ${
+                  active
+                    ? "bg-[#6B3F69] text-white border-[#6B3F69] shadow-xl shadow-[#6B3F69]/20 -translate-y-1"
+                    : done
+                    ? "bg-emerald-50 text-emerald-700 border-emerald-100 shadow-sm"
+                    : "bg-white text-slate-400 border-slate-200 shadow-sm opacity-60"
                 }`}>
-                  {done ? <Check size={14} /> : <Icon size={14} />}
-                  <span className="font-medium">{s.label}</span>
+                  <div className={`h-5 w-5 sm:h-6 sm:w-6 rounded-md sm:rounded-lg flex items-center justify-center shrink-0 ${
+                    active ? "bg-white/20" : done ? "bg-emerald-100" : "bg-slate-50"
+                  }`}>
+                    {done ? <Check size={12} strokeWidth={3} /> : <Icon size={12} strokeWidth={2.5} />}
+                  </div>
+                  {/* Label hidden on very small screens */}
+                  <span className="hidden xs:block sm:block text-[10px] sm:text-[11px] font-black uppercase tracking-wider">
+                    {s.label}
+                  </span>
                 </div>
-                {i < STEPS.length - 1 && <div className="flex-1 h-px bg-slate-200 mx-2" />}
+                {i < STEPS.length - 1 && (
+                  <div className={`flex-1 h-0.5 sm:h-1 mx-1 sm:mx-4 rounded-full transition-all duration-700 ${done ? "bg-emerald-200" : "bg-slate-100"}`} />
+                )}
               </li>
             );
           })}
@@ -247,31 +259,62 @@ export default function NewEmployeePage() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit(onSubmit)} className="bg-white border border-slate-200 rounded-xl p-6 space-y-5">
+        <form
+          onSubmit={handleSubmit(onSubmit)}
+          className="bg-white border border-slate-200 rounded-2xl p-5 sm:p-10 space-y-5 sm:space-y-6 shadow-sm"
+        >
+          {/* ── Step 1: Identity ── */}
           {step === 1 && (
             <>
-              <Field label="Full name *" error={errors.fullName?.message}>
-                <input {...register("fullName")} className={inputCls(errors.fullName)} placeholder="Ahmed Ali" />
+              <Field label="Full name" error={errors.fullName?.message}>
+                <input
+                  {...register("fullName")}
+                  placeholder="Ahmed Ali"
+                  className={inputCls(errors.fullName)}
+                />
               </Field>
-              <div className="grid grid-cols-2 gap-4">
-                <Field label="CNIC *" error={errors.cnic?.message}>
-                  <Controller name="cnic" control={control} render={({ field }) => (
-                    <CNICInput value={field.value} onChange={field.onChange} onBlur={field.onBlur} className={inputCls(errors.cnic)} />
-                  )} />
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                <Field label="CNIC" error={errors.cnic?.message}>
+                  <Controller
+                    name="cnic"
+                    control={control}
+                    render={({ field }) => (
+                      <CNICInput
+                        value={field.value}
+                        onChange={field.onChange}
+                        onBlur={field.onBlur}
+                        className={inputCls(errors.cnic)}
+                      />
+                    )}
+                  />
                 </Field>
+
                 <Field label="Date of birth" error={errors.dob?.message}>
-                  <input type="date" {...register("dob")} className={inputCls(errors.dob)} />
+                  <input
+                    type="date"
+                    {...register("dob")}
+                    className={inputCls(errors.dob)}
+                  />
                 </Field>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <Field label="Gender *" error={errors.gender?.message}>
-                  <select {...register("gender")} className={inputCls(errors.gender)}>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                <Field label="Gender" error={errors.gender?.message}>
+                  <select
+                    {...register("gender")}
+                    className={inputCls(errors.gender)}
+                  >
                     <option value="male">Male</option>
                     <option value="female">Female</option>
                   </select>
                 </Field>
+
                 <Field label="Marital status" error={errors.maritalStatus?.message}>
-                  <select {...register("maritalStatus")} className={inputCls(errors.maritalStatus)}>
+                  <select
+                    {...register("maritalStatus")}
+                    className={inputCls(errors.maritalStatus)}
+                  >
                     <option value="single">Single</option>
                     <option value="married">Married</option>
                     <option value="divorced">Divorced</option>
@@ -279,56 +322,76 @@ export default function NewEmployeePage() {
                   </select>
                 </Field>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                 <Field label="Nationality" error={errors.nationality?.message}>
-                  <input {...register("nationality")} className={inputCls(errors.nationality)} />
+                  <input
+                    {...register("nationality")}
+                    placeholder="Pakistani"
+                    className={inputCls(errors.nationality)}
+                  />
                 </Field>
+
                 <Field label="Religion" error={errors.religion?.message}>
-                  <input {...register("religion")} className={inputCls(errors.religion)} />
+                  <input
+                    {...register("religion")}
+                    className={inputCls(errors.religion)}
+                  />
                 </Field>
               </div>
             </>
           )}
 
+          {/* ── Step 2: Contact ── */}
           {step === 2 && (
             <>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Field label="Personal email *" error={errors.personalEmail?.message}>
-                  <input type="email" {...register("personalEmail")} className={inputCls(errors.personalEmail)} placeholder="name@example.com" />
+                  <input
+                    type="email"
+                    {...register("personalEmail")}
+                    placeholder="name@example.com"
+                    className={inputCls(errors.personalEmail)}
+                  />
                 </Field>
-                <Field label="Mobile *" error={errors.mobile?.message}>
+                <Field label="Mobile" error={errors.mobile?.message}>
                   <Controller name="mobile" control={control} render={({ field }) => (
                     <PhoneInput value={field.value} onChange={field.onChange} onBlur={field.onBlur} className={inputCls(errors.mobile)} />
                   )} />
                 </Field>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Field label="Org email" error={errors.orgEmail?.message}>
                   <input type="email" {...register("orgEmail")} className={inputCls(errors.orgEmail)} />
                 </Field>
                 <Field label="Org phone" error={errors.orgPhone?.message}>
                   <Controller name="orgPhone" control={control} render={({ field }) => (
-                    <PhoneInput value={field.value ?? ''} onChange={field.onChange} onBlur={field.onBlur} className={inputCls(errors.orgPhone)} />
+                    <PhoneInput value={field.value ?? ""} onChange={field.onChange} onBlur={field.onBlur} className={inputCls(errors.orgPhone)} />
                   )} />
                 </Field>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Field label="Emergency contact name" error={errors.emergencyName?.message}>
                   <input {...register("emergencyName")} className={inputCls(errors.emergencyName)} />
                 </Field>
                 <Field label="Emergency contact phone" error={errors.emergencyPhone?.message}>
                   <Controller name="emergencyPhone" control={control} render={({ field }) => (
-                    <PhoneInput value={field.value ?? ''} onChange={field.onChange} onBlur={field.onBlur} className={inputCls(errors.emergencyPhone)} />
+                    <PhoneInput value={field.value ?? ""} onChange={field.onChange} onBlur={field.onBlur} className={inputCls(errors.emergencyPhone)} />
                   )} />
                 </Field>
               </div>
-              <Field label="Residential address *" error={errors.residentialAddress?.message}>
+
+              <Field label="Residential address" error={errors.residentialAddress?.message}>
                 <textarea {...register("residentialAddress")} rows={2} className={inputCls(errors.residentialAddress)} />
               </Field>
+
               <Field label="Permanent address" error={errors.permanentAddress?.message}>
                 <textarea {...register("permanentAddress")} rows={2} className={inputCls(errors.permanentAddress)} />
               </Field>
-              <div className="grid grid-cols-2 gap-4">
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Field label="City" error={errors.city?.message}>
                   <input {...register("city")} className={inputCls(errors.city)} />
                 </Field>
@@ -336,10 +399,11 @@ export default function NewEmployeePage() {
             </>
           )}
 
+          {/* ── Step 3: Placement ── */}
           {step === 3 && (
             <>
-              <div className="grid grid-cols-2 gap-4">
-                <Field label="Organization *" error={errors.organizationCode?.message}>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Field label="Organization" error={errors.organizationCode?.message}>
                   <select {...register("organizationCode")} className={inputCls(errors.organizationCode)}>
                     <option value="">— select org —</option>
                     {organizations.map((o) => (
@@ -364,8 +428,9 @@ export default function NewEmployeePage() {
                   </select>
                 </Field>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <Field label="Department *" error={errors.departmentCode?.message}>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Field label="Department" error={errors.departmentCode?.message}>
                   <select {...register("departmentCode")} className={inputCls(errors.departmentCode)}>
                     <option value="">— select —</option>
                     {departments.map((d) => (
@@ -373,7 +438,7 @@ export default function NewEmployeePage() {
                     ))}
                   </select>
                 </Field>
-                <Field label="Designation *" error={errors.designationCode?.message}>
+                <Field label="Designation" error={errors.designationCode?.message}>
                   <select {...register("designationCode")} disabled={!deptCode} className={inputCls(errors.designationCode)}>
                     <option value="">— select —</option>
                     {designations.map((d) => (
@@ -382,8 +447,9 @@ export default function NewEmployeePage() {
                   </select>
                 </Field>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <Field label="Joining date *" error={errors.joiningDate?.message}>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Field label="Joining date" error={errors.joiningDate?.message}>
                   <input type="date" {...register("joiningDate")} className={inputCls(errors.joiningDate)} />
                 </Field>
                 <Field label="Shift" error={errors.shift?.message}>
@@ -397,7 +463,8 @@ export default function NewEmployeePage() {
                   </select>
                 </Field>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Field label="Bank name" error={errors.bankName?.message}>
                   <input {...register("bankName")} className={inputCls(errors.bankName)} />
                 </Field>
@@ -408,23 +475,35 @@ export default function NewEmployeePage() {
             </>
           )}
 
+          {/* ── Step 4: History ── */}
           {step === 4 && (
             <>
               <section>
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="text-sm font-semibold text-slate-900">Education</h3>
-                  <button type="button" onClick={() => eduArr.append({ degree: "", institute: "", passingYear: "" })}
-                    className="inline-flex items-center gap-1 text-sm text-slate-700 hover:text-slate-900">
+                  <button
+                    type="button"
+                    onClick={() => eduArr.append({ degree: "", institute: "", passingYear: "" })}
+                    className="inline-flex items-center gap-1 text-sm text-slate-700 hover:text-slate-900"
+                  >
                     <Plus size={14} /> Add
                   </button>
                 </div>
-                {eduArr.fields.length === 0 && <p className="text-sm text-slate-400 italic">No records added.</p>}
+
+                {eduArr.fields.length === 0 && (
+                  <p className="text-sm text-slate-400 italic">No records added.</p>
+                )}
+
                 {eduArr.fields.map((f, i) => (
-                  <div key={f.id} className="grid grid-cols-[1fr_1fr_120px_auto] gap-3 mb-3">
+                  <div key={f.id} className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_120px_auto] gap-3 mb-3">
                     <input {...register(`education.${i}.degree`)} placeholder="Degree" className={inputCls(errors.education?.[i]?.degree)} />
                     <input {...register(`education.${i}.institute`)} placeholder="Institute" className={inputCls(errors.education?.[i]?.institute)} />
                     <input {...register(`education.${i}.passingYear`)} placeholder="YYYY" className={inputCls(errors.education?.[i]?.passingYear)} />
-                    <button type="button" onClick={() => eduArr.remove(i)} className="p-2 text-rose-600 hover:bg-rose-50 rounded-lg">
+                    <button
+                      type="button"
+                      onClick={() => eduArr.remove(i)}
+                      className="p-2 text-rose-600 hover:bg-rose-50 rounded-lg self-start sm:self-auto"
+                    >
                       <Trash2 size={14} />
                     </button>
                   </div>
@@ -434,24 +513,35 @@ export default function NewEmployeePage() {
               <section className="pt-6 border-t border-slate-100">
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="text-sm font-semibold text-slate-900">Work experience</h3>
-                  <button type="button" onClick={() => expArr.append({ employer: "", jobTitle: "", startDate: "", endDate: "", responsibilities: "" })}
-                    className="inline-flex items-center gap-1 text-sm text-slate-700 hover:text-slate-900">
+                  <button
+                    type="button"
+                    onClick={() => expArr.append({ employer: "", jobTitle: "", startDate: "", endDate: "", responsibilities: "" })}
+                    className="inline-flex items-center gap-1 text-sm text-slate-700 hover:text-slate-900"
+                  >
                     <Plus size={14} /> Add
                   </button>
                 </div>
-                {expArr.fields.length === 0 && <p className="text-sm text-slate-400 italic">No records added.</p>}
+
+                {expArr.fields.length === 0 && (
+                  <p className="text-sm text-slate-400 italic">No records added.</p>
+                )}
+
                 {expArr.fields.map((f, i) => (
                   <div key={f.id} className="space-y-2 mb-4 p-3 border border-slate-200 rounded-lg">
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <input {...register(`experience.${i}.employer`)} placeholder="Employer" className={inputCls(errors.experience?.[i]?.employer)} />
                       <input {...register(`experience.${i}.jobTitle`)} placeholder="Job title" className={inputCls(errors.experience?.[i]?.jobTitle)} />
                     </div>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <input type="date" {...register(`experience.${i}.startDate`)} className={inputCls(errors.experience?.[i]?.startDate)} />
                       <input type="date" {...register(`experience.${i}.endDate`)} className={inputCls(errors.experience?.[i]?.endDate)} />
                     </div>
                     <textarea {...register(`experience.${i}.responsibilities`)} rows={2} placeholder="Responsibilities" className={inputCls()} />
-                    <button type="button" onClick={() => expArr.remove(i)} className="inline-flex items-center gap-1 text-sm text-rose-600 hover:text-rose-700">
+                    <button
+                      type="button"
+                      onClick={() => expArr.remove(i)}
+                      className="inline-flex items-center gap-1 text-sm text-rose-600 hover:text-rose-700"
+                    >
                       <Trash2 size={14} /> Remove
                     </button>
                   </div>
@@ -461,21 +551,35 @@ export default function NewEmployeePage() {
           )}
 
           {/* Navigation */}
-          <div className="flex items-center justify-between pt-4 border-t border-slate-100">
-            <button type="button" onClick={prev} disabled={step === 1}
-              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed">
+          <div className="flex items-center justify-between pt-6 sm:pt-8 border-t border-slate-100 mt-8 sm:mt-10">
+            <button
+              type="button"
+              onClick={prev}
+              disabled={step === 1}
+              className="inline-flex items-center gap-2 sm:gap-3 px-5 sm:px-8 h-12 sm:h-14 text-[10px] sm:text-[11px] font-black uppercase tracking-widest text-slate-800 bg-white border border-slate-200 rounded-xl sm:rounded-2xl hover:text-slate-900 disabled:opacity-30 disabled:cursor-not-allowed transition-all active:scale-95 shadow-sm"
+            >
               <ChevronLeft size={16} /> Back
             </button>
 
             {step < 4 ? (
-              <button type="button" onClick={next}
-                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-slate-900 rounded-lg hover:bg-slate-800">
-                Next <ChevronRight size={16} />
+              <button
+                type="button"
+                onClick={next}
+                className="inline-flex items-center gap-2 sm:gap-3 px-7 sm:px-10 h-12 sm:h-14 text-[10px] font-black uppercase tracking-widest text-white bg-[#6B3F69] rounded-xl sm:rounded-2xl hover:bg-[#5a3458] transition-all active:scale-95 shadow-xl shadow-[#6B3F69]/20"
+              >
+                Next Step <ChevronRight size={16} />
               </button>
             ) : (
-              <button type="submit" disabled={isSubmitting}
-                className="inline-flex items-center gap-2 px-5 py-2 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 disabled:opacity-60">
-                {isSubmitting ? <><Loader2 size={16} className="animate-spin" /> Saving…</> : <><Check size={16} /> Create employee</>}
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="inline-flex items-center gap-2 sm:gap-3 px-7 sm:px-10 h-12 sm:h-14 text-[10px] font-black uppercase tracking-widest text-white bg-emerald-500 rounded-xl sm:rounded-2xl hover:bg-emerald-600 disabled:opacity-60 transition-all active:scale-95 shadow-xl shadow-emerald-500/20"
+              >
+                {isSubmitting ? (
+                  <><Loader2 size={16} className="animate-spin" /> Saving…</>
+                ) : (
+                  <><Check size={16} strokeWidth={3} /> Finalize Creation</>
+                )}
               </button>
             )}
           </div>
@@ -485,7 +589,7 @@ export default function NewEmployeePage() {
   );
 }
 
-// ----- Shared field + input helpers -----
+// ----- Shared helpers -----
 function Field({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
   return (
     <label className="block">
@@ -496,7 +600,13 @@ function Field({ label, error, children }: { label: string; error?: string; chil
   );
 }
 
+// ── Single unified inputCls — bg-gray-50 everywhere ──
 function inputCls(err?: any) {
-  const base = "w-full px-3 py-2 text-sm bg-white border rounded-lg outline-none transition focus:ring-2 focus:ring-slate-900/10 disabled:bg-slate-50 disabled:text-slate-400";
-  return `${base} ${err ? "border-rose-300 focus:border-rose-400" : "border-slate-200 focus:border-slate-400"}`;
+  const base =
+    "w-full px-3 py-2.5 sm:py-3 h-11 sm:h-14 text-sm bg-gray-50 border rounded-lg outline-none transition focus:ring-2 focus:ring-slate-900/10 disabled:bg-slate-100 disabled:text-slate-400 appearance-none";
+  return `${base} ${
+    err
+      ? "border-rose-300 focus:border-rose-400"
+      : "border-slate-200 focus:border-slate-400"
+  }`;
 }
