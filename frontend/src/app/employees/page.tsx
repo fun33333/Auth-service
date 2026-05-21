@@ -351,7 +351,7 @@ export default function EmployeesPage() {
   }) : [];
 
   async function handleDelete(id: string) {
-    if (!window.confirm("Are you sure you want to delete this employee? This action cannot be undone.")) return;
+    if (!window.confirm("Are you sure you want to archive this employee? The record will be preserved and can be restored by an admin.")) return;
     
     try {
       const res = await fetchWithAuth(`/employees/employees/${id}`, {
