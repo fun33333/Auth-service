@@ -89,10 +89,13 @@ Desktop.ini
 # Uncomment if you don't want to track docker volumes
 # docker-volumes/
 
-# ----- Misc -----
+# ----- Secrets / Keys -----
 *.pem
 *.key
 *.cert
+config/pgbouncer/userlist.txt
+config/pgbouncer/pgbouncer.ini
+postgres_data/
 
 # ----- Test/Debug Artifacts -----
 .playwright-mcp/

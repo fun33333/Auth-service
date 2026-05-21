@@ -9,11 +9,12 @@ import {
   ChevronLeft, ChevronRight, X, Calendar,
   LayoutGrid, List as ListIcon, MoreVertical, Download, CreditCard,
   ShieldCheck, Smartphone, User as UserIcon,
-  ShieldAlert, MoreVertical as Dots
+  ShieldAlert, MoreVertical as Dots, Trash2, Edit2
 } from 'lucide-react';
 import IDCard from '@/components/IDCard';
 import Skeleton from '@/components/Skeleton';
 import { fetchWithAuth } from '@/utils/api';
+import toast from "react-hot-toast";
 
 // --- Types ---
 interface Employee {
@@ -25,10 +26,10 @@ interface Employee {
   department?: { dept_name: string; dept_code: string } | null;
   designation?: { position_name: string; position_code: string } | null;
   is_active: boolean;
-  created_at: string; // Backend uses created_at
+  created_at: string;
   image?: string;
-  priority?: 'High' | 'Medium' | 'Low';
-  gender?: 'Male' | 'Female' | 'Other';
+  employment_type?: string;
+  gender?: string;
   bio?: string;
   location?: string;
   cnic?: string;
@@ -37,59 +38,67 @@ interface Employee {
 // --- Utils ---
 const getDeptColor = (deptName: string = '') => {
   const name = deptName.toLowerCase();
-  if (name.includes('food')) return 'bg-emerald-50 text-emerald-600 border-emerald-100';
-  if (name.includes('acad')) return 'bg-blue-50 text-blue-600 border-blue-100';
-  if (name.includes('health') || name.includes('medic')) return 'bg-indigo-50 text-indigo-600 border-indigo-100';
-  if (name.includes('it') || name.includes('tech')) return 'bg-amber-50 text-amber-600 border-amber-100';
-  return 'bg-zinc-50 text-zinc-600 border-zinc-100';
+  if (name.includes('food')) return 'bg-orange-50 text-orange-600 border-orange-100/50';
+  if (name.includes('acad')) return 'bg-blue-50 text-blue-600 border-blue-100/50';
+  if (name.includes('health') || name.includes('medic')) return 'bg-rose-50 text-rose-600 border-rose-100/50';
+  if (name.includes('it') || name.includes('tech') || name.includes('design')) return 'bg-purple-50 text-purple-600 border-purple-100/50';
+  if (name.includes('admin') || name.includes('sales')) return 'bg-amber-50 text-amber-600 border-amber-100/50';
+  return 'bg-slate-50 text-slate-600 border-slate-100/50';
 };
 
 // --- Components ---
 
 const StatsCard = ({ title, count, icon: Icon, color, bgColor, loading }: any) => (
-  <div className="bg-white p-6 rounded-[1.5rem] border border-zinc-100 shadow-sm flex items-center gap-5 hover:shadow-md transition-all duration-300">
-    <div className={`h-14 w-14 rounded-2xl flex items-center justify-center ${bgColor} ${color}`}>
-      <Icon size={24} strokeWidth={2.5} />
-    </div>
+  <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group flex items-center justify-between">
     <div>
-      <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1">{title}</p>
+      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">{title}</p>
       {loading ? (
-        <Skeleton width="40px" height="24px" />
+        <div className="h-8 w-16 bg-slate-50 rounded animate-pulse" />
       ) : (
-        <h3 className="text-2xl font-black text-zinc-900 leading-none">{count}</h3>
+        <div className="flex items-baseline gap-2">
+          <h3 className="text-3xl font-black text-slate-900 tracking-tighter leading-none">{count}</h3>
+          <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest">Live</span>
+        </div>
       )}
+    </div>
+    <div className={`h-14 w-14 rounded-2xl flex items-center justify-center ${bgColor} ${color} transition-all duration-500 group-hover:scale-110 shadow-sm`}>
+      <Icon size={24} strokeWidth={2.5} />
     </div>
   </div>
 );
 
-const EmployeeCard = ({ employee, onClick }: { employee: Employee, onClick: () => void }) => (
+const EmployeeCard = ({ employee, onClick, onDelete }: { employee: Employee, onClick: () => void, onDelete: (id: string) => void }) => (
   <div
-    onClick={onClick}
-    className="bg-white rounded-[2rem] border border-zinc-100 p-8 shadow-sm hover:shadow-xl transition-all duration-300 group flex flex-col items-center text-center relative cursor-pointer"
+    className="bg-white rounded-2xl border border-zinc-100 p-5 shadow-sm hover:shadow-xl transition-all duration-300 group flex flex-col items-center text-center relative"
   >
     {/* Status Indicator Dot */}
     <div className={`absolute top-6 right-6 h-2 w-2 rounded-full ${employee.is_active ? 'bg-emerald-400' : 'bg-rose-500'}`} />
 
     {/* Profile Initial */}
-    <div className="h-16 w-16 rounded-full bg-blue-600 flex items-center justify-center text-white text-xl font-black mb-4 shadow-lg shadow-blue-600/20">
+    <div onClick={onClick} className="h-13 w-13 rounded-2xl hover:bg-[#6B3F69] bg-gray-400  flex items-center justify-center text-white text-lg font-black mb-4 shadow-lg shadow-blue-600/20 cursor-pointer transition-transform hover:scale-110">
       {employee.full_name.charAt(0)}
     </div>
 
-    {/* Name & Designation */}
-    <div className="mb-6">
+    {/* Name & Designation & Gender */}
+    <div className="mb-6 cursor-pointer flex flex-col items-center" onClick={onClick}>
       <h4 className="text-[14px] font-black text-zinc-900 tracking-tight">{employee.full_name}</h4>
-      <p className={`text-[9px] font-black uppercase tracking-[0.2em] mt-2 px-4 py-1.5 rounded-full border ${getDeptColor(employee.department?.dept_name)}`}>
-        {employee.designation?.position_name || 'Personnel'}
-      </p>
+      <div className="flex items-center gap-2 mt-2">
+        <p className={`text-[9px] font-black uppercase tracking-[0.2em] px-2 py-1 rounded-full border ${getDeptColor(employee.department?.dept_name)}`}>
+          {employee.designation?.position_name || 'Personnel'}
+        </p>
+        <span className={`px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border ${employee.gender === 'male' ? 'bg-blue-50 text-blue-600 border-blue-100' : employee.gender === 'female' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-slate-50 text-slate-600 border-slate-100'}`}>
+          {employee.gender || 'N/A'}
+        </span>
+      </div>
     </div>
 
     {/* Metrics Pills */}
-    <div className="flex gap-2 w-full mb-8">
+    <div className="flex gap-2 w-full mb-5">
       <div className="flex-1 bg-emerald-50 border border-emerald-100/50 rounded-lg p-2 text-center">
         <p className="text-[7px] font-black text-emerald-400 uppercase tracking-widest mb-1">Emp ID</p>
         <p className="text-[9px] font-black text-emerald-600">{employee.employee_code}</p>
       </div>
-      <div className="flex-1 bg-zinc-50 border border-zinc-100/50 rounded-lg p-2 text-center">
+      <div className="flex-1 bg-zinc-50 border border-zinc-100/50 rounded-lg p-1 text-center">
         <p className="text-[7px] font-black text-zinc-400 uppercase tracking-widest mb-1">Join Date</p>
         <p className="text-[9px] font-black text-zinc-900">{new Date(employee.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
       </div>
@@ -97,15 +106,18 @@ const EmployeeCard = ({ employee, onClick }: { employee: Employee, onClick: () =
 
     {/* Action Footer */}
     <div className="flex items-center gap-3 w-full">
-      <button className="h-12 w-12 bg-zinc-900 text-white rounded-xl flex items-center justify-center hover:bg-blue-600 transition-all active:scale-95 shadow-lg shadow-zinc-900/10">
-        <Phone size={16} />
-      </button>
-      <button className="h-12 w-12 bg-zinc-50 text-zinc-400 rounded-xl flex items-center justify-center hover:bg-zinc-100 transition-all active:scale-95">
-        <Filter size={16} />
+      <Link href={`/employees/${employee.employee_id}`} className="h-12 w-12 bg-white text-black rounded-xl flex items-center justify-center hover:bg-gray-300 transition-all active:scale-95 shadow-lg shadow-zinc-900/10">
+        <Edit2 size={16} />
+      </Link>
+      <button 
+        onClick={() => onDelete(employee.employee_id)}
+        className="h-12 w-12 bg-rose-50 text-rose-500 rounded-lg flex items-center justify-center hover:bg-rose-100 transition-all active:scale-95 border border-rose-100"
+      >
+        <Trash2 size={16} />
       </button>
       <button
         onClick={onClick}
-        className="flex-1 h-12 bg-white border border-zinc-100 text-zinc-400 rounded-xl flex items-center justify-center hover:text-zinc-900 hover:border-zinc-300 transition-all active:scale-95 shadow-sm"
+        className="flex-1 h-12 bg-white border border-zinc-100 text-zinc-400 rounded-lg flex items-center justify-center hover:text-zinc-900 hover:border-zinc-300 transition-all active:scale-95 shadow-sm"
       >
         <ShieldCheck size={18} />
       </button>
@@ -113,18 +125,19 @@ const EmployeeCard = ({ employee, onClick }: { employee: Employee, onClick: () =
   </div>
 );
 
-const EmployeeTable = ({ employees, onDetailClick, loading }: { employees: Employee[], onDetailClick: (emp: Employee) => void, loading: boolean }) => (
-  <div className="bg-white rounded-[2rem] border border-zinc-100 overflow-hidden shadow-sm mt-8">
+const EmployeeTable = ({ employees, onDetailClick, onDelete, loading }: { employees: Employee[], onDetailClick: (emp: Employee) => void, onDelete: (id: string) => void, loading: boolean }) => (
+  <div className="bg-white rounded-2xl border border-zinc-100 overflow-hidden shadow-sm mt-8">
     <div className="overflow-x-auto">
       <table className="w-full text-left">
         <thead>
           <tr className="border-b border-zinc-50 bg-zinc-50/30">
             <th className="py-6 px-8 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Name</th>
+            <th className="py-6 px-8 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Gender</th>
             <th className="py-6 px-8 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Employee ID</th>
             <th className="py-6 px-8 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Phone</th>
             <th className="py-6 px-8 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Join Date</th>
             <th className="py-6 px-8 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Department</th>
-            <th className="py-6 px-8 text-[10px] font-black text-zinc-400 uppercase tracking-widest text-right">Action</th>
+            <th className="py-6 px-8 text-[10px] font-black text-zinc-400 uppercase tracking-widest text-center">Action</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-zinc-50/50">
@@ -145,42 +158,67 @@ const EmployeeTable = ({ employees, onDetailClick, loading }: { employees: Emplo
               <tr
                 key={emp.employee_id}
                 onClick={() => onDetailClick(emp)}
-                className="hover:bg-zinc-50 transition-colors group cursor-pointer border-b border-zinc-50/50 last:border-0"
+                className="hover:bg-slate-50/50 transition-colors group cursor-pointer border-b border-slate-50 last:border-0"
               >
                 <td className="py-5 px-8">
                   <div className="flex items-center gap-4">
-                    <div className="h-10 w-10 border border-zinc-100 rounded-full bg-zinc-900 flex items-center justify-center text-white text-xs font-black">
-                      {emp.full_name.charAt(0)}
+                    <div className="h-11 w-11 rounded-full bg-slate-900 overflow-hidden flex items-center justify-center text-white text-sm font-black shadow-lg shadow-slate-900/10 transition-transform group-hover:scale-105">
+                      {emp.image ? (
+                        <img src={emp.image} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        emp.full_name.charAt(0)
+                      )}
                     </div>
                     <div>
-                      <h5 className="text-[13px] font-black text-zinc-900 group-hover:text-blue-600 transition-colors">{emp.full_name}</h5>
-                      <p className="text-[10px] font-bold text-zinc-400 lowercase italic">{emp.email}</p>
+                      <h5 className="text-[14px] font-bold text-slate-900 group-hover:text-[#6B3F69] transition-colors leading-tight">{emp.full_name}</h5>
+                      <p className="text-[11px] font-medium text-slate-400 lowercase">{emp.email}</p>
                     </div>
                   </div>
                 </td>
                 <td className="py-5 px-8">
-                  <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 px-3 py-1 rounded-md tracking-wider border border-emerald-100/50">
+                  <span className={`px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border ${emp.gender === 'male' ? 'bg-blue-50 text-blue-600 border-blue-100' : emp.gender === 'female' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-slate-50 text-slate-600 border-slate-100'}`}>
+                    {emp.gender || 'N/A'}
+                  </span>
+                </td>
+                <td className="py-5 px-8">
+                  <span className="text-[11px] font-black text-[#6B3F69] bg-purple-50/50 px-3 py-1.5 rounded-lg tracking-wider border border-purple-100/50">
                     {emp.employee_code}
                   </span>
                 </td>
-                <td className="py-5 px-8 text-[11px] font-bold text-zinc-500">
+                <td className="py-5 px-8 text-[12px] font-semibold text-slate-500 italic">
                   {emp.phone}
                 </td>
-                <td className="py-5 px-8 text-[11px] font-bold text-zinc-500">
+                <td className="py-5 px-8 text-[12px] font-bold text-slate-700">
                   {new Date(emp.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
                 </td>
-                <td className="py-5 px-8 text-[11px]">
-                  <span className={`px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest border ${getDeptColor(emp.department?.dept_name)}`}>
+                <td className="py-5 px-8">
+                  <span className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border shadow-sm ${getDeptColor(emp.department?.dept_name)}`}>
                     {emp.department?.dept_name || 'General'}
                   </span>
                 </td>
-                <td className="py-5 px-8 text-right">
-                  <button
-                    onClick={() => onDetailClick(emp)}
-                    className="h-8 w-8 rounded-lg hover:bg-zinc-100 flex items-center justify-center text-zinc-400 transition-colors ml-auto"
-                  >
-                    <Dots size={16} />
-                  </button>
+                <td className="py-5 px-8">
+                  <div className="flex items-center justify-center gap-2">
+                    <Link
+                      href={`/employees/${emp.employee_id}`}
+                      className="h-9 w-9 rounded-lg hover:bg-slate-200 flex items-center justify-center text-slate-600 hover:text-slate-900 transition-all"
+                      title="Edit Employee"
+                    >
+                      <Edit2 size={16} />
+                    </Link>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onDelete(emp.employee_id); }}
+                      className="h-9 w-9 rounded-lg hover:bg-rose-100 flex items-center justify-center text-rose-400 hover:text-rose-600 transition-all"
+                      title="Delete Employee"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                    {/* <button
+                      onClick={(e) => { e.stopPropagation(); onDetailClick(emp); }}
+                      className="h-9 w-9 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-900 transition-all"
+                    >
+                      <Dots size={18} />
+                    </button> */}
+                  </div>
                 </td>
               </tr>
             ))
@@ -207,13 +245,13 @@ const DetailModal = ({ employee, open, onClose }: { employee: Employee | null, o
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
       <div className="fixed inset-0 bg-zinc-900/80 backdrop-blur-xl animate-in fade-in duration-500" onClick={onClose} />
-      <div className="bg-white w-full max-w-2xl rounded-[3rem] shadow-2xl relative z-70 overflow-hidden animate-in zoom-in-95 duration-500">
+      <div className="bg-white w-full max-w-2xl rounded-2xl shadow-2xl relative z-70 overflow-hidden animate-in zoom-in-95 duration-500">
         <div className="p-12 relative flex flex-col items-center max-h-[90vh] overflow-y-auto custom-scrollbar">
-          <button onClick={onClose} className="absolute top-10 right-10 text-zinc-400 hover:text-zinc-900 border border-zinc-100 p-2 rounded-xl transition-all print:hidden"><X size={24} /></button>
+          <button onClick={onClose} className="absolute top-10 right-10 text-zinc-400 hover:text-zinc-900 border border-zinc-100 p-2 rounded-lg transition-all print:hidden"><X size={24} /></button>
 
           {!showCard ? (
             <>
-              <div className="h-32 w-32 rounded-[2.5rem] bg-blue-600 flex items-center justify-center text-white text-5xl font-black mb-6 shadow-2xl shadow-blue-600/20">
+              <div className="h-32 w-32 rounded-3xl bg-[#6B3F69] flex items-center justify-center text-white text-5xl font-black mb-6 shadow-2xl shadow-blue-600/20">
                 {employee.full_name.charAt(0)}
               </div>
               <h3 className="text-3xl font-black text-zinc-900 tracking-tight">{employee.full_name}</h3>
@@ -233,7 +271,7 @@ const DetailModal = ({ employee, open, onClose }: { employee: Employee | null, o
               <div className="mt-10 w-full flex gap-4">
                 <button
                   onClick={() => setShowCard(true)}
-                  className="flex-1 h-14 bg-zinc-900 text-white rounded-2xl flex items-center justify-center gap-3 text-[10px] font-black uppercase tracking-widest hover:bg-blue-600 transition-all shadow-xl active:scale-95"
+                  className="flex-1 h-14 bg-[#6B3F69] text-white rounded-2xl flex items-center justify-center gap-3 text-[10px] font-black uppercase tracking-widest hover:[#6B3F69] transition-all shadow-xl active:scale-95"
                 >
                   <CreditCard size={18} /> Generate ID Card
                 </button>
@@ -257,7 +295,7 @@ const DetailModal = ({ employee, open, onClose }: { employee: Employee | null, o
                 </button>
                 <button
                   onClick={handlePrint}
-                  className="flex-1 h-14 bg-blue-600 text-white rounded-2xl flex items-center justify-center gap-3 text-[10px] font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-xl shadow-blue-600/20 active:scale-95"
+                  className="flex-1 h-14 bg-[#6B3F69] text-white rounded-2xl flex items-center justify-center gap-3 text-[10px] font-black uppercase tracking-widest hover:bg-[#6B3F69] transition-all shadow-xl shadow-blue-600/20 active:scale-95"
                 >
                   <Download size={18} /> Print Card
                 </button>
@@ -275,7 +313,8 @@ export default function EmployeesPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
-  const [priorityFilter, setPriorityFilter] = useState('All');
+  const [employmentTypeFilter, setEmploymentTypeFilter] = useState('All');
+  const [genderFilter, setGenderFilter] = useState('All');
   const [entriesPerPage, setEntriesPerPage] = useState('10');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
 
@@ -285,7 +324,7 @@ export default function EmployeesPage() {
   async function loadData() {
     try {
       setLoading(true);
-      const res = await fetchWithAuth('/employees/employees');
+      const res = await fetchWithAuth('/employees/employees')
       if (res.ok) {
         const data = await res.json();
         // Handle both Array response and { employees: Array } response
@@ -306,45 +345,89 @@ export default function EmployeesPage() {
     const matchesSearch = (e.full_name || '').toLowerCase().includes(search.toLowerCase()) ||
       (e.employee_code || '').toLowerCase().includes(search.toLowerCase());
     const matchesStatus = statusFilter === 'All' || (statusFilter === 'Active' ? e.is_active : !e.is_active);
-    const matchesPriority = priorityFilter === 'All' || (e.priority === priorityFilter);
-    return matchesSearch && matchesStatus && matchesPriority;
+    const matchesEmploymentType = employmentTypeFilter === 'All' || (e.employment_type === employmentTypeFilter);
+    const matchesGender = genderFilter === 'All' || (e.gender === genderFilter.toLowerCase());
+    return matchesSearch && matchesStatus && matchesEmploymentType && matchesGender;
   }) : [];
+
+  async function handleDelete(id: string) {
+    if (!window.confirm("Are you sure you want to archive this employee? The record will be preserved and can be restored by an admin.")) return;
+    
+    try {
+      const res = await fetchWithAuth(`/employees/employees/${id}`, {
+        method: 'DELETE'
+      });
+      if (res.ok) {
+        setEmployees(employees.filter(emp => emp.employee_id !== id));
+        toast.success("Employee Deleted Successfully", { style: { backgroundColor: '#ef4444', color: '#fff' }, icon: '🗑️' });
+      } else {
+        const error = await res.json();
+        alert(`Failed to delete employee: ${error.error || 'Unknown error'}`);
+      }
+    } catch (err) {
+      console.error("Delete failed:", err);
+      alert("Failed to delete employee. Please try again.");
+    }
+  }
 
   const stats = {
     total: Array.isArray(employees) ? employees.length : 0,
     new: Array.isArray(employees) ? employees.filter(e => (new Date().getTime() - new Date(e.created_at).getTime()) < 30 * 24 * 60 * 60 * 1000).length : 0,
-    male: Array.isArray(employees) ? employees.filter(e => e.gender === 'Male').length : 0,
-    female: Array.isArray(employees) ? employees.filter(e => e.gender === 'Female').length : 0,
+    male: Array.isArray(employees) ? employees.filter(e => (e.gender || '').toLowerCase() === 'male').length : 0,
+    female: Array.isArray(employees) ? employees.filter(e => (e.gender || '').toLowerCase() === 'female').length : 0,
   };
-
+  // employees main page
   return (
     <ProtectedLayout>
-      <div className="p-4 sm:p-6 lg:p-10 max-w-[1600px] mx-auto space-y-10 animate-in fade-in duration-700">
+      <div className="p-4 sm:p-6 lg:p-10 max-w-400 mx-auto space-y-10 animate-in fade-in duration-700">
 
         {/* Header Section */}
-        <div>
-          <h1 className="text-4xl font-black tracking-tight text-zinc-900">Employee</h1>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-2 sm:p-5 rounded-3xl border border-slate-100 shadow-sm backdrop-blur-md ">
+          <div className="flex items-center gap-4">
+            <div className="h-12 w-12 rounded-2xl bg-[#6B3F69] flex items-center justify-center text-white shadow-lg shadow-[#6B3F69]/20">
+              <Users size={22} strokeWidth={2.5} />
+            </div>
+            <div>
+              <h1 className="text-lg sm:text-2xl font-black text-slate-900 tracking-tight uppercase leading-none">Employees</h1>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Personnel Registry</p>
+            </div>
+          </div>
+
+          <Link
+            href="/employees/new"
+            className="flex items-center justify-center gap-2 h-11 px-5 bg-[#6B3F69] text-white rounded-lg text-[10px] font-black uppercase tracking-widest hover:opacity-90 transition-all active:scale-95 shadow-lg shadow-[#6B3F69]/20"
+          >
+            <Plus size={18} strokeWidth={3} />
+            <span className="text-xs font-black uppercase tracking-widest">Add Employee</span>
+          </Link>
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          <StatsCard title="Total Employee" count={stats.total} icon={Users} color="text-indigo-600" bgColor="bg-indigo-50" loading={loading} />
-          <StatsCard title="New Employee" count={stats.new} icon={UserPlus} color="text-amber-600" bgColor="bg-amber-50" loading={loading} />
-          <StatsCard title="Male" count={stats.male} icon={UserIcon} color="text-blue-600" bgColor="bg-blue-50" loading={loading} />
-          <StatsCard title="Female" count={stats.female} icon={UserIcon} color="text-rose-600" bgColor="bg-rose-50" loading={loading} />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          <div onClick={() => { setStatusFilter('All'); setGenderFilter('All'); setEmploymentTypeFilter('All'); }} className="cursor-pointer">
+            <StatsCard title="Total Employee" count={stats.total} icon={Users} color="text-purple-600" bgColor="bg-purple-50/50" loading={loading} />
+          </div>
+          <StatsCard title="New Employee" count={stats.new} icon={UserPlus} color="text-amber-600" bgColor="bg-amber-50/50" loading={loading} />
+          <div onClick={() => setGenderFilter('Male')} className="cursor-pointer">
+            <StatsCard title="Male" count={stats.male} icon={UserIcon} color="text-blue-600" bgColor="bg-blue-50/50" loading={loading} />
+          </div>
+          <div onClick={() => setGenderFilter('Female')} className="cursor-pointer">
+            <StatsCard title="Female" count={stats.female} icon={UserIcon} color="text-emerald-600" bgColor="bg-emerald-50/50" loading={loading} />
+          </div>
         </div>
 
         {/* Filter Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-end mt-12 bg-white/50 p-6 rounded-[2rem] border border-zinc-100 shadow-sm">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end mt-10 bg-white/50 p-3 rounded-2xl border border-zinc-100 shadow-sm">
           <div className="space-y-3">
-            <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest pl-1">Employee Name</label>
+            <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest pl-1">Employee Name / ID</label>
             <div className="relative group">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-zinc-400 group-focus-within:text-zinc-900 transition-colors" />
               <input
                 type="text"
                 placeholder="Search here..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full h-14 pl-6 pr-6 bg-white border border-zinc-100 rounded-2xl outline-none focus:border-zinc-900 focus:ring-4 focus:ring-zinc-900/5 transition-all text-sm font-bold"
+                className="w-full h-14 pl-10 pr-5 bg-white border border-zinc-100 rounded-2xl outline-none focus:border-zinc-900 focus:ring-4 focus:ring-zinc-900/5 transition-all text-sm font-bold"
               />
             </div>
           </div>
@@ -354,7 +437,7 @@ export default function EmployeesPage() {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full h-14 px-6 bg-white border border-zinc-100 rounded-2xl outline-none focus:border-zinc-900 transition-all text-sm font-bold appearance-none cursor-pointer"
+              className="w-full h-14 px-5 bg-white border border-zinc-100 rounded-2xl outline-none focus:border-zinc-900 transition-all text-sm font-bold appearance-none cursor-pointer"
             >
               <option value="All">All</option>
               <option value="Active">Active</option>
@@ -363,49 +446,49 @@ export default function EmployeesPage() {
           </div>
 
           <div className="space-y-3">
-            <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest pl-1">Select Priority</label>
+            <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest pl-1">Select Gender</label>
             <select
-              value={priorityFilter}
-              onChange={(e) => setPriorityFilter(e.target.value)}
-              className="w-full h-14 px-6 bg-white border border-zinc-100 rounded-2xl outline-none focus:border-zinc-900 transition-all text-sm font-bold appearance-none cursor-pointer"
+              value={genderFilter}
+              onChange={(e) => setGenderFilter(e.target.value)}
+              className="w-full h-14 px-5 bg-white border border-zinc-100 rounded-2xl outline-none focus:border-zinc-900 transition-all text-sm font-bold appearance-none cursor-pointer"
             >
-              <option value="All">All</option>
-              <option value="High">High</option>
-              <option value="Medium">Medium</option>
-              <option value="Low">Low</option>
+              <option value="All">All Gender</option>
+              <option value="Male">Male</option>
+              <option value="Female">Female</option>
             </select>
           </div>
 
-          <div className="flex gap-3 h-14">
-            <button
-              className="h-full w-14 bg-zinc-900 text-white rounded-2xl flex items-center justify-center hover:bg-zinc-800 transition-all active:scale-95 shadow-lg shadow-zinc-900/10"
+          <div className="space-y-3">
+            <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest pl-1">Select Employment Type</label>
+            <select
+              value={employmentTypeFilter}
+              onChange={(e) => setEmploymentTypeFilter(e.target.value)}
+              className="w-full h-14 px-5 bg-white border border-zinc-100 rounded-2xl outline-none focus:border-zinc-900 transition-all text-sm font-bold appearance-none cursor-pointer"
             >
-              <Search size={20} />
-            </button>
-            <Link
-              href="/employees/new"
-              className="flex-1 h-full px-6 flex items-center justify-center gap-2 border border-zinc-200 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-50 transition-all active:scale-95"
-            >
-              + Add Employee
-            </Link>
+              <option value="All">All Types</option>
+              <option value="Full-time">Full-time</option>
+              <option value="Part-time">Part-time</option>
+              <option value="Contract">Contract</option>
+              <option value="Intern">Intern</option>
+            </select>
           </div>
         </div>
 
         {/* Options Row */}
-        <div className="flex items-center justify-between mt-8">
+        <div className="flex items-center justify-between ">
           <div className="flex items-center gap-3">
             <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Show Entries</p>
             <select
               value={entriesPerPage}
               onChange={(e) => setEntriesPerPage(e.target.value)}
-              className="h-10 px-4 bg-white border border-zinc-100 rounded-xl outline-none text-[10px] font-black uppercase cursor-pointer"
+              className="h-10 px-2 bg-white border border-zinc-100 rounded-lg outline-none text-[10px] font-black uppercase cursor-pointer"
             >
               <option value="10">10</option>
               <option value="25">25</option>
               <option value="50">50</option>
             </select>
           </div>
-          <div className="flex items-center p-1 bg-zinc-100 rounded-xl">
+          <div className="flex items-center p-1 bg-zinc-100 rounded-lg">
             <button
               onClick={() => setViewMode('grid')}
               className={`h-10 w-10 flex items-center justify-center transition-all ${viewMode === 'grid' ? 'bg-white rounded-lg shadow-sm text-blue-600' : 'text-zinc-400 hover:text-zinc-900'}`}
@@ -424,20 +507,21 @@ export default function EmployeesPage() {
         {/* View Content */}
         {viewMode === 'list' ? (
           <EmployeeTable
-            employees={filtered.slice(0, parseInt(entriesPerPage))}
+            employees={filtered.slice(0, entriesPerPage === 'All' ? filtered.length : parseInt(entriesPerPage))}
             loading={loading}
             onDetailClick={(emp) => {
               setSelectedEmployee(emp);
               setIsModalOpen(true);
             }}
+            onDelete={handleDelete}
           />
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-8 mt-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-5 mt-5">
             {loading ? (
               [...Array(entriesPerPage === 'All' ? 10 : parseInt(entriesPerPage))].map((_, i) => (
-                <div key={i} className="bg-white rounded-[2rem] border border-zinc-100 p-8 shadow-sm h-[320px]">
+                <div key={i} className="bg-white rounded-3xl border border-zinc-100 p-8 shadow-sm h-80">
                   <Skeleton className="h-16 w-16 rounded-full mx-auto" />
-                  <Skeleton className="h-4 w-3/4 mx-auto mt-6" />
+                  <Skeleton className="h-4 w-3/4 mx-auto mt-5" />
                   <Skeleton className="h-3 w-1/2 mx-auto mt-2" />
                   <div className="flex gap-2 mt-8">
                     <Skeleton className="h-10 flex-1 rounded-lg" />
@@ -446,7 +530,7 @@ export default function EmployeesPage() {
                 </div>
               ))
             ) : filtered.length === 0 ? (
-              <div className="col-span-full py-20 text-center bg-white rounded-[2rem] border border-zinc-100">
+              <div className="col-span-full py-20 text-center bg-white rounded-2xl border border-zinc-100">
                 <p className="text-sm font-bold text-zinc-400 uppercase tracking-widest">No personnel records found</p>
               </div>
             ) : (
@@ -458,6 +542,7 @@ export default function EmployeesPage() {
                     setSelectedEmployee(emp);
                     setIsModalOpen(true);
                   }}
+                  onDelete={handleDelete}
                 />
               ))
             )}
