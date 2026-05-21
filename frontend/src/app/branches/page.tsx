@@ -210,7 +210,7 @@ function BranchModal({
         <div className="px-8 py-6 border-t border-zinc-50 flex justify-end gap-3 bg-zinc-50/30">
           <button type="button" onClick={onClose} className="px-6 py-3 text-[10px] font-black text-zinc-400 uppercase tracking-widest hover:text-zinc-600 transition">Cancel</button>
           <button type="submit" disabled={isSubmitting}
-            className="px-10 py-3.5 bg-[#6B3F69] text-white rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-[#6B3F69]  shadow-lg transition-all active:scale-95 disabled:opacity-50">
+            className="px-10 py-3.5 bg-theme-800 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-theme-800  shadow-lg transition-all active:scale-95 disabled:opacity-50">
             {isSubmitting ? "Saving…" : initial ? "Confirm Changes" : "Deploy Unit"}
           </button>
         </div>
@@ -477,3 +477,4 @@ export default function BranchesPage() {
     </ProtectedLayout>
   );
 }
+

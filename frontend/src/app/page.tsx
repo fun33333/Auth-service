@@ -57,9 +57,9 @@ function BarChart({ data }: { data: number[] }) {
               width={barWidth}
               height={barHeight}
               rx={4}
-              fill="#6B3F69"
+              fill="currentColor"
               opacity={activeIndex === null ? 0.3 : (activeIndex === i ? 1 : 0.1)}
-              className="cursor-pointer transition-colors duration-300 hover:opacity-100"
+              className="text-theme-800 cursor-pointer transition-colors duration-300 hover:opacity-100"
               onClick={() => setActiveIndex(activeIndex === i ? null : i)}
             />
             {/* Flat bottom for the bar */}
@@ -68,19 +68,19 @@ function BarChart({ data }: { data: number[] }) {
               y={y + barHeight - 4}
               width={barWidth}
               height={4}
-              fill="#6B3F69"
+              fill="currentColor"
               opacity={activeIndex === null ? 0.3 : (activeIndex === i ? 1 : 0.1)}
-              className="pointer-events-none transition-colors duration-300"
+              className="text-theme-800 pointer-events-none transition-colors duration-300"
             />
             {activeIndex === i && (
               <text
                 x={x + barWidth / 2}
                 y={y - 8}
                 textAnchor="middle"
-                fill="#6B3F69"
+                fill="currentColor"
                 fontSize="12"
                 fontWeight="900"
-                className="pointer-events-none drop-shadow-sm"
+                className="text-theme-800 pointer-events-none drop-shadow-sm"
               >
                 {data[i]}
               </text>
@@ -145,12 +145,12 @@ function StatCard({
   const theme = colorMap[color] || colorMap.indigo;
 
   return (
-    <div className={`bg-white rounded-3xl border border-slate-100 shadow-sm hover:shadow-2xl ${theme.shadow} hover:-translate-y-1 transition-all duration-300 group flex items-center justify-between p-3 sm:p-4 relative overflow-hidden`}>
-      <div className={`absolute top-0 right-0 w-24 h-24 ${theme.blob} blur-[60px] rounded-full -mr-8 -mt-8`} />
+    <div className={`bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-2xl ${theme.shadow} hover:-translate-y-1 transition-all duration-300 group flex items-center justify-between  sm:p-4 relative overflow-hidden`}>
+      <div className={`absolute top-0 right-0 w-20 h-20 ${theme.blob} blur-[60px] rounded-full -mr-2 -mt-4`} />
       <div>
         <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">{title}</p>
         {loading ? (
-          <div className="h-8 w-16 bg-slate-50 rounded animate-pulse" />
+          <div className="h-8 w-15 bg-slate-50 rounded animate-pulse" />
         ) : (
           <div className="flex items-baseline gap-2">
             <h2 className="text-2xl sm:text-3xl font-black text-slate-900 leading-none tracking-tighter">
@@ -184,14 +184,14 @@ function SystemStatusCard({
   const colorMap: Record<string, any> = {
     blue: { text: "text-blue-600", bg: "bg-blue-400", shadow: "hover:shadow-blue-500/20", blob: "bg-blue-500/5" },
     emerald: { text: "text-emerald-600", bg: "bg-emerald-400", shadow: "hover:shadow-emerald-500/20", blob: "bg-emerald-500/5" },
-    purple: { text: "text-[#6B3F69]", bg: "bg-[#6B3F69]", shadow: "hover:shadow-[#6B3F69]/20", blob: "bg-[#6B3F69]/5" },
+    purple: { text: "text-theme-800", bg: "bg-theme-800", shadow: "hover:shadow-theme-800/20", blob: "bg-theme-800/5" },
   };
   const theme = colorMap[color] || colorMap.blue;
 
   return (
-    <div className={`bg-white rounded-3xl border border-slate-100 shadow-sm p-3 sm:p-4 hover:shadow-2xl ${theme.shadow} hover:-translate-y-1 transition-all duration-500 group relative overflow-hidden`}>
-      <div className={`absolute top-0 right-0 w-24 h-24 ${theme.blob} blur-[60px] rounded-full -mr-8 -mt-8`} />
-      <p className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 mb-3">
+    <div className={`bg-white rounded-2xl border border-slate-100 shadow-sm p-2 sm:p-2 hover:shadow-2xl ${theme.shadow} hover:-translate-y-1 transition-all duration-500 group relative overflow-hidden`}>
+      <div className={`absolute top-0 right-0 w-24 h-24 ${theme.blob} blur-[60px] rounded-full -mr-2 -mt-3`} />
+      <p className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 mb-2">
         System Status
       </p>
       <div className="flex items-center gap-4 mb-3">
@@ -237,7 +237,7 @@ function OrgMixRow({
     emerald: "bg-emerald-500",
     amber: "bg-amber-500",
     rose: "bg-rose-500",
-    purple: "bg-[#6B3F69]",
+    purple: "bg-theme-800",
     blue: "bg-blue-500",
     violet: "bg-violet-500",
   };
@@ -303,20 +303,20 @@ function EmployeeAlertItem({
   return (
     <a
       href={`/employees/${employee.employee_id}`}
-      className="rounded-xl border border-slate-50 bg-slate-50/50 p-2.5 flex items-center gap-3 hover:bg-white hover:shadow-xl hover:shadow-[#6B3F69]/5 hover:-translate-y-0.5 transition-all duration-300 group"
+      className="rounded-xl border border-slate-50 bg-slate-50/50 p-2.5 flex items-center gap-3 hover:bg-white hover:shadow-xl hover:shadow-theme-800/5 hover:-translate-y-0.5 transition-all duration-300 group"
     >
-      <div className="w-10 h-10 rounded-xl bg-[#6B3F69]/10 flex items-center justify-center text-[#6B3F69] font-black text-sm group-hover:bg-[#6B3F69] group-hover:text-white transition-all duration-500 shadow-sm">
+      <div className="w-10 h-10 rounded-xl bg-theme-800/10 flex items-center justify-center text-theme-800 font-black text-sm group-hover:bg-theme-800 group-hover:text-white transition-all duration-500 shadow-sm">
         {employee.full_name?.charAt(0) || "E"}
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-[11px] font-black text-slate-900 truncate uppercase tracking-tight group-hover:text-[#6B3F69] transition-colors">
+        <p className="text-[11px] font-black text-slate-900 truncate uppercase tracking-tight group-hover:text-theme-800 transition-colors">
           {employee.full_name}
         </p>
         <p className="text-[9px] text-slate-400 truncate uppercase tracking-widest font-black mt-0.5">
           {employee.designation?.position_name || "Employee"} 
         </p>
       </div>
-      <ArrowRight size={14} className="shrink-0 text-slate-300 group-hover:text-[#6B3F69] group-hover:translate-x-1 transition-all" />
+      <ArrowRight size={14} className="shrink-0 text-slate-300 group-hover:text-theme-800 group-hover:translate-x-1 transition-all" />
     </a>
   );
 }
@@ -382,7 +382,7 @@ function HubAction({
     emerald: "text-emerald-600 bg-emerald-50",
     amber: "text-amber-600 bg-amber-50",
     rose: "text-rose-600 bg-rose-50",
-    purple: "text-[#6B3F69] bg-[#6B3F69]/10",
+    purple: "text-theme-800 bg-theme-800/10",
     blue: "text-blue-600 bg-blue-50",
   };
 
@@ -391,7 +391,7 @@ function HubAction({
   return (
     <a
       href={href}
-      className="flex flex-col items-center text-center gap-2 p-2 sm:p-3 bg-white border border-slate-100 rounded-2xl hover:shadow-2xl hover:shadow-[#6B3F69]/10 hover:-translate-y-1.5 transition-all duration-500 group"
+      className="flex flex-col items-center text-center gap-2 p-2 sm:p-3 bg-white border border-slate-100 rounded-2xl hover:shadow-2xl hover:shadow-theme-800/10 hover:-translate-y-1.5 transition-all duration-500 group"
     >
       <div
         className={`w-16 h-16 rounded-2xl flex items-center justify-center ${selectedColor} shadow-sm transition-transform group-hover:scale-110`}
@@ -559,18 +559,18 @@ export default function Dashboard() {
         {/* Page Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-5 bg-white p-3 sm:p-4 rounded-2xl border border-slate-100 backdrop-blur-md ">
           <div className="flex items-center gap-4">
-            <div className="h-14 w-14 rounded-2xl bg-[#6B3F69] flex items-center justify-center text-white shadow-lg shadow-[#6B3F69]/20 font-black text-xl">
+            <div className="h-14 w-14 rounded-2xl bg-theme-800 flex items-center justify-center text-white shadow-lg shadow-theme-800/20 font-black text-xl">
               {user?.full_name?.charAt(0) || "U"}
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-sm font-bold text-slate-400 uppercase tracking-widest">{greeting},</span>
-                <span className="text-sm font-black text-[#6B3F69] uppercase tracking-widest">{user?.full_name || "Guest"}</span>
+                <span className="text-sm font-black text-theme-800 uppercase tracking-widest">{user?.full_name || "Guest"}</span>
               </div>
 
             </div>
           </div>
-          <div className="flex flex-col items-end">
+          {/* <div className="flex flex-col items-end">
             <div className="flex items-center gap-1 text-xs text-slate-500 bg-white border border-slate-100 rounded-lg px-4 py-2.5 shadow-sm">
               <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mr-1">
                 Registry Sync
@@ -578,11 +578,11 @@ export default function Dashboard() {
               <span className="font-black text-slate-700">{today}</span>
             </div>
 
-          </div>
+          </div> */}
         </div>
 
         {/* ── Row 1: Stat Cards + System Status ── */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 ">
           <StatCard
             title="Total Institutions"
             value={stats.institutions}
@@ -620,7 +620,7 @@ export default function Dashboard() {
               <h2 className="text-sm font-black text-slate-800 uppercase tracking-tighter">
                Per Department Employees
               </h2>
-              {/* <span className="text-[10px] font-black uppercase tracking-widest text-[#6B3F69] bg-[#6B3F69]/10 px-2 py-1 rounded-full">
+              {/* <span className="text-[10px] font-black uppercase tracking-widest text-theme-800 bg-theme-800/10 px-2 py-1 rounded-full">
                 Personnel Hubs
               </span> */}
             </div>
@@ -710,8 +710,8 @@ export default function Dashboard() {
 
 
           {/* Intelligence Hub */}
-          <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-2xl hover:shadow-[#6B3F69]/10 hover:-translate-y-1 transition-all duration-500 p-4 sm:p-5 relative overflow-hidden group/hub h-fit">
-            <div className="absolute top-0 right-0 w-30 h-30 bg-[#6B3F69]/5 blur-[100px] rounded-full " />
+          <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-2xl hover:shadow-theme-800/10 hover:-translate-y-1 transition-all duration-500 p-4 sm:p-5 relative overflow-hidden group/hub h-fit">
+            <div className="absolute top-0 right-0 w-30 h-30 bg-theme-800/5 blur-[100px] rounded-full " />
             <div className="flex items-center justify-between mb-2">
               <h2 className="text-1xl font-black text-slate-900 tracking-tighter uppercase">
                 Intelligence Hub
@@ -768,7 +768,7 @@ export default function Dashboard() {
                 System Stream
               </h2>
               <div className="relative">
-                <Activity size={15} className="text-[#6B3F69]" />
+                <Activity size={15} className="text-theme-800" />
                 <span className="absolute -top-1 -right-1 w-2 h-2 bg-rose-500 rounded-full animate-ping" />
               </div>
             </div>
@@ -801,4 +801,5 @@ export default function Dashboard() {
     </ProtectedLayout>
   );
 }
+
 

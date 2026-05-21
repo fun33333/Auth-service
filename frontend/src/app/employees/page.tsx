@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import ProtectedLayout from '@/components/ProtectedLayout';
 import Link from 'next/link';
 import {
@@ -9,7 +9,7 @@ import {
   ChevronLeft, ChevronRight, X, Calendar,
   LayoutGrid, List as ListIcon, MoreVertical, Download, CreditCard,
   ShieldCheck, Smartphone, User as UserIcon,
-  ShieldAlert, MoreVertical as Dots, Trash2, Edit2
+  ShieldAlert, MoreVertical as Dots, Trash2, Edit2, ExternalLink
 } from 'lucide-react';
 import IDCard from '@/components/IDCard';
 import Skeleton from '@/components/Skeleton';
@@ -75,7 +75,7 @@ const EmployeeCard = ({ employee, onClick, onDelete }: { employee: Employee, onC
     <div className={`absolute top-6 right-6 h-2 w-2 rounded-full ${employee.is_active ? 'bg-emerald-400' : 'bg-rose-500'}`} />
 
     {/* Profile Initial */}
-    <div onClick={onClick} className="h-13 w-13 rounded-2xl hover:bg-[#6B3F69] bg-gray-400  flex items-center justify-center text-white text-lg font-black mb-4 shadow-lg shadow-blue-600/20 cursor-pointer transition-transform hover:scale-110">
+    <div onClick={onClick} className="h-13 w-13 rounded-2xl hover:bg-theme-800 bg-gray-400  flex items-center justify-center text-white text-lg font-black mb-4 shadow-lg shadow-blue-600/20 cursor-pointer transition-transform hover:scale-110">
       {employee.full_name.charAt(0)}
     </div>
 
@@ -109,7 +109,7 @@ const EmployeeCard = ({ employee, onClick, onDelete }: { employee: Employee, onC
       <Link href={`/employees/${employee.employee_id}`} className="h-12 w-12 bg-white text-black rounded-xl flex items-center justify-center hover:bg-gray-300 transition-all active:scale-95 shadow-lg shadow-zinc-900/10">
         <Edit2 size={16} />
       </Link>
-      <button 
+      <button
         onClick={() => onDelete(employee.employee_id)}
         className="h-12 w-12 bg-rose-50 text-rose-500 rounded-lg flex items-center justify-center hover:bg-rose-100 transition-all active:scale-95 border border-rose-100"
       >
@@ -125,12 +125,65 @@ const EmployeeCard = ({ employee, onClick, onDelete }: { employee: Employee, onC
   </div>
 );
 
+const ActionMenu = ({ emp, onDelete, onDetailClick }: { emp: Employee, onDelete: (id: string) => void, onDetailClick: (emp: Employee) => void }) => {
+  const [open, setOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  return (
+    <div className="flex items-center justify-center gap-2 relative" onClick={(e) => e.stopPropagation()}>
+      <button 
+        onClick={(e) => { e.stopPropagation(); onDetailClick(emp); }}
+        className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-bold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors shadow-sm whitespace-nowrap"
+      >
+        View profile <ExternalLink size={13} className="text-slate-400" />
+      </button>
+      <div ref={menuRef} className="relative">
+        <button
+          onClick={(e) => { e.stopPropagation(); setOpen(!open); }}
+          className={`h-[30px] w-[30px] flex items-center justify-center rounded-lg border transition-colors ${open ? 'bg-blue-50 border-blue-200 text-blue-600' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+        >
+          <MoreVertical size={14} />
+        </button>
+        {open && (
+          <div className="absolute right-0 top-full mt-1 w-44 bg-white border border-slate-100 rounded-xl shadow-lg shadow-slate-200/50 py-1.5 z-50 animate-in fade-in zoom-in-95 duration-100">
+            <Link href={`/service?employee_id=${emp.employee_id}`} className="w-full text-left px-4 py-2 text-[11px] font-semibold text-blue-600 hover:bg-blue-50 flex items-center">
+              Setup permissions
+            </Link>
+            <Link href={`/employees/${emp.employee_id}`} className="w-full text-left px-4 py-2 text-[11px] font-semibold text-slate-600 hover:bg-slate-50 flex items-center">
+              Edit employee
+            </Link>
+            <button className="w-full text-left px-4 py-2 text-[11px] font-semibold text-slate-600 hover:bg-slate-50 flex items-center">
+              Disable user
+            </button>
+            <button 
+              onClick={(e) => { e.stopPropagation(); setOpen(false); onDelete(emp.employee_id); }}
+              className="w-full text-left px-4 py-2 text-[11px] font-semibold text-rose-500 hover:bg-rose-50 flex items-center mt-1 pt-2 border-t border-slate-50"
+            >
+              Remove user
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 const EmployeeTable = ({ employees, onDetailClick, onDelete, loading }: { employees: Employee[], onDetailClick: (emp: Employee) => void, onDelete: (id: string) => void, loading: boolean }) => (
-  <div className="bg-white rounded-2xl border border-zinc-100 overflow-hidden shadow-sm mt-8">
+  <div className="bg-white rounded-2xl border border-zinc-200 overflow-hidden shadow-sm mt-8">
     <div className="overflow-x-auto">
-      <table className="w-full text-left">
-        <thead>
-          <tr className="border-b border-zinc-50 bg-zinc-50/30">
+      <table className="w-full text-left ">
+        <thead className='bg-slate-50/30'>
+          <tr className="border-b border-zinc-400 bg-slate-50/50">
             <th className="py-6 px-8 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Name</th>
             <th className="py-6 px-8 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Gender</th>
             <th className="py-6 px-8 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Employee ID</th>
@@ -162,7 +215,7 @@ const EmployeeTable = ({ employees, onDetailClick, onDelete, loading }: { employ
               >
                 <td className="py-5 px-8">
                   <div className="flex items-center gap-4">
-                    <div className="h-11 w-11 rounded-full bg-slate-900 overflow-hidden flex items-center justify-center text-white text-sm font-black shadow-lg shadow-slate-900/10 transition-transform group-hover:scale-105">
+                    <div className="h-11 w-11 rounded-full bg-slate-50/50 overflow-hidden flex items-center justify-center text-white text-sm font-black shadow-lg shadow-slate-900/10 transition-transform group-hover:scale-105">
                       {emp.image ? (
                         <img src={emp.image} alt="" className="w-full h-full object-cover" />
                       ) : (
@@ -170,7 +223,7 @@ const EmployeeTable = ({ employees, onDetailClick, onDelete, loading }: { employ
                       )}
                     </div>
                     <div>
-                      <h5 className="text-[14px] font-bold text-slate-900 group-hover:text-[#6B3F69] transition-colors leading-tight">{emp.full_name}</h5>
+                      <h5 className="text-[14px] font-bold text-slate-900 group-hover:text-theme-800 transition-colors leading-tight">{emp.full_name}</h5>
                       <p className="text-[11px] font-medium text-slate-400 lowercase">{emp.email}</p>
                     </div>
                   </div>
@@ -181,7 +234,7 @@ const EmployeeTable = ({ employees, onDetailClick, onDelete, loading }: { employ
                   </span>
                 </td>
                 <td className="py-5 px-8">
-                  <span className="text-[11px] font-black text-[#6B3F69] bg-purple-50/50 px-3 py-1.5 rounded-lg tracking-wider border border-purple-100/50">
+                  <span className="text-[11px] font-black text-theme-800 bg-purple-50/50 px-3 py-1.5 rounded-lg tracking-wider border border-purple-100/50">
                     {emp.employee_code}
                   </span>
                 </td>
@@ -197,28 +250,7 @@ const EmployeeTable = ({ employees, onDetailClick, onDelete, loading }: { employ
                   </span>
                 </td>
                 <td className="py-5 px-8">
-                  <div className="flex items-center justify-center gap-2">
-                    <Link
-                      href={`/employees/${emp.employee_id}`}
-                      className="h-9 w-9 rounded-lg hover:bg-slate-200 flex items-center justify-center text-slate-600 hover:text-slate-900 transition-all"
-                      title="Edit Employee"
-                    >
-                      <Edit2 size={16} />
-                    </Link>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); onDelete(emp.employee_id); }}
-                      className="h-9 w-9 rounded-lg hover:bg-rose-100 flex items-center justify-center text-rose-400 hover:text-rose-600 transition-all"
-                      title="Delete Employee"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                    {/* <button
-                      onClick={(e) => { e.stopPropagation(); onDetailClick(emp); }}
-                      className="h-9 w-9 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-900 transition-all"
-                    >
-                      <Dots size={18} />
-                    </button> */}
-                  </div>
+                  <ActionMenu emp={emp} onDelete={onDelete} onDetailClick={onDetailClick} />
                 </td>
               </tr>
             ))
@@ -241,37 +273,37 @@ const DetailModal = ({ employee, open, onClose }: { employee: Employee | null, o
   const handlePrint = () => {
     window.print();
   };
-
+  ///employees first  card 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-2">
       <div className="fixed inset-0 bg-zinc-900/80 backdrop-blur-xl animate-in fade-in duration-500" onClick={onClose} />
       <div className="bg-white w-full max-w-2xl rounded-2xl shadow-2xl relative z-70 overflow-hidden animate-in zoom-in-95 duration-500">
-        <div className="p-12 relative flex flex-col items-center max-h-[90vh] overflow-y-auto custom-scrollbar">
+        <div className="p-7 relative flex flex-col items-center max-h-[90vh] overflow-y-auto custom-scrollbar">
           <button onClick={onClose} className="absolute top-10 right-10 text-zinc-400 hover:text-zinc-900 border border-zinc-100 p-2 rounded-lg transition-all print:hidden"><X size={24} /></button>
 
           {!showCard ? (
             <>
-              <div className="h-32 w-32 rounded-3xl bg-[#6B3F69] flex items-center justify-center text-white text-5xl font-black mb-6 shadow-2xl shadow-blue-600/20">
+              <div className="h-25 w-25 rounded-2xl bg-theme-800 flex items-center justify-center text-white text-5xl font-black mb-3 shadow-2xl shadow-blue-600/20">
                 {employee.full_name.charAt(0)}
               </div>
-              <h3 className="text-3xl font-black text-zinc-900 tracking-tight">{employee.full_name}</h3>
+              <h3 className="text-2xl font-black text-zinc-900 tracking-tight">{employee.full_name}</h3>
               <p className="text-blue-600 text-[10px] font-black uppercase tracking-[0.4em] mt-3 bg-blue-50 px-6 py-2 rounded-full border border-blue-100">{employee.designation?.position_name || 'No Designation'}</p>
 
-              <div className="grid grid-cols-2 gap-8 w-full mt-12 pt-12 border-t border-zinc-100">
-                <div className="bg-zinc-50 p-6 rounded-3xl border border-zinc-100">
+              <div className="grid grid-cols-2 gap-4 w-full mt-5 pt-5 border-t border-zinc-100">
+                <div className="bg-zinc-100 p-4 rounded-2xl border border-zinc-100">
                   <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1.5 ">Email Address</p>
                   <p className="text-sm font-bold text-zinc-900 truncate">{employee.email}</p>
                 </div>
-                <div className="bg-zinc-50 p-6 rounded-3xl border border-zinc-100">
+                <div className="bg-zinc-100 p-4 rounded-2xl border border-zinc-100">
                   <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-1.5">Phone Access</p>
                   <p className="text-sm font-bold text-zinc-900">{employee.phone}</p>
                 </div>
               </div>
 
-              <div className="mt-10 w-full flex gap-4">
+              <div className="mt-5 w-100 flex gap-4">
                 <button
                   onClick={() => setShowCard(true)}
-                  className="flex-1 h-14 bg-[#6B3F69] text-white rounded-2xl flex items-center justify-center gap-3 text-[10px] font-black uppercase tracking-widest hover:[#6B3F69] transition-all shadow-xl active:scale-95"
+                  className="flex-1 h-14 bg-theme-800 text-white rounded-2xl flex items-center justify-center gap-3 text-[10px] font-black uppercase tracking-widest hover:[var(--color-theme-800)] transition-all shadow-xl active:scale-95"
                 >
                   <CreditCard size={18} /> Generate ID Card
                 </button>
@@ -286,16 +318,16 @@ const DetailModal = ({ employee, open, onClose }: { employee: Employee | null, o
                 department: { dept_name: employee.department?.dept_name || 'General' }
               }} />
 
-              <div className="mt-8 flex gap-4 w-full px-8 print:hidden">
+              <div className=" flex gap-4 w-full px-8 print:hidden">
                 <button
                   onClick={() => setShowCard(false)}
-                  className="flex-1 h-14 bg-zinc-100 text-zinc-400 rounded-2xl flex items-center justify-center text-[10px] font-black uppercase tracking-widest hover:bg-zinc-200 hover:text-zinc-900 transition-all"
+                  className="flex-1 h-14 bg-zinc-100 text-zinc-400 rounded-2xl flex items-center justify-center text-[10px] font-black uppercase tracking-widest bg-zinc-100 hover:bg-zinc-200 hover:text-zinc-900 transition-all"
                 >
                   Back to Profile
                 </button>
                 <button
                   onClick={handlePrint}
-                  className="flex-1 h-14 bg-[#6B3F69] text-white rounded-2xl flex items-center justify-center gap-3 text-[10px] font-black uppercase tracking-widest hover:bg-[#6B3F69] transition-all shadow-xl shadow-blue-600/20 active:scale-95"
+                  className="flex-1 h-14 bg-theme-800 text-white rounded-2xl flex items-center justify-center gap-3 text-[10px] font-black uppercase tracking-widest hover:bg-theme-800 transition-all shadow-xl shadow-blue-600/20 active:scale-95"
                 >
                   <Download size={18} /> Print Card
                 </button>
@@ -352,7 +384,7 @@ export default function EmployeesPage() {
 
   async function handleDelete(id: string) {
     if (!window.confirm("Are you sure you want to delete this employee? This action cannot be undone.")) return;
-    
+
     try {
       const res = await fetchWithAuth(`/employees/employees/${id}`, {
         method: 'DELETE'
@@ -379,31 +411,34 @@ export default function EmployeesPage() {
   // employees main page
   return (
     <ProtectedLayout>
-      <div className="p-4 sm:p-6 lg:p-10 max-w-400 mx-auto space-y-10 animate-in fade-in duration-700">
+      <div className="p-4 sm:p-4 lg:p-6 max-w-400 mx-auto space-y-6 animate-in fade-in duration-70">
 
-        {/* Header Section */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-2 sm:p-5 rounded-3xl border border-slate-100 shadow-sm backdrop-blur-md ">
+        {/* Top Header Card */}
+        <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-100 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            <div className="h-12 w-12 rounded-2xl bg-[#6B3F69] flex items-center justify-center text-white shadow-lg shadow-[#6B3F69]/20">
-              <Users size={22} strokeWidth={2.5} />
+            <div className="bg-theme-800 text-white p-3 rounded-xl shadow-md">
+              <Users size={24} />
             </div>
             <div>
-              <h1 className="text-lg sm:text-2xl font-black text-slate-900 tracking-tight uppercase leading-none">Employees</h1>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Personnel Registry</p>
+              <h1 className="text-xl sm:text-2xl font-black text-theme-800 tracking-tight uppercase">
+                EMPLOYEES
+              </h1>
+              <p className="text-[10px] sm:text-xs font-bold text-slate-400 tracking-wider uppercase mt-0.5">
+                PERSONNEL REGISTRY
+              </p>
             </div>
           </div>
 
           <Link
             href="/employees/new"
-            className="flex items-center justify-center gap-2 h-11 px-5 bg-[#6B3F69] text-white rounded-lg text-[10px] font-black uppercase tracking-widest hover:opacity-90 transition-all active:scale-95 shadow-lg shadow-[#6B3F69]/20"
+            className="flex items-center gap-2 bg-theme-800 text-white px-4 py-2.5 rounded-lg font-bold text-xs hover:bg-theme-900 transition-colors shadow-sm whitespace-nowrap uppercase tracking-widest active:scale-95"
           >
-            <Plus size={18} strokeWidth={3} />
-            <span className="text-xs font-black uppercase tracking-widest">Add Employee</span>
+            <Plus size={16} strokeWidth={2.5} /> ADD EMPLOYEE
           </Link>
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           <div onClick={() => { setStatusFilter('All'); setGenderFilter('All'); setEmploymentTypeFilter('All'); }} className="cursor-pointer">
             <StatsCard title="Total Employee" count={stats.total} icon={Users} color="text-purple-600" bgColor="bg-purple-50/50" loading={loading} />
           </div>
@@ -416,65 +451,116 @@ export default function EmployeesPage() {
           </div>
         </div>
 
+
         {/* Filter Section */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end mt-10 bg-white/50 p-3 rounded-2xl border border-zinc-100 shadow-sm">
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2 items-end mt-6  p-3 rounded-2xl ">
+
           <div className="space-y-3">
+
             <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest pl-1">Employee Name / ID</label>
+
             <div className="relative group">
+
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-zinc-400 group-focus-within:text-zinc-900 transition-colors" />
+
               <input
+
                 type="text"
+
                 placeholder="Search here..."
+
                 value={search}
+
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full h-14 pl-10 pr-5 bg-white border border-zinc-100 rounded-2xl outline-none focus:border-zinc-900 focus:ring-4 focus:ring-zinc-900/5 transition-all text-sm font-bold"
+
+                className="w-full h-14 pl-10 pr-4 bg-white border border-zinc-100 rounded-2xl outline-none focus:border-zinc-900 focus:ring-4 focus:ring-zinc-900/5 transition-all text-sm font-bold"
+
               />
+
             </div>
+
           </div>
 
+
+
           <div className="space-y-3">
+
             <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest pl-1">Select Status</label>
+
             <select
+
               value={statusFilter}
+
               onChange={(e) => setStatusFilter(e.target.value)}
+
               className="w-full h-14 px-5 bg-white border border-zinc-100 rounded-2xl outline-none focus:border-zinc-900 transition-all text-sm font-bold appearance-none cursor-pointer"
+
             >
+
               <option value="All">All</option>
+
               <option value="Active">Active</option>
+
               <option value="Inactive">Inactive</option>
+
             </select>
+
           </div>
 
           <div className="space-y-3">
+
             <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest pl-1">Select Gender</label>
-            <select
-              value={genderFilter}
-              onChange={(e) => setGenderFilter(e.target.value)}
-              className="w-full h-14 px-5 bg-white border border-zinc-100 rounded-2xl outline-none focus:border-zinc-900 transition-all text-sm font-bold appearance-none cursor-pointer"
-            >
-              <option value="All">All Gender</option>
-              <option value="Male">Male</option>
-              <option value="Female">Female</option>
-            </select>
-          </div>
 
-          <div className="space-y-3">
-            <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest pl-1">Select Employment Type</label>
             <select
-              value={employmentTypeFilter}
-              onChange={(e) => setEmploymentTypeFilter(e.target.value)}
+
+              value={genderFilter}
+
+              onChange={(e) => setGenderFilter(e.target.value)}
+
               className="w-full h-14 px-5 bg-white border border-zinc-100 rounded-2xl outline-none focus:border-zinc-900 transition-all text-sm font-bold appearance-none cursor-pointer"
+
             >
-              <option value="All">All Types</option>
-              <option value="Full-time">Full-time</option>
-              <option value="Part-time">Part-time</option>
-              <option value="Contract">Contract</option>
-              <option value="Intern">Intern</option>
+
+              <option value="All">All Gender</option>
+
+              <option value="Male">Male</option>
+
+              <option value="Female">Female</option>
+
             </select>
+
+          </div>
+          <div className="space-y-3">
+
+            <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest pl-1">Select Employment Type</label>
+
+            <select
+
+              value={employmentTypeFilter}
+
+              onChange={(e) => setEmploymentTypeFilter(e.target.value)}
+
+              className="w-full h-14 px-5 bg-white border border-zinc-100 rounded-2xl outline-none focus:border-zinc-900 transition-all text-sm font-bold appearance-none cursor-pointer"
+
+            >
+
+              <option value="All">All Types</option>
+
+              <option value="Full-time">Full-time</option>
+
+              <option value="Part-time">Part-time</option>
+
+              {/* <option value="Contract">Contract</option>
+
+              <option value="Intern">Intern</option> */}
+
+            </select>
+
           </div>
         </div>
 
-        {/* Options Row */}
+        {/* Options Row
         <div className="flex items-center justify-between ">
           <div className="flex items-center gap-3">
             <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Show Entries</p>
@@ -502,7 +588,7 @@ export default function EmployeesPage() {
               <ListIcon size={16} />
             </button>
           </div>
-        </div>
+        </div> */}
 
         {/* View Content */}
         {viewMode === 'list' ? (
@@ -560,3 +646,4 @@ export default function EmployeesPage() {
     </ProtectedLayout>
   );
 }
+

@@ -637,3 +637,27 @@ def list_vms_users(
         })
 
     return 200, {"results": users, "count": len(users)}
+
+
+@router.post("/toggle-access", response={200: dict, 400: dict})
+def toggle_service_access(request, employee_id: str, service: str):
+    """Toggle service access (active/inactive) for a user."""
+    try:
+        employee = Employee.objects.get(employee_id=employee_id, is_deleted=False)
+    except Employee.DoesNotExist:
+        return 400, {"error": f"Employee '{employee_id}' not found"}
+        
+    if service not in ['hdms', 'vms']:
+        return 400, {"error": "Invalid service identifier"}
+        
+    try:
+        sa = ServiceAccess.objects.get(employee=employee, service=service)
+        sa.is_active = not sa.is_active
+        sa.save()
+        status_str = "activated" if sa.is_active else "deactivated"
+        return 200, {
+            "message": f"Successfully {status_str} {service.upper()} access for {employee.full_name}.",
+            "is_active": sa.is_active
+        }
+    except ServiceAccess.DoesNotExist:
+        return 400, {"error": f"No service access record found for {employee.full_name} under {service.upper()}."}

@@ -147,7 +147,7 @@ export default function LoginPage() {
         .ems-wrap::before {
           content:'';
           position:absolute; top:0; left:0; right:0; height:3px; z-index:10;
-          background: linear-gradient(90deg, #6B3F69 0%, #9b59b6 40%, #c084fc 60%, #6B3F69 100%);
+          background: linear-gradient(90deg, var(--color-theme-800) 0%, #9b59b6 40%, #c084fc 60%, var(--color-theme-800) 100%);
           background-size:200% auto;
           animation: topBar 3.5s linear infinite;
         }
@@ -155,7 +155,7 @@ export default function LoginPage() {
         /* ── LEFT panel ── */
         .ems-left {
           width:100%;                   /* mobile: full width */
-          background: linear-gradient(148deg, #7b3f91 0%, #6B3F69 48%, #4e2259 100%);
+          background: linear-gradient(148deg, #7b3f91 0%, var(--color-theme-800) 48%, #4e2259 100%);
           padding: 32px 24px;
           display:flex; flex-direction:column;
           align-items:center; justify-content:center;
@@ -249,7 +249,7 @@ export default function LoginPage() {
         }
         .ems-input::placeholder { color:#c0c5d8; font-size:13px; }
         .ems-input:focus {
-          border-color:#6B3F69;
+          border-color:var(--color-theme-800);
           background:#f9f5fb;
           box-shadow:0 0 0 3px rgba(107,63,105,.10);
         }
@@ -258,7 +258,7 @@ export default function LoginPage() {
         .ems-btn {
           width:100%; height:46px;
           border-radius:12px; border:none;
-          background:#6B3F69; color:#fff;
+          background:var(--color-theme-800); color:#fff;
           font-size:15px; font-weight:600;
           display:flex; align-items:center; justify-content:center; gap:8px;
           cursor:pointer;
@@ -456,7 +456,7 @@ export default function LoginPage() {
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400
-                               hover:text-[#6B3F69] transition-colors"
+                               hover:text-theme-800 transition-colors"
                   >
                     {showPassword
                       ? <EyeOff className="w-4 h-4" />

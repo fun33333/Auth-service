@@ -81,28 +81,28 @@ function EntityCard({
 }) {
   const branchCount = branches.length;
   return (
-    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-2xl hover:shadow-[#6B3F69]/10 hover:-translate-y-1.5 transition-all duration-500 group relative overflow-hidden flex flex-col">
-      <div className="absolute top-0 right-0 w-25 h-25 bg-[#6B3F69]/5 blur-[60px] rounded-full -mr-8 -mt-8 transition-transform group-hover:scale-150" />
+    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-2xl hover:shadow-theme-800/10 hover:-translate-y-1.5 transition-all duration-500 group relative overflow-hidden flex flex-col">
+      <div className="absolute top-0 right-0 w-25 h-25 bg-theme-800/5 blur-[60px] rounded-full -mr-8 -mt-8 transition-transform group-hover:scale-150" />
 
       <div className="p-4 sm:p-5 relative z-10 flex-1 flex flex-col">
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center gap-3">
-            <div className="h-12 w-12 rounded-2xl bg-[#6B3F69]/10 text-[#6B3F69] flex items-center justify-center shadow-sm group-hover:scale-110 group-hover:rotate-3 transition-all duration-500 shrink-0">
+            <div className="h-12 w-12 rounded-2xl bg-theme-800/10 text-theme-800 flex items-center justify-center shadow-sm group-hover:scale-110 group-hover:rotate-3 transition-all duration-500 shrink-0">
               <Building2 size={22} strokeWidth={2.5} />
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2 mb-0.5">
-                <span className="text-[9px] font-black text-[#6B3F69] uppercase tracking-widest">{institution.inst_code}</span>
+                <span className="text-[9px] font-black text-theme-800 uppercase tracking-widest">{institution.inst_code}</span>
                 <span className="h-1 w-1 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
               </div>
-              <h3 className="text-sm font-black text-slate-900 tracking-tight group-hover:text-[#6B3F69] transition-colors uppercase leading-tight truncate">
+              <h3 className="text-sm font-black text-slate-900 tracking-tight group-hover:text-theme-800 transition-colors uppercase leading-tight truncate">
                 {institution.name}
               </h3>
             </div>
           </div>
 
           <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all duration-500 transform translate-x-2 group-hover:translate-x-0">
-            <button onClick={() => onEdit(institution)} className="h-8 w-8 flex items-center justify-center bg-white text-slate-400 rounded-lg hover:text-[#6B3F69] hover:bg-[#6B3F69]/10 transition-all active:scale-95 border border-slate-100 shadow-sm">
+            <button onClick={() => onEdit(institution)} className="h-8 w-8 flex items-center justify-center bg-white text-slate-400 rounded-lg hover:text-theme-800 hover:bg-theme-800/10 transition-all active:scale-95 border border-slate-100 shadow-sm">
               <Edit2 size={14} strokeWidth={2.5} />
             </button>
             <button onClick={() => onDelete(institution.id)} className="h-8 w-8 flex items-center justify-center bg-white text-slate-400 rounded-lg hover:text-rose-500 hover:bg-rose-50 transition-all active:scale-95 border border-slate-100 shadow-sm">
@@ -130,7 +130,7 @@ function EntityCard({
         <div className="mt-auto pt-2">
           <button
             onClick={() => onViewBranches(institution)}
-            className="w-full  bg-[#6B3F69] text-white rounded-2xl py-3 text-[10px] font-black uppercase tracking-[0.2em] hover:bg-[#6B3F69] transition-all active:scale-95 text-center flex items-center justify-center gap-2 shadow-lg shadow-slate-900/10"
+            className="w-full  bg-theme-800 text-white rounded-2xl py-3 text-[10px] font-black uppercase tracking-[0.2em] hover:bg-theme-800 transition-all active:scale-95 text-center flex items-center justify-center gap-2 shadow-lg shadow-slate-900/10"
           >
             <GitBranch size={16} strokeWidth={3} />
             See Branches
@@ -197,7 +197,7 @@ function InstitutionModal({ open, onClose, onSave, initial, organizations }: {
   };
 
   const inp = (err?: string) =>
-    `w-full px-5 py-3.5 bg-zinc-50 border focus:bg-white rounded-lg text-[10px] uppercase font-black tracking-widest outline-none transition-all ${err ? 'border-rose-400' : 'border-transparent focus:border-[#6B3F69]'}`;
+    `w-full px-5 py-3.5 bg-zinc-50 border focus:bg-white rounded-lg text-[10px] uppercase font-black tracking-widest outline-none transition-all ${err ? 'border-rose-400' : 'border-transparent focus:border-theme-800'}`;
 
   if (!open) return null;
   //////// add institution from ////
@@ -293,7 +293,7 @@ function InstitutionModal({ open, onClose, onSave, initial, organizations }: {
           <div className="col-span-2 pt-6 flex justify-end gap-2">
             <button onClick={onClose} disabled={saving} className="px-6 py-3 text-[10px] font-black text-zinc-500 rounded-lg hover:bg-[#dce0e4] bg-[#f1f5f9] hover:text-zinc-700 uppercase tracking-widest">Cancel</button>
             <button onClick={handleSubmit} disabled={saving}
-              className="px-8 py-3.5 bg-[#6B3F69] text-white rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-[#6B3F69] transition-all active:scale-95 shadow-xl disabled:opacity-50">
+              className="px-8 py-3.5 bg-theme-800 text-white rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-theme-800 transition-all active:scale-95 shadow-xl disabled:opacity-50">
               {saving ? 'Saving...' : initial ? 'Finalize Changes' : 'Department Registration'}
             </button>
           </div>
@@ -361,7 +361,7 @@ function BranchModal({ open, onClose, onSave, initial, institutionCode }: {
   };
 
   const inp = (err?: string) =>
-    `w-full px-5 py-3.5 bg-zinc-50 border focus:bg-white rounded-lg text-[10px] uppercase font-black tracking-widest outline-none transition-all ${err ? 'border-rose-400' : 'border-transparent focus:border-[#6B3F69]'}`;
+    `w-full px-5 py-3.5 bg-zinc-50 border focus:bg-white rounded-lg text-[10px] uppercase font-black tracking-widest outline-none transition-all ${err ? 'border-rose-400' : 'border-transparent focus:border-theme-800'}`;
 
   if (!open) return null;
   ////branch from code///////
@@ -436,7 +436,7 @@ function BranchModal({ open, onClose, onSave, initial, institutionCode }: {
           <div className="col-span-2 pt-6 flex justify-end gap-2">
             <button onClick={onClose} disabled={saving} className="px-6 py-3 text-[10px] font-black bg-[#e4e4f0] rounded-lg text-zinc-600 hover:text-zinc-700 uppercase tracking-widest">Cancel</button>
             <button onClick={handleSubmit} disabled={saving}
-              className="px-8 py-3.5 bg-[#6B3F69] text-white rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-[#6B3F69] transition-all active:scale-95 shadow-xl disabled:opacity-50">
+              className="px-8 py-3.5 bg-theme-800 text-white rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-theme-800 transition-all active:scale-95 shadow-xl disabled:opacity-50">
               {saving ? 'Saving...' : initial ? 'Apply Command' : 'Initialize Deployment'}
             </button>
           </div>
@@ -601,17 +601,18 @@ function InstitutionsPage() {
       <BranchModal open={branchModal} onClose={() => setBranchModal(false)} onSave={handleBranchSave} initial={editBranch} institutionCode={selectedInst?.inst_code || ''} />
 
       <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-        <div className="absolute top-[-5%] left-[-5%] w-[40%] h-[40%] bg-[#6B3F69]/5 blur-[120px] rounded-full" />
+        <div className="absolute top-[-5%] left-[-5%] w-[40%] h-[40%] bg-theme-800/5 blur-[120px] rounded-full" />
         <div className="absolute bottom-[10%] right-[-5%] w-[30%] h-[30%] bg-blue-500/5 blur-[100px] rounded-full" />
       </div>
 
-      <div className="relative z-10 p-2 sm:p-3 lg:p-5 max-w-8xl mx-auto space-y-2 sm:space-y-4">
+     <div className="p-4 sm:p-4 lg:p-6 max-w-400 mx-auto space-y-6 animate-in fade-in duration-700">
+
         {view === "list" ? (
           <>
             {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 sm:p-5 rounded-2xl border border-slate-100 shadow-sm backdrop-blur-md ">
               <div className="flex items-center gap-4">
-                <div className="h-12 w-12 rounded-2xl bg-[#6B3F69] flex items-center justify-center text-white shadow-lg shadow-[#6B3F69]/20">
+                <div className="h-12 w-12 rounded-2xl bg-theme-800 flex items-center justify-center text-white shadow-lg shadow-theme-800/20">
                   <Building2 size={22} strokeWidth={2.5} />
                 </div>
                 <div>
@@ -622,19 +623,20 @@ function InstitutionsPage() {
 
               <div className="flex flex-wrap gap-3 w-full sm:w-auto">
                 <button onClick={() => { setEditInst(null); setInstModal(true); }}
-                  className="h-11 px-6 bg-[#6B3F69] text-white rounded-xl flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest hover:bg-[#5A3458] transition-all shadow-lg shadow-[#6B3F69]/20 active:scale-95">
+                  className="h-11 px-6 bg-theme-800 text-white rounded-xl flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest hover:bg-theme-900 transition-all shadow-lg shadow-theme-800/20 active:scale-95">
                   <Plus size={16} strokeWidth={3} /> Add Institution
                 </button>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-2">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               {[
                 { label: 'Total Institutions', val: institutions.length, icon: Building2, color: 'text-purple-600', bg: 'bg-purple-50/50', shadow: 'hover:shadow-purple-500/20', blob: 'bg-purple-500/5' },
+                { label: 'Active Institutions', val: institutions.length, icon: Building2, color: 'text-emerald-600', bg: 'bg-emerald-50/50', shadow: 'hover:shadow-emerald-500/20', blob: 'bg-emerald-500/5' },
+                { label: 'Total Org.', val: organizations.length, icon: Building2, color: 'text-indigo-600', bg: 'bg-indigo-50/50', shadow: 'hover:shadow-indigo-500/20', blob: 'bg-indigo-500/5' },
                 { label: 'Total Branches', val: totalUnits, icon: GitBranch, color: 'text-blue-600', bg: 'bg-blue-50/50', shadow: 'hover:shadow-blue-500/20', blob: 'bg-blue-500/5' },
-
               ].map((stat, i) => (
-                <div key={i} className={`bg-white p-5 rounded-3xl border border-slate-100 shadow-sm flex items-center justify-between group hover:shadow-2xl ${stat.shadow} hover:-translate-y-1 transition-all duration-300 relative overflow-hidden`}>
+                <div key={i} className={`bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between group hover:shadow-2xl ${stat.shadow} hover:-translate-y-1 transition-all duration-300 relative overflow-hidden`}>
                   <div className={`absolute top-0 right-0 w-24 h-24 ${stat.blob} blur-[60px] rounded-full -mr-8 -mt-8 transition-transform group-hover:scale-150`} />
                   <div className="relative z-10">
                     <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">{stat.label}</p>
@@ -656,7 +658,7 @@ function InstitutionsPage() {
                 <input
                   type="text"
                   placeholder="Quickly search by name, code, or type..."
-                  className="w-full pl-11 pr-4 py-3 border-0 bg-slate-50 rounded-lg text-xs font-bold uppercase tracking-widest placeholder:text-slate-400 focus:bg-white focus:ring-2 focus:ring-[#6B3F69]/20 outline-none transition"
+                  className="w-full pl-11 pr-4 py-3 border-0 bg-slate-50 rounded-lg text-xs font-bold uppercase tracking-widest placeholder:text-slate-400 focus:bg-white focus:ring-2 focus:ring-theme-800/20 outline-none transition"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                 />
@@ -677,16 +679,16 @@ function InstitutionsPage() {
           <div className="space-y-7 ">
             <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-5">
               <div className="space-y-4">
-                <button onClick={() => setView("list")} className="flex items-center gap-2 text-zinc-500 hover:text-zinc-900 text-[10px] font-black uppercase tracking-[0.3em] transition-all group py-2">
+                <button onClick={() => setView("list")} className="flex items-center gap-2 text-zinc-500 bg-white rounded-2xl p-3 hover:text-zinc-600 text-[10px] font-black uppercase tracking-[0.3em] transition-all group py-2">
                   <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" /> Back To catalog
                 </button>
                 <div className="flex items-center gap-5">
-                  <div className="h-15 w-15 rounded-2xl bg-[#6B3F69] flex items-center justify-center text-white shadow-2xl shadow-zinc-900/40">
+                  <div className="h-15 w-15 rounded-2xl bg-theme-800 flex items-center justify-center text-white shadow-2xl shadow-zinc-900/40">
                     <Building2 size={40} />
                   </div>
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-black text hover:bg-[#6B3F69]uppercase tracking-widest bg-[#6B3F69]/10 px-2 py-2 rounded-full border border-[#6B3F69]/20">{selectedInst ? selectedInst.inst_type : 'Consolidated'}</span>
+                      <span className="text-[10px] font-black text hover:bg-theme-800uppercase tracking-widest bg-theme-800/10 px-2 py-2 rounded-full border border-theme-800/20">{selectedInst ? selectedInst.inst_type : 'Consolidated'}</span>
                       <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">{selectedInst ? `ID: ${selectedInst.inst_code}` : 'All Units'}</span>
                     </div>
                     <h1 className="text-2xl font-black text-zinc-900 tracking-tighter uppercase leading-tight">
@@ -695,7 +697,7 @@ function InstitutionsPage() {
                   </div>
                 </div>
               </div>
-              <button onClick={() => { setEditBranch(null); setBranchModal(true); }} className="h-14 px-2 bg-[#6B3F69] text-white rounded-2xl flex items-center gap-2 text-[10px] font-black uppercase tracking-widest hover:bg-[#6B3F69] transition-all shadow-2xl active:scale-95">
+              <button onClick={() => { setEditBranch(null); setBranchModal(true); }} className="h-14 px-3 bg-theme-800 text-white rounded-2xl flex items-center gap-2 text-[10px] font-black uppercase tracking-widest hover:bg-theme-800 transition-all shadow-2xl active:scale-95">
                 <Plus size={20} /> Add New Branch
               </button>
             </div>
@@ -708,7 +710,7 @@ function InstitutionsPage() {
                 { label: 'Strategic Standby', val: offlineUnits, icon: XCircle, sub: 'Offline' }
               ].map((s, i) => (
                 <div key={i} className="bg-white p-6 rounded-3xl border border-zinc-100 shadow-sm flex items-center gap-6 group hover:shadow-xl transition-all">
-                  <div className="h-12 w-12 rounded-xl bg-zinc-50 flex items-center justify-center text-zinc-400 group-hover:bg-[#6B3F69] group-hover:text-white transition-all">
+                  <div className="h-12 w-12 rounded-xl bg-zinc-50 flex items-center justify-center text-zinc-400 group-hover:bg-theme-800 group-hover:text-white transition-all">
                     <s.icon size={24} />
                   </div>
                   <div>
@@ -724,7 +726,7 @@ function InstitutionsPage() {
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-zinc-100 text-left">
                   <thead>
-                    <tr className="bg-zinc-50/50">
+                    <tr className="bg-zinc-50/50 hover:bg-gray-400">
                       <th className="py-6 px-8 text-[10px] font-black text-zinc-500 uppercase tracking-widest">Operational Unit</th>
                       <th className="py-6 px-8 text-[10px] font-black text-zinc-500 uppercase tracking-widest">Deployment Base</th>
                       <th className="py-6 px-8 text-[10px] font-black text-zinc-500 uppercase tracking-widest">Command Node</th>
@@ -750,7 +752,7 @@ function InstitutionsPage() {
                       <tr key={b.branch_id} className="hover:bg-zinc-50/50 transition-all group">
                         <td className="py-6 px-8">
                           <div className="flex items-center gap-4">
-                            <div className="h-12 w-12 rounded-2xl bg-[#d6d6e2] flex items-center justify-center text-white shadow-lg group-hover:bg-[#6B3F69] transition-all shrink-0">
+                            <div className="h-12 w-12 rounded-2xl bg-[#d6d6e2] flex items-center justify-center text-white shadow-lg group-hover:bg-theme-800 transition-all shrink-0">
                               <GitBranch size={20} />
                             </div>
                             <div>
@@ -760,7 +762,7 @@ function InstitutionsPage() {
                                 {!selectedInst && (
                                   <>
                                     <span className="h-0.5 w-0.5 rounded-full bg-zinc-200" />
-                                    <p className="text-[9px] font-black text-[#6B3F69] uppercase tracking-widest">{b.institution_code}</p>
+                                    <p className="text-[9px] font-black text-theme-800 uppercase tracking-widest">{b.institution_code}</p>
                                   </>
                                 )}
                               </div>
@@ -769,7 +771,7 @@ function InstitutionsPage() {
                         </td>
                         <td className="py-6 px-8">
                           <div className="flex items-center gap-3">
-                            <MapPin size={14} className="text-[#6B3F69]" />
+                            <MapPin size={14} className="text-theme-800" />
                             <div>
                               <p className="text-[11px] font-black text-zinc-900 uppercase">{b.city || 'Central'}</p>
                               <p className="text-[9px] font-bold text-zinc-500 uppercase truncate max-w-37.5">{b.address}</p>
@@ -825,3 +827,4 @@ export default function SuspendedInstitutionsPage() {
     </Suspense>
   );
 }
+

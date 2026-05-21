@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import ProtectedLayout from "@/components/ProtectedLayout";
 import { fetchWithAuth } from "@/utils/api";
-import { Plus, Search, Edit2, Trash2, X, Briefcase, CheckCircle2, XCircle, Star, Filter } from "lucide-react";
+import { Plus, Search, Edit2, Trash2, X, Briefcase, CheckCircle2, XCircle, Filter,   LayoutGrid } from "lucide-react";
 import { useForm, SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -18,7 +18,7 @@ type Designation = {
   description?: string;
 };
 
-type Department = { dept_code: string; dept_name: string };
+type Department = { dept_code: string; dept_name: string; branch_code?: string };
 
 const desigSchema = z.object({
   position_name: z.string().trim().min(2, "Name must be at least 2 characters"),
@@ -89,7 +89,7 @@ function DesignationModal({
   };
 
   const lockedExtra = "opacity-50 cursor-not-allowed bg-slate-100";
-  // Department from
+  // Designation form
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm">
       <form onSubmit={handleSubmit(submit)} className="bg-white rounded-2xl shadow-2xl w-full max-w-xl mx-5">
@@ -109,7 +109,7 @@ function DesignationModal({
           </div>
         )}
 
-        <div className="px-5 py-4 space-y-3.5">
+        <div className="px-8 py-8 space-y-3.5">
           <div>
             <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Position / Title</label>
             <input type="text" placeholder="e.g. Senior Surgeon, Head Teacher" {...register("position_name")} className={inputCls(errors.position_name?.message)} />
@@ -142,9 +142,9 @@ function DesignationModal({
         </div>
 
         <div className="px-5 py-3.5 border-t border-slate-100 flex justify-end gap-2.5 bg-slate-50/50 rounded-b-2xl">
-          <button type="button" onClick={onClose} className="px-4 py-2 text-[10px] font-black text-slate-500 uppercase tracking-widest hover:text-slate-600 transition">Cancel</button>
+          <button type="button" onClick={onClose} className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest rounded-lg hover:text-slate-600 bg-gray-300 hover:bg-gray-200 transition">Cancel</button>
           <button type="submit" disabled={isSubmitting}
-            className="px-6 py-2 text-[10px] font-black text-white bg-zinc-900 rounded-xl hover:bg-gray-600 shadow-lg transition-all active:scale-95 uppercase tracking-widest disabled:opacity-50">
+            className="px-6 py-4 text-[10px] font-black text-white bg-theme-800 rounded-lg  shadow-lg transition-all active:scale-95 uppercase tracking-widest disabled:opacity-50">
             {isSubmitting ? "Saving…" : initial ? "Apply Changes" : "Confirm Entry"}
           </button>
         </div>
@@ -209,7 +209,7 @@ export default function DesignationsPage() {
     { label: "Total Designations", value: designations.length, icon: Briefcase, color: "text-blue-600", bg: "bg-blue-50" },
     { label: "Active Roles", value: designations.length, icon: CheckCircle2, color: "text-emerald-600", bg: "bg-emerald-50" },
     { label: "Branches", value: new Set(designations.map(d => d.department__dept_code || d.department_code)).size, icon: Filter, color: "text-violet-600", bg: "bg-violet-50" },
-    // { label: "System Nodes", value: designations.length, icon: Star, color: "text-amber-600", bg: "bg-amber-50" },
+    { label: "Total Departments", value: departments.length, icon: LayoutGrid, color: "text-blue-600", bg: "bg-blue-50", shadow: "hover:shadow-blue-500/20", blob: "bg-blue-500/5" },
   ];
 
   async function handleSave(data: DesigOutput): Promise<SaveResult> {
@@ -275,19 +275,19 @@ export default function DesignationsPage() {
       {/* Delete Confirmation Modal */}
       {deleteId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 p-6 animate-in zoom-in-95 duration-200 text-center">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-3 p-5 animate-in zoom-in-95 duration-200 text-center">
             <div className="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-4 text-red-500">
               <Trash2 size={20} />
             </div>
             <h3 className="text-base font-black text-slate-900 uppercase tracking-tight">Delete Designation</h3>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1.5">Soft-delete — recoverable.</p>
+            {/* <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1.5">Soft-delete — recoverable.</p> */}
             <div className="flex gap-2.5 mt-5">
               <button onClick={() => setDeleteId(null)} disabled={deleteBusy}
-                className="flex-1 px-4 py-2.5 text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-50 rounded-lg hover:bg-slate-100 transition disabled:opacity-50">
+                className="flex-1 px-4 py-2.5 text-[10px] font-black text-slate-500 uppercase tracking-widest bg-slate-50 rounded-lg hover:bg-slate-200 transition disabled:opacity-50">
                 Cancel
               </button>
               <button onClick={() => handleDelete(deleteId)} disabled={deleteBusy}
-                className="flex-1 px-4 py-2.5 text-[10px] font-black text-white bg-red-600 rounded-xl hover:bg-red-700 transition shadow-md shadow-red-200 disabled:opacity-50">
+                className="flex-1 px-2 py-2 text-[10px] font-black text-white bg-red-400 rounded-lg hover:bg-red-500 transition shadow-md shadow-red-200 disabled:opacity-50">
                 {deleteBusy ? "…" : "Delete"}
               </button>
             </div>
@@ -306,9 +306,9 @@ export default function DesignationsPage() {
       <div className="p-2 sm:p-4 lg:p-6 max-w-400 mx-auto space-y-6  animate-in fade-in duration-500">
 
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 sm:p-5 rounded-3xl border border-slate-100 shadow-sm backdrop-blur-md ">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 sm:p-5 rounded-2xl border border-slate-100 shadow-sm backdrop-blur-md ">
           <div className="flex items-center gap-4">
-            <div className="h-12 w-12 rounded-2xl bg-[#6B3F69] flex items-center justify-center text-white shadow-lg shadow-[#6B3F69]/20">
+            <div className="h-12 w-12 rounded-2xl bg-theme-800 flex items-center justify-center text-white shadow-lg shadow-theme-800/20">
               <Briefcase size={22} strokeWidth={2.5} />
             </div>
             <div>
@@ -319,7 +319,7 @@ export default function DesignationsPage() {
 
           <button
             onClick={() => { setEditTarget(null); setModalOpen(true); }}
-            className="flex items-center justify-center gap-2 h-11 px-6 bg-[#6B3F69] text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:opacity-90 transition-all active:scale-95 shadow-lg shadow-[#6B3F69]/20"
+            className="flex items-center justify-center gap-2 h-11 px-6 bg-theme-800 text-white rounded-lg text-[10px] font-black uppercase tracking-widest hover:opacity-90 transition-all active:scale-95 shadow-lg shadow-theme-800/20"
           >
             <Plus size={18} strokeWidth={3} />
             <span className="text-xs font-black uppercase tracking-widest">Add Designation</span>
@@ -329,7 +329,7 @@ export default function DesignationsPage() {
         {/* Stats */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           {stats.map((s) => (
-            <div key={s.label} className="bg-white p-6 px-7 rounded-3xl border border-slate-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 group flex items-center justify-between">
+            <div key={s.label} className="bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 px-6 p-5 group flex items-center justify-between">
               <div>
                 <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1.5">{s.label}</p>
                 {loading ? <Skeleton width="44px" height="26px" /> : (
@@ -354,7 +354,7 @@ export default function DesignationsPage() {
             <input
               type="text"
               placeholder="Quickly search by name, code, or Designation code..."
-              className="w-full pl-11 pr-4 py-3 border-0 bg-slate-50 rounded-lg text-xs font-bold uppercase tracking-widest placeholder:text-slate-400 focus:bg-white focus:ring-2 focus:ring-[#6B3F69]/20 outline-none transition"
+              className="w-full pl-11 pr-4 py-3 border-0 bg-slate-50 rounded-lg text-xs font-bold uppercase tracking-widest placeholder:text-slate-400 focus:bg-white focus:ring-2 focus:ring-theme-800/20 outline-none transition"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -366,11 +366,11 @@ export default function DesignationsPage() {
         <div className="bg-white rounded-2xl border border-zinc-100 overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-zinc-100 text-left">
-              <thead>
-                <tr className="bg-zinc-50/60">
+              <thead className="bg-zinc-50/20">
+                <tr className="bg-zinc-50/20">
                   <th className="py-3 px-4 text-[9px] font-black text-zinc-400 uppercase tracking-[0.18em]">Position / Role</th>
                   <th className="py-3 px-4 text-[9px] font-black text-zinc-400 uppercase tracking-[0.18em]">Registry Code</th>
-                  <th className="py-3 px-4 text-[9px] font-black text-zinc-400 uppercase tracking-[0.18em]">Branch</th>
+                  <th className="py-3 px-4 text-[9px] font-black text-zinc-400 uppercase tracking-[0.18em]">Department</th>
                   <th className="py-3 px-4 text-[9px] font-black text-zinc-400 uppercase tracking-[0.18em] text-right">Actions</th>
                 </tr>
               </thead>
@@ -395,11 +395,11 @@ export default function DesignationsPage() {
                     <tr key={d.id} className="hover:bg-zinc-50/60 transition-all group">
                       <td className="p-4">
                         <div className="flex items-center gap-3">
-                          <div className="h-12 w-12 rounded-2xl bg-[#d6d6e2] flex items-center justify-center text-white shadow-lg group-hover:bg-[#6B3F69] transition-all shrink-0">
+                          <div className="h-12 w-12 rounded-2xl text-[15px] font-bold bg-[#d6d6e2] flex items-center justify-center text-white shadow-lg group-hover:bg-theme-800 transition-all shrink-0">
                             {d.position_name?.charAt(0)}
                           </div>
                           <div>
-                            <h5 className="text-xs font-black text-zinc-900 uppercase tracking-tight">{d.position_name}</h5>
+                            <h5 className="text-[12px] font-black text-zinc-900 uppercase tracking-tight">{d.position_name}</h5>
                             <p className="text-[9px] text-zinc-400 font-bold uppercase tracking-widest mt-0.5">Professional Grade Record</p>
                           </div>
                         </div>
@@ -427,7 +427,7 @@ export default function DesignationsPage() {
                           </button>
                           <button
                             onClick={() => setDeleteId(d.id)}
-                            className="h-8 w-8 flex items-center justify-center bg-white text-zinc-400 rounded-lg hover:bg-red-600 hover:text-white transition-all shadow-sm border border-zinc-100"
+                            className="h-8 w-8 flex items-center justify-center bg-white text-zinc-400 rounded-lg hover:bg-red-400 hover:text-white transition-all shadow-sm border border-zinc-100"
                           >
                             <Trash2 size={13} />
                           </button>
