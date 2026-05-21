@@ -26,6 +26,53 @@
 
 ## Change History
 
+### 2026-05-21 — Maryam UI merge + security cleanup
+
+**Branch:** `merge-dev → main` (merge commit `7e748fd`)
+
+**Frontend UI refresh (Maryam's work — absorbed via merge-dev):**
+- `login/page.tsx` — full redesign: animated background scene (orbs, particles, grid), feature cards, mount transition. Logic unchanged (raw `fetch` to `/auth/login`, `fetchWithAuth` import correctly dropped since login needs no token).
+- `page.tsx` (dashboard) — major UI rework with new color scheme (`#6B3F69`).
+- `employees/page.tsx` — new card/table toggle, stats bar, filters (status/gender/employment type), delete button added (soft-delete via `DELETE /employees/{id}`).
+- `employees/[id]/edit/page.tsx` — minor UI polish.
+- `employees/new/page.tsx` — formatting cleanup, `register()` spreads preserved (no logic change).
+- `institutions/page.tsx` — inline modal edit replaces route-based edit. 3 separate route pages deleted: `institutions/[id]/edit`, `institutions/[id]/page`, `institutions/new` — functionality moved into `InstitutionModal` inside the list page.
+- `designations/page.tsx` — UI refresh.
+- `profile/page.tsx` — UI refresh.
+- `ProtectedLayout.tsx` — sidebar color `indigo` → `#6B3F69`, user avatar section now a `<Link>` to `/profile`, `isProfileOpen` state removed.
+- `layout.tsx` — minor changes.
+- `globals.css` — minor additions.
+- `branches/page.tsx`, `departments/page.tsx` — minor UI tweaks.
+
+**New dependencies:**
+- `framer-motion ^12.38.0`, `react-hot-toast ^2.6.0` — required by UI updates. Lock file committed.
+
+**Backend — additive only (no breaking change):**
+- `Backend/src/employees/api.py` — `gender` field added to `list_employees` response dict. Additive; HDMS unaffected.
+- `Backend/.env.example` — deleted (was outdated).
+
+**New infra/scripts (non-breaking):**
+- `docker-compose.infra.yml` — shared ERP infrastructure compose (postgres, pgbouncer, redis).
+- `config/pgbouncer/entrypoint.sh`, `config/postgres/postgresql.conf` — infra config files.
+- `scripts/init-erp-dbs.sh`, `scripts/init-md5-password.sh` — DB init helpers.
+- `verify_sso.py`, `verify_sso_deep.py` — SSO debug/verification scripts.
+- `frontend/.dockerignore` — added.
+
+**Bugfix:**
+- `employees/page.tsx` delete confirmation: "cannot be undone" → "archive... can be restored by admin" — backend always soft-deletes (`is_deleted=True`), old wording was misleading.
+
+**Security:**
+- `.env`, `config/jwt_private.pem`, `config/jwt_public.pem`, `config/pgbouncer/pgbouncer.ini`, `config/pgbouncer/userlist.txt` — accidentally committed in merge-dev, removed before merge to main. None of these reached main history.
+- `.gitignore` merge conflict resolved. Added explicit rules: `config/pgbouncer/userlist.txt`, `config/pgbouncer/pgbouncer.ini` (`.env` and `*.pem` were already covered).
+
+> ⚠️ **Action needed:** JWT keys committed in merge-dev history (not main). If those are real production keys, rotate them.
+
+**E2E verified (Playwright):**
+- Dashboard loads, employees page loads with new UI ✅
+- Delete confirmation dialog shows correct archive wording ✅
+
+---
+
 ### 2026-05-16 — Staging hardening + production deploy
 
 - `ALLOWED_HOSTS`, `CORS_ALLOWED_ORIGINS`, `CSRF_TRUSTED_ORIGINS` — all env-driven. Was hardcoded `*` before.
