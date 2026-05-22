@@ -639,7 +639,7 @@ def list_vms_users(
     return 200, {"results": users, "count": len(users)}
 
 
-@router.post("/toggle-access", response={200: dict, 400: dict})
+@router.post("/toggle-access", response={200: dict, 400: dict}, auth=AuthBearer())
 def toggle_service_access(request, employee_id: str, service: str):
     """Toggle service access (active/inactive) for a user."""
     try:

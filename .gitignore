@@ -1,16 +1,3 @@
-<<<<<<< HEAD
-# Ignore Service repos
-Auth-service/
-HDMS/
-
-# Ignore local environment files
-
-.env.local
-.DS_Store (for macOS devs)
-
-# Ignore volumes (if any)
-postgres_data/
-=======
 # ========================================
 # Auth-Service Root .gitignore
 # (Next.js Frontend + Django Backend)
@@ -33,7 +20,6 @@ media/
 staticfiles/
 
 # Virtual Environments
-.env
 .venv
 env/
 venv/
@@ -84,6 +70,17 @@ next-env.d.ts
 .env.*
 !.env.example
 
+# ----- Secrets & Keys -----
+*.pem
+*.key
+*.cert
+
+# ----- Infra config (lives in erp_new/config/, not here) -----
+config/pgbouncer/pgbouncer.ini
+config/pgbouncer/userlist.txt
+config/pgbouncer/entrypoint.sh
+config/postgres/postgresql.conf
+
 # ----- IDE / Editor -----
 .vscode/
 .idea/
@@ -98,18 +95,10 @@ Thumbs.db
 Desktop.ini
 *.lnk
 
-# ----- Docker -----
-# Uncomment if you don't want to track docker volumes
-# docker-volumes/
-
-# ----- Misc -----
-*.pem
-*.key
-*.cert
+# ----- Docker volumes -----
+postgres_data/
 
 # ----- Test/Debug Artifacts -----
 .playwright-mcp/
 graphify-out/
 test-*.png
->>>>>>> 57f77149fad4954a4f0aa5f17a575db3a22d28ba
-
