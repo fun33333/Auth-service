@@ -113,18 +113,18 @@ class HdmsRoleAdmin(admin.ModelAdmin):
     actions = ['restore_items']
     
     def employee_name(self, obj):
-        return obj.service_access.employee.full_name
-    employee_name.short_description = 'Employee'
+        return obj.service_access.employee.full_name + " || "+ obj.service_access.employee.employee_code
+    employee_name.short_description = 'Employee || Employee Code'
     
     def role_type_badge(self, obj):
         colors = {
-            'moderator': '#8B0000',  # Dark red
+            'moderator': '#8B0900',  # Dark red
             'assignee': '#0066cc',   # Blue
             'requestor': '#666666'   # Gray
         }
-        color = colors.get(obj.role_type, '#000000')
+        color = colors.get(obj.role_type, '#00880')
         return format_html(
-            '<span style="color: {}; font-weight: bold;">● {}</span>',
+            '<span style="color: {}; font-weight: bold;"> ● {}</span>',
             color, obj.get_role_type_display()
         )
     role_type_badge.short_description = 'HDMS Role'
