@@ -3,8 +3,8 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import {
-  Lock, User, LogIn, AlertCircle, Eye, EyeOff,
-  Building2, Layers, Briefcase, Users,
+  Lock, User, AlertCircle, Eye, EyeOff,
+  Users, Building2, LayoutGrid, Briefcase, Shield, ArrowRight,
 } from "lucide-react";
 
 export default function LoginPage() {
@@ -17,7 +17,7 @@ export default function LoginPage() {
   const { login } = useAuth();
 
   useEffect(() => {
-    const t = setTimeout(() => setMounted(true), 60);
+    const t = setTimeout(() => setMounted(true), 80);
     return () => clearTimeout(t);
   }, []);
 
@@ -47,433 +47,392 @@ export default function LoginPage() {
     }
   };
 
-  const a = (delay: number) =>
-    `transition-all duration-500 ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
-    } [transition-delay:${delay}ms]`;
-
   const features = [
-    { icon: Building2, label: "Institution Mgmt", sub: "Multi-branch" },
-    { icon: Layers,    label: "Department Mgmt",  sub: "Structured"   },
-    { icon: Briefcase, label: "Designation Mgmt", sub: "Roles"        },
-    { icon: Users,     label: "Employee Mgmt",    sub: "Full lifecycle"},
+    { icon: Building2,  label: "Institution Management", sub: "Multi-branch" },
+    { icon: LayoutGrid, label: "Department Management",  sub: "Structured"   },
+    { icon: Briefcase,  label: "Designation Management", sub: "Role-based"   },
+    { icon: Users,      label: "Employee Management",    sub: "Full lifecycle"},
+    { icon: Shield,     label: "Service Access Control", sub: "Permissions"  },
   ];
+
+  const s = (delay: number) =>
+    `transition-all duration-500 ease-out ${
+      mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"
+    }` + ` [transition-delay:${delay}ms]`;
 
   return (
     <>
       <style>{`
-        /* ── keyframes ── */
-        @keyframes dotBlink {
-          0%, 80%, 100% { opacity: .25 }
-          40%           { opacity: 1   }
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap');
+
+        @keyframes cardIn {
+          from { opacity: 0; transform: translateY(24px) scale(.98); }
+          to   { opacity: 1; transform: translateY(0)    scale(1);   }
         }
-        @keyframes orbDrift1 {
-          0%,100% { transform: translate(0,0) scale(1); }
-          50%     { transform: translate(22px,16px) scale(1.06); }
-        }
-        @keyframes orbDrift2 {
-          0%,100% { transform: translate(0,0) scale(1); }
-          50%     { transform: translate(-18px,12px) scale(1.08); }
-        }
-        @keyframes particleRise {
-          0%   { transform: translateY(105vh) scale(0); opacity:0; }
-          6%   { opacity:.7; }
-          94%  { opacity:.7; }
-          100% { transform: translateY(-8vh) scale(1); opacity:0; }
-        }
-        @keyframes wrapIn {
-          from { opacity:0; transform: scale(.96) translateY(20px); }
-          to   { opacity:1; transform: scale(1)   translateY(0); }
-        }
-        @keyframes logoIn {
-          from { transform: scale(.55) rotate(-12deg); opacity:0; }
-          to   { transform: scale(1)   rotate(0deg);  opacity:1; }
-        }
-        @keyframes blobPulse {
-          from { transform: scale(1)    rotate(0deg);  opacity:.08; }
-          to   { transform: scale(1.14) rotate(14deg); opacity:.14; }
-        }
-        @keyframes sweep {
-          0%   { left:-70%; }
-          55%  { left:130%; }
-          100% { left:130%; }
-        }
-        @keyframes topBar {
+        @keyframes shimmer {
           0%   { background-position: 200% center; }
-          100% { background-position:-200% center; }
+          100% { background-position: -200% center; }
+        }
+        @keyframes dotPulse {
+          0%, 80%, 100% { opacity: .25; transform: scale(.8); }
+          40%           { opacity: 1;   transform: scale(1);   }
+        }
+        @keyframes spinRing {
+          to { transform: rotate(360deg); }
         }
 
-        /* ── bg scene ── */
-        .ems-scene {
-          position:fixed; inset:0; z-index:0; overflow:hidden; pointer-events:none;
-        }
-        .ems-orb {
-          position:absolute; border-radius:50%; filter:blur(70px);
-        }
-        .ems-orb-1 {
-          width:440px; height:440px; top:-130px; left:-100px;
-          background:rgba(107,63,105,.13);
-          animation: orbDrift1 13s ease-in-out infinite;
-        }
-        .ems-orb-2 {
-          width:300px; height:300px; bottom:-80px; right:-60px;
-          background:rgba(107,63,105,.10);
-          animation: orbDrift2 10s ease-in-out infinite;
-        }
-        .ems-grid {
-          position:fixed; inset:0; z-index:0; pointer-events:none;
+        .login-root {
+          min-height: 100vh;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 24px;
+          background: #f0f4f8;
           background-image:
-            linear-gradient(rgba(107,63,105,.022) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(107,63,105,.022) 1px, transparent 1px);
-          background-size:44px 44px;
-        }
-        .ems-particle {
-          position:fixed; border-radius:50%; pointer-events:none; z-index:0;
-          animation: particleRise linear infinite;
+            radial-gradient(circle at 20% 20%, rgba(10,65,116,.07) 0%, transparent 50%),
+            radial-gradient(circle at 80% 80%, rgba(0,29,57,.05) 0%, transparent 50%);
+          font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
         }
 
-        /* ── outer card ── */
-        .ems-wrap {
-          position:relative; z-index:1;
-          width:100%; max-width:860px;
-          background:#fff;
-          border-radius:24px;
-          display:flex;
-          flex-direction: column;       /* mobile: stack vertically */
-          overflow:hidden;
-          box-shadow: 0 28px 72px rgba(0,0,0,.12), 0 4px 20px rgba(0,0,0,.07);
-          animation: wrapIn .7s cubic-bezier(.22,1,.36,1) both;
+        /* ── card ── */
+        .lc-card {
+          width: 100%;
+          max-width: 900px;
+          display: flex;
+          flex-direction: column;
+          background: #fff;
+          border-radius: 20px;
+          overflow: hidden;
+          box-shadow:
+            0 0 0 1px rgba(0,0,0,.06),
+            0 8px 24px rgba(0,29,57,.08),
+            0 32px 64px rgba(0,29,57,.06);
+          animation: cardIn .55s cubic-bezier(.22,1,.36,1) both;
+          position: relative;
         }
-        /* top shimmer bar */
-        .ems-wrap::before {
-          content:'';
-          position:absolute; top:0; left:0; right:0; height:3px; z-index:10;
-          background: linear-gradient(90deg, var(--color-theme-800) 0%, #9b59b6 40%, #c084fc 60%, var(--color-theme-800) 100%);
-          background-size:200% auto;
-          animation: topBar 3.5s linear infinite;
+        /* top accent bar */
+        .lc-card::before {
+          content: '';
+          position: absolute; top: 0; left: 0; right: 0; height: 2px; z-index: 10;
+          background: linear-gradient(90deg, #001D39 0%, #0A4174 30%, #49769F 55%, #7BBDE8 75%, #49769F 90%, #001D39 100%);
+          background-size: 200% auto;
+          animation: shimmer 4s linear infinite;
         }
 
         /* ── LEFT panel ── */
-        .ems-left {
-          width:100%;                   /* mobile: full width */
-          background: linear-gradient(148deg, #7b3f91 0%, var(--color-theme-800) 48%, #4e2259 100%);
-          padding: 32px 24px;
-          display:flex; flex-direction:column;
-          align-items:center; justify-content:center;
-          position:relative; overflow:hidden;
-          border-radius: 20px 20px 0 0;  /* mobile: round top only */
+        .lc-left {
+          background: #001D39;
+          padding: 40px 32px;
+          display: flex;
+          flex-direction: column;
+          position: relative;
+          overflow: hidden;
+        }
+        /* dot grid */
+        .lc-left::before {
+          content: '';
+          position: absolute; inset: 0; pointer-events: none;
+          background-image: radial-gradient(rgba(255,255,255,.055) 1.5px, transparent 1.5px);
+          background-size: 28px 28px;
+        }
+        /* bottom glow */
+        .lc-left::after {
+          content: '';
+          position: absolute; bottom: -60px; right: -60px;
+          width: 240px; height: 240px; border-radius: 50%;
+          background: radial-gradient(circle, rgba(73,118,159,.25) 0%, transparent 70%);
+          pointer-events: none;
         }
 
-        /* blobs */
-        .ems-blob {
-          position:absolute; border-radius:50%;
-          background:rgba(255,255,255,.07);
-          animation: blobPulse ease-in-out infinite alternate;
+        .lc-logo {
+          display: flex; align-items: center; gap: 10px;
+          position: relative; z-index: 1;
         }
-        .ems-blob-1 { width:200px; height:200px; top:-70px; left:-55px;  animation-duration:7s; }
-        .ems-blob-2 { width:140px; height:140px; bottom:-45px; right:-35px; animation-duration:9s; animation-delay:-3s; }
-        .ems-blob-3 { width:80px;  height:80px;  bottom:70px; left:18px; animation-duration:5s; animation-delay:-1s; }
-
-        /* sweep shimmer */
-        .ems-left::after {
-          content:'';
-          position:absolute; top:0; bottom:0; width:55%;
-          background:linear-gradient(90deg,transparent,rgba(255,255,255,.07),transparent);
-          animation: sweep 5s ease-in-out infinite;
-          pointer-events:none;
+        .lc-logo-icon {
+          width: 36px; height: 36px; border-radius: 10px;
+          background: #49769F;
+          display: flex; align-items: center; justify-content: center;
+          box-shadow: 0 4px 12px rgba(73,118,159,.4);
+          flex-shrink: 0;
+        }
+        .lc-logo-text {
+          font-size: 14px; font-weight: 800; color: #fff; letter-spacing: .04em;
         }
 
-        /* logo icon */
-        .ems-logo-icon {
-          width:56px; height:56px; border-radius:16px;
-          background:rgba(255,255,255,.18);
-          border:1.5px solid rgba(255,255,255,.28);
-          display:flex; align-items:center; justify-content:center;
-          backdrop-filter:blur(8px);
-          margin-bottom:16px;
-          animation: logoIn .65s .2s cubic-bezier(.22,1,.36,1) both;
-          position:relative; overflow:hidden; flex-shrink:0;
+        .lc-headline {
+          margin-top: 32px;
+          position: relative; z-index: 1;
         }
-        .ems-logo-icon::after {
-          content:'';
-          position:absolute; top:-28%; left:-18%;
-          width:48%; height:48%;
-          background:rgba(255,255,255,.22); border-radius:50%;
-          filter:blur(8px);
+        .lc-headline h2 {
+          font-size: 26px; font-weight: 900; color: #fff; line-height: 1.2;
+          letter-spacing: -.02em;
+        }
+        .lc-headline p {
+          margin-top: 8px; font-size: 13px; color: rgba(189,216,233,.65);
+          line-height: 1.6; max-width: 260px;
         }
 
-        /* feature rows — hidden on very small, shown from sm up */
-        .ems-features-wrap {
-          width:100%;
-          position:relative; z-index:1;
-          display: none;   /* hidden on mobile by default */
+        /* divider */
+        .lc-divider {
+          margin: 24px 0; height: 1px;
+          background: rgba(255,255,255,.08);
+          position: relative; z-index: 1;
         }
 
-        .ems-feat {
-          display:flex; align-items:center; gap:12px;
-          width:100%;
-          padding:9px 13px;
-          background:rgba(255,255,255,.10);
-          border:1px solid rgba(255,255,255,.14);
-          border-radius:12px;
-          margin-bottom:8px;
-          cursor:default;
-          transition:background .25s, transform .25s;
-          backdrop-filter:blur(4px);
+        /* feature nav items — same style as sidebar nav */
+        .lc-features { position: relative; z-index: 1; display: flex; flex-direction: column; gap: 4px; }
+        .lc-feat {
+          display: flex; align-items: center; gap: 10px;
+          padding: 9px 12px; border-radius: 12px;
+          background: rgba(255,255,255,.05);
+          border: 1px solid rgba(255,255,255,.07);
+          transition: background .2s, transform .2s;
+          cursor: default;
         }
-        .ems-feat:hover { background:rgba(255,255,255,.18); transform:translateX(4px); }
-        .ems-feat-icon {
-          width:32px; height:32px; border-radius:9px;
-          background:rgba(255,255,255,.15);
-          display:flex; align-items:center; justify-content:center; flex-shrink:0;
+        .lc-feat:hover {
+          background: rgba(255,255,255,.10);
+          transform: translateX(3px);
         }
-        .ems-feat-lbl  { font-size:12.5px; font-weight:600; color:#fff; }
-        .ems-feat-sub  { font-size:10.5px; color:rgba(255,255,255,.55); margin-left:auto; }
+        .lc-feat-icon {
+          width: 28px; height: 28px; border-radius: 8px;
+          background: rgba(73,118,159,.35);
+          display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+        }
+        .lc-feat-label { font-size: 12.5px; font-weight: 600; color: #fff; }
+        .lc-feat-sub   { font-size: 10.5px; color: rgba(123,189,232,.55); margin-left: auto; }
+
+        /* bottom tagline */
+        .lc-tagline {
+          margin-top: auto; padding-top: 28px;
+          position: relative; z-index: 1;
+          font-size: 10.5px; font-weight: 600;
+          color: rgba(189,216,233,.3);
+          text-transform: uppercase; letter-spacing: .1em;
+        }
 
         /* ── RIGHT panel ── */
-        .ems-right {
-          flex:1;
-          padding: 28px 24px 32px;     /* mobile padding */
-          display:flex; flex-direction:column; justify-content:center;
+        .lc-right {
+          flex: 1;
+          padding: 40px 36px 44px;
+          display: flex; flex-direction: column; justify-content: center;
+          background: #fff;
         }
 
-        /* inputs */
-        .ems-input {
-          width:100%; height:46px;
-          padding-left:40px; padding-right:14px;
-          border-radius:11px;
-          border:1.5px solid #e8eaf2;
-          background:#f4f6fb;
-          font-size:14px; color:#1a1a2e;
-          outline:none;
-          transition:border-color .22s, background .22s, box-shadow .22s;
+        .lc-title { margin-bottom: 28px; }
+        .lc-title h1 {
+          font-size: 26px; font-weight: 900;
+          color: #001D39; letter-spacing: -.025em; line-height: 1.15;
         }
-        .ems-input::placeholder { color:#c0c5d8; font-size:13px; }
-        .ems-input:focus {
-          border-color:var(--color-theme-800);
-          background:#f9f5fb;
-          box-shadow:0 0 0 3px rgba(107,63,105,.10);
+        .lc-title p {
+          margin-top: 5px; font-size: 13px; color: #94a3b8; font-weight: 500;
         }
 
-        /* submit btn */
-        .ems-btn {
-          width:100%; height:46px;
-          border-radius:12px; border:none;
-          background:var(--color-theme-800); color:#fff;
-          font-size:15px; font-weight:600;
-          display:flex; align-items:center; justify-content:center; gap:8px;
-          cursor:pointer;
-          box-shadow:0 6px 20px rgba(107,63,105,.32);
-          transition:background .2s, transform .2s, box-shadow .2s;
-          position:relative; overflow:hidden;
+        /* field wrapper */
+        .lc-field { display: flex; flex-direction: column; gap: 6px; }
+        .lc-label {
+          font-size: 12px; font-weight: 700;
+          color: #64748b; text-transform: uppercase; letter-spacing: .07em;
         }
-        .ems-btn::before {
-          content:'';
-          position:absolute; inset:0;
-          background:linear-gradient(135deg,rgba(255,255,255,.14),transparent 60%);
-          pointer-events:none;
+        .lc-input-wrap { position: relative; }
+        .lc-input-icon {
+          position: absolute; left: 13px; top: 50%; transform: translateY(-50%);
+          color: #94a3b8; pointer-events: none;
+          display: flex; align-items: center;
+          transition: color .2s;
         }
-        .ems-btn:hover:not(:disabled) {
-          background:#7d4a7b; transform:translateY(-2px);
-          box-shadow:0 10px 28px rgba(107,63,105,.38);
+        .lc-input {
+          width: 100%; height: 46px;
+          padding-left: 40px; padding-right: 14px;
+          border-radius: 10px;
+          border: 1.5px solid #e2e8f0;
+          background: #f8fafc;
+          font-size: 14px; font-weight: 500; color: #0f172a;
+          font-family: inherit;
+          outline: none;
+          transition: border-color .2s, background .2s, box-shadow .2s;
         }
-        .ems-btn:active:not(:disabled) { transform:translateY(0); }
-        .ems-btn:disabled { opacity:.6; cursor:not-allowed; }
+        .lc-input::placeholder { color: #cbd5e1; font-weight: 400; font-size: 13px; }
+        .lc-input:focus {
+          border-color: #0A4174;
+          background: #fff;
+          box-shadow: 0 0 0 3px rgba(10,65,116,.09);
+        }
+        .lc-input:focus ~ .lc-input-icon,
+        .lc-input-wrap:focus-within .lc-input-icon { color: #0A4174; }
+
+        /* password eye */
+        .lc-eye {
+          position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+          background: none; border: none; padding: 4px;
+          color: #94a3b8; cursor: pointer; border-radius: 6px;
+          display: flex; align-items: center;
+          transition: color .2s, background .2s;
+        }
+        .lc-eye:hover { color: #0A4174; background: #f1f5f9; }
+
+        /* error */
+        .lc-error {
+          display: flex; align-items: flex-start; gap: 8px;
+          background: #fef2f2; border: 1.5px solid #fecaca;
+          color: #dc2626; font-size: 12.5px; font-weight: 500;
+          border-radius: 10px; padding: 10px 12px;
+        }
+
+        /* submit button */
+        .lc-btn {
+          width: 100%; height: 46px; border: none; border-radius: 10px;
+          background: #0A4174; color: #fff;
+          font-size: 14.5px; font-weight: 800; font-family: inherit;
+          letter-spacing: .02em;
+          display: flex; align-items: center; justify-content: center; gap: 8px;
+          cursor: pointer;
+          box-shadow: 0 4px 14px rgba(10,65,116,.3);
+          transition: background .2s, transform .15s, box-shadow .2s;
+          position: relative; overflow: hidden;
+        }
+        .lc-btn::after {
+          content: '';
+          position: absolute; inset: 0;
+          background: linear-gradient(135deg, rgba(255,255,255,.12) 0%, transparent 60%);
+          pointer-events: none;
+        }
+        .lc-btn:hover:not(:disabled) {
+          background: #49769F;
+          transform: translateY(-2px);
+          box-shadow: 0 8px 20px rgba(10,65,116,.28);
+        }
+        .lc-btn:active:not(:disabled) { transform: translateY(0); }
+        .lc-btn:disabled { opacity: .65; cursor: not-allowed; }
 
         /* dot loader */
-        .ems-dots span {
-          display:inline-block; width:5px; height:5px;
-          border-radius:50%; background:#fff; margin:0 2.5px;
-          animation: dotBlink 1.2s infinite;
+        .lc-dots { display: flex; align-items: center; gap: 5px; }
+        .lc-dots span {
+          width: 5px; height: 5px; border-radius: 50%; background: #fff;
+          animation: dotPulse 1.3s ease-in-out infinite;
+          display: inline-block;
         }
-        .ems-dots span:nth-child(2) { animation-delay:.2s; }
-        .ems-dots span:nth-child(3) { animation-delay:.4s; }
+        .lc-dots span:nth-child(2) { animation-delay: .15s; }
+        .lc-dots span:nth-child(3) { animation-delay: .3s;  }
 
-        /* or divider */
-        .ems-or {
-          display:flex; align-items:center; gap:12px;
-          margin-bottom: 16px;
-        }
-        .ems-or::before,.ems-or::after {
-          content:''; flex:1; height:1px; background:#e8eaf0;
-        }
-
-        /* ══════════════════════════════════
-           TABLET  ≥ 540px
-           Show feature list in left panel
-        ══════════════════════════════════ */
-        @media (min-width: 540px) {
-          .ems-features-wrap { display: block; }
-
-          .ems-left {
-            padding: 36px 28px;
-          }
-          .ems-right {
-            padding: 36px 32px 40px;
-          }
-        }
-
-        /* ══════════════════════════════════
-           DESKTOP  ≥ 700px
-           Side-by-side layout
-        ══════════════════════════════════ */
-        @media (min-width: 700px) {
-          .ems-wrap {
-            flex-direction: row;        /* side by side */
-            min-height: 520px;
-          }
-          .ems-left {
-            width: 42%; flex-shrink: 0;
-            padding: 44px 36px;
-            border-radius: 20px;
-            margin: 8px 0 8px 8px;     /* floating card effect */
-          }
-          .ems-right {
-            padding: 52px 48px;
-          }
+        /* ── breakpoints ── */
+        @media (min-width: 680px) {
+          .lc-card { flex-direction: row; min-height: 560px; }
+          .lc-left { width: 42%; flex-shrink: 0; }
+          .lc-right { padding: 52px 48px; }
         }
       `}</style>
 
-      {/* BG scene */}
-      <div className="ems-scene">
-        <div className="ems-orb ems-orb-1" />
-        <div className="ems-orb ems-orb-2" />
-      </div>
-      <div className="ems-grid" />
+      <div className="login-root">
+        <div className="lc-card">
 
-      {/* Particles */}
-      {mounted && Array.from({ length: 12 }).map((_, i) => (
-        <div
-          key={i}
-          className="ems-particle"
-          style={{
-            width:  `${3 + Math.random() * 5}px`,
-            height: `${3 + Math.random() * 5}px`,
-            left:   `${Math.random() * 100}%`,
-            background: `rgba(107,63,105,${.1 + Math.random() * .12})`,
-            animationDuration: `${14 + Math.random() * 18}s`,
-            animationDelay:    `${Math.random() * 14}s`,
-          }}
-        />
-      ))}
+          {/* ═══ LEFT ═══ */}
+          <div className="lc-left">
 
-      {/* Page shell */}
-      <div
-        className="min-h-screen flex items-center justify-center p-4 sm:p-6"
-        style={{ background: "#dfdddd", position: "relative", zIndex: 1 }}
-      >
-        <div className="ems-wrap">
-
-          {/* ════ LEFT ════ */}
-          <div className="ems-left">
-            <div className="ems-blob ems-blob-1" />
-            <div className="ems-blob ems-blob-2" />
-            <div className="ems-blob ems-blob-3" />
-
-            {/* Logo */}
-            <div className={`ems-logo-icon ${a(0)}`}>
-              <Lock className="w-6 h-6 text-white" />
+            {/* Logo — matches sidebar exactly */}
+            <div className={`lc-logo ${s(0)}`}>
+              <div className="lc-logo-icon">
+                <Users size={18} color="#fff" />
+              </div>
+              <span className="lc-logo-text">EMS Dashboard</span>
             </div>
 
-            <h2
-              className={`text-xl font-extrabold text-white text-center mb-2 ${a(80)}`}
-              style={{ position: "relative", zIndex: 1 }}
-            >
-              Welcome Back!
-            </h2>
-            <p
-              className={`text-[12.5px] text-white/70 text-center leading-relaxed mb-5 max-w-[260px] ${a(140)}`}
-              style={{ position: "relative", zIndex: 1 }}
-            >
-              Enter your personal details to use all of the EMS features and manage your workforce efficiently.
-            </p>
+            {/* Headline */}
+            <div className={`lc-headline ${s(80)}`}>
+              <h2>Employee Management System</h2>
+              <p>Manage your workforce, departments, and organizational structure from one unified platform.</p>
+            </div>
 
-            {/* Feature list — hidden on mobile, shown ≥540px */}
-            <div className={`ems-features-wrap ${a(200)}`}>
+            <div className={`lc-divider ${s(140)}`} />
+
+            {/* Feature list — same spirit as sidebar nav */}
+            <div className="lc-features">
               {features.map(({ icon: Icon, label, sub }, i) => (
-                <div key={label} className="ems-feat" style={{ transitionDelay: `${200 + i * 55}ms` }}>
-                  <div className="ems-feat-icon">
-                    <Icon className="w-4 h-4 text-white" />
+                <div key={label} className={`lc-feat ${s(180 + i * 50)}`}>
+                  <div className="lc-feat-icon">
+                    <Icon size={13} color="#7BBDE8" />
                   </div>
-                  <span className="ems-feat-lbl">{label}</span>
-                  <span className="ems-feat-sub">{sub}</span>
+                  <span className="lc-feat-label">{label}</span>
+                  <span className="lc-feat-sub">{sub}</span>
                 </div>
               ))}
             </div>
+
+            <div className={`lc-tagline ${s(480)}`}>
+              Idara al-Khair NGO · ERP Suite
+            </div>
           </div>
 
-          {/* ════ RIGHT ════ */}
-          <div className="ems-right">
+          {/* ═══ RIGHT ═══ */}
+          <div className="lc-right">
 
-            <div className={a(60)}>
-              <h1 className="text-2xl sm:text-[28px] font-bold text-[#1a1a2e] mb-1">LOGIN IN</h1>
-              <p className="text-[13px] text-slate-400 mb-6">Access your EMS dashboard</p>
+            <div className={`lc-title ${s(60)}`}>
+              <h1>Welcome Back</h1>
+              <p>Sign in with your employee credentials</p>
             </div>
 
-            <div className={`ems-or ${a(180)}`}>
-              <span className="text-[11.5px] text-slate-400 whitespace-nowrap">use your employee credentials</span>
-            </div>
-
-            <form onSubmit={handleLogin} style={{ display: "flex", flexDirection: "column", gap: 13 }}>
+            <form onSubmit={handleLogin} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
 
               {/* Error */}
               {error && (
-                <div className="flex items-center gap-2 bg-red-50 border border-red-200
-                                text-red-600 text-[12px] rounded-lg px-3 py-2.5">
-                  <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                <div className="lc-error">
+                  <AlertCircle size={14} style={{ marginTop: 1, flexShrink: 0 }} />
                   <span>{error}</span>
                 </div>
               )}
 
               {/* Employee Code */}
-              <div className={a(240)}>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <div className={`lc-field ${s(160)}`}>
+                <label className="lc-label">Employee Code</label>
+                <div className="lc-input-wrap">
+                  <span className="lc-input-icon"><User size={15} /></span>
                   <input
                     type="text"
                     required
                     value={employeeCode}
-                    onChange={(e) => setEmployeeCode(e.target.value)}
-                    placeholder="Employee Code (e.g. AIT01-G-26-T-0001)"
-                    className="ems-input"
+                    onChange={(e) => setEmployeeCode(e.target.value.toUpperCase())}
+                    placeholder="e.g. AIT01-G-26-T-0001"
+                    className="lc-input"
+                    style={{ textTransform: "uppercase" }}
+                    autoComplete="username"
                   />
                 </div>
               </div>
 
               {/* Password */}
-              <div className={a(300)}>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <div className={`lc-field ${s(220)}`}>
+                <label className="lc-label">Password</label>
+                <div className="lc-input-wrap">
+                  <span className="lc-input-icon"><Lock size={15} /></span>
                   <input
                     type={showPassword ? "text" : "password"}
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Password"
-                    className="ems-input"
-                    style={{ paddingRight: 40 }}
+                    placeholder="Enter your password"
+                    className="lc-input"
+                    style={{ paddingRight: 44 }}
+                    autoComplete="current-password"
                   />
                   <button
                     type="button"
+                    className="lc-eye"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400
-                               hover:text-theme-800 transition-colors"
+                    tabIndex={-1}
                   >
-                    {showPassword
-                      ? <EyeOff className="w-4 h-4" />
-                      : <Eye    className="w-4 h-4" />}
+                    {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
                   </button>
                 </div>
               </div>
 
               {/* Submit */}
-              <div className={a(420)}>
-                <button type="submit" disabled={isLoading} className="ems-btn">
+              <div className={s(300)} style={{ marginTop: 4 }}>
+                <button type="submit" disabled={isLoading} className="lc-btn">
                   {isLoading ? (
-                    <div className="ems-dots"><span /><span /><span /></div>
+                    <div className="lc-dots"><span /><span /><span /></div>
                   ) : (
                     <>
-                      <LogIn className="w-4 h-4" />
-                      LOGIN IN
+                      Log In
+                      <ArrowRight size={16} />
                     </>
                   )}
                 </button>
