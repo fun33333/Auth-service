@@ -301,7 +301,7 @@ export default function EditEmployeePage() {
             return (
               <li key={s.id} className="flex items-center flex-1 group">
                 <div className={`flex items-center gap-3 px-4 py-3 rounded-2xl border transition-all duration-500 ${
-                  active ? "bg-[#6B3F69] text-white border-[#6B3F69] shadow-xl shadow-[#6B3F69]/20 -translate-y-1" :
+                  active ? "bg-theme-800 text-white border-theme-800 shadow-xl shadow-theme-800/20 -translate-y-1" :
                   done ? "bg-emerald-50 text-emerald-700 border-emerald-100 shadow-sm" :
                   "bg-white text-slate-400 border-slate-100 shadow-sm opacity-60"
                 }`}>
@@ -564,7 +564,7 @@ export default function EditEmployeePage() {
               <button 
                 type="button" 
                 onClick={next}
-                className="inline-flex items-center gap-3 px-10 h-14 text-[10px] font-black uppercase tracking-widest text-white bg-slate-900 rounded-2xl hover:bg-[#6B3F69] transition-all active:scale-95 shadow-xl shadow-slate-900/10"
+                className="inline-flex items-center gap-3 px-10 h-14 text-[10px] font-black uppercase tracking-widest text-white bg-slate-900 rounded-2xl hover:bg-theme-800 transition-all active:scale-95 shadow-xl shadow-slate-900/10"
               >
                 Next Step <ChevronRight size={18} />
               </button>

@@ -20,7 +20,6 @@ media/
 staticfiles/
 
 # Virtual Environments
-.env
 .venv
 env/
 venv/
@@ -70,6 +69,17 @@ next-env.d.ts
 .env.production.local
 .env.*
 !.env.example
+
+# ----- Secrets & Keys -----
+*.pem
+*.key
+*.cert
+
+# ----- Infra config (lives in erp_new/config/, not here) -----
+config/pgbouncer/pgbouncer.ini
+config/pgbouncer/userlist.txt
+config/pgbouncer/entrypoint.sh
+config/postgres/postgresql.conf
 
 # ----- IDE / Editor -----
 .vscode/

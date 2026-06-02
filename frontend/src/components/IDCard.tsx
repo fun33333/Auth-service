@@ -23,9 +23,9 @@ const IDCard: React.FC<IDCardProps> = ({ employee }) => {
       <div className="id-card w-87.5 h-137.5 bg-white rounded-4xl shadow-2xl relative overflow-hidden border border-zinc-200 flex flex-col items-center p-0 font-sans print:shadow-none print:border-zinc-300">
         
         {/* Top Accent */}
-        <div className="absolute top-0 left-0 w-full h-45 bg-[#6B3F69] flex flex-col items-center pt-8">
+        <div className="absolute top-0 left-0 w-full h-45 bg-theme-800 flex flex-col items-center pt-8">
            <div className="flex items-center gap-2 mb-4">
-              <div className="w-8 h-8 rounded-lg bg-[#6B3F69] flex items-center justify-center">
+              <div className="w-8 h-8 rounded-lg bg-theme-800 flex items-center justify-center">
                  <ShieldCheck className="text-white" size={18} />
               </div>
               <span className="text-white font-black tracking-tighter text-lg">AL-KHIDMAT</span>
@@ -105,3 +105,4 @@ const IDCard: React.FC<IDCardProps> = ({ employee }) => {
 };
 
 export default IDCard;
+

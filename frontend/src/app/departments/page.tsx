@@ -112,162 +112,157 @@ function DepartmentModal({
     };
 
     // Department Modal Form - Styled like Institution Registry Form
-return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-        <form onSubmit={handleSubmit(submit)} className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl mx-4 animate-in zoom-in-95 duration-200 overflow-hidden">
-            
-            {/* ━━━ HEADER ━━━ */}
-            <div className="px-8 py-6 border-b border-slate-100 bg-gradient-to-br from-white to-slate-50/50">
-                <div className="flex items-start justify-between gap-4">
-                    <div>
-                        <h2 className="text-2xl font-black text-slate-900 tracking-tight uppercase">
-                            {initial ? "Edit Department" : "Add Department"}
-                        </h2>
-                        <p className="text-xs font-bold text-slate-400 mt-2 tracking-widest uppercase">
-                            {initial ? "Update department information" : "Fill in the department details"}
-                        </p>
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+            <form onSubmit={handleSubmit(submit)} className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl mx-4 animate-in zoom-in-95 duration-200 overflow-hidden">
+
+                {/* ━━━ HEADER ━━━ */}
+                <div className="px-8 py-6 border-b border-slate-100 bg-linear-to-br from-white to-slate-50/50">
+                    <div className="flex items-start justify-between gap-4">
+                        <div>
+                            <h2 className="text-2xl font-black text-slate-900 tracking-tight uppercase">
+                                {initial ? "Edit Department" : "Add Department"}
+                            </h2>
+                            <p className="text-xs font-bold text-slate-400 mt-2 tracking-widest uppercase">
+                                {initial ? "Update department information" : "Fill in the department details"}
+                            </p>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            className="p-2 text-slate-300 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition shrink-0"
+                        >
+                            <X size={22} />
+                        </button>
                     </div>
-                    <button 
-                        type="button" 
-                        onClick={onClose} 
-                        className="p-2 text-slate-300 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition flex-shrink-0"
+                </div>
+
+                {/* ━━━ ERROR MESSAGE ━━━ */}
+                {submitError && (
+                    <div className="mx-8 mt-6 p-4 rounded-xl bg-rose-50 border border-rose-200 text-xs font-bold text-rose-700 tracking-wide">
+                        {submitError}
+                    </div>
+                )}
+
+                {/* ━━━ FORM CONTENT ━━━ */}
+                <div className="px-8 py-8 space-y-6">
+
+                    {/* Branch */}
+                    <div>
+                        <label className="block text-xs font-black text-slate-700 mb-2 tracking-widest uppercase">
+                            Branch
+                        </label>
+                        <select
+                            {...register("branch_code")}
+                            disabled={!!instVal}
+                            className={`w-full px-4 py-3 bg-white border rounded-lg text-slate-900 font-medium placeholder:text-slate-400 transition focus:outline-none focus:ring-2 focus:ring-theme-800/20 focus:border-theme-800 disabled:opacity-50 disabled:bg-slate-50 disabled:cursor-not-allowed ${errors.branch_code ? "border-rose-300" : "border-slate-200"
+                                }`}
+                        >
+                            <option value="">---------</option>
+                            {branches.map(b => (
+                                <option key={b.branch_code} value={b.branch_code}>
+                                    {b.branch_name} ({b.branch_code})
+                                </option>
+                            ))}
+                        </select>
+                        <FieldError msg={errors.branch_code?.message} />
+                        {!instVal && !branchVal && (
+                            <p className="text-xs text-slate-400 mt-2">
+                                Pick institution OR branch — not both
+                            </p>
+                        )}
+                    </div>
+
+                    {/* Institution */}
+                    <div>
+                        <label className="block text-xs font-black text-slate-700 mb-2 tracking-widest uppercase">
+                            Institution
+                        </label>
+                        <select
+                            {...register("institution_code")}
+                            disabled={!!branchVal}
+                            className={`w-full px-4 py-3 bg-white border rounded-lg text-slate-900 font-medium placeholder:text-slate-400 transition focus:outline-none focus:ring-2 focus:ring-theme-800/20 focus:border-theme-800 disabled:opacity-50 disabled:bg-slate-50 disabled:cursor-not-allowed ${errors.institution_code ? "border-rose-300" : "border-slate-200"
+                                }`}
+                        >
+                            <option value="">---------</option>
+                            {institutions.map(inst => (
+                                <option key={inst.inst_code} value={inst.inst_code}>
+                                    {inst.name} ({inst.inst_code})
+                                </option>
+                            ))}
+                        </select>
+                        <FieldError msg={errors.institution_code?.message} />
+                    </div>
+
+                    {/* Department Code & Name (2 Column) */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                        <div>
+                            <label className="block text-xs font-black text-slate-700 mb-2 tracking-widest uppercase">
+                                Department Code
+                            </label>
+                            <input
+                                type="text"
+                                placeholder="E.G. HR, FIN, ACAD"
+                                disabled={!!initial}
+                                {...register("dept_code")}
+                                className={`w-full px-4 py-3 bg-white border rounded-lg text-slate-900 font-medium placeholder:text-slate-400 transition focus:outline-none focus:ring-2 focus:ring-theme-800/20 focus:border-theme-800 disabled:opacity-50 disabled:bg-slate-50 disabled:cursor-not-allowed ${errors.dept_code ? "border-rose-300" : "border-slate-200"
+                                    }`}
+                            />
+                            <FieldError msg={errors.dept_code?.message} />
+                        </div>
+
+                        <div>
+                            <label className="block text-xs font-black text-slate-700 mb-2 tracking-widest uppercase">
+                                Department Name
+                            </label>
+                            <input
+                                type="text"
+                                placeholder="E.G. ACADEMIC"
+                                {...register("dept_name")}
+                                className={`w-full px-4 py-3 bg-white border rounded-lg text-slate-900 font-medium placeholder:text-slate-400 transition focus:outline-none focus:ring-2 focus:ring-theme-800/20 focus:border-theme-800 ${errors.dept_name ? "border-rose-300" : "border-slate-200"
+                                    }`}
+                            />
+                            <FieldError msg={errors.dept_name?.message} />
+                        </div>
+                    </div>
+
+                    {/* Description */}
+                    <div>
+                        <label className="block text-xs font-black text-slate-700 mb-2 tracking-widest uppercase">
+                            Description
+                        </label>
+                        <input
+                            type="text"
+                            placeholder="BRIEF DESCRIPTION"
+                            {...register("description")}
+                            className={`w-full px-4 py-3 bg-white border rounded-lg text-slate-900 font-medium placeholder:text-slate-400 transition focus:outline-none focus:ring-2 focus:ring-theme-800/20 focus:border-theme-800 ${errors.description ? "border-rose-300" : "border-slate-200"
+                                }`}
+                        />
+                        <FieldError msg={errors.description?.message} />
+                    </div>
+
+                </div>
+
+                {/* ━━━ FOOTER ━━━ */}
+                <div className="px-8 py-6 border-t border-slate-100 bg-slate-50 flex justify-end gap-3">
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        className="px-6 py-3 text-sm font-black text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-100 transition uppercase tracking-wider"
                     >
-                        <X size={22} />
+                        Cancel
+                    </button>
+                    <button
+                        type="submit"
+                        disabled={isSubmitting}
+                        className="px-8 py-3 text-sm font-black text-white bg-theme-800 rounded-lg hover:bg-[#5a3558] shadow-lg shadow-theme-800/20 transition active:scale-95 disabled:opacity-60 uppercase tracking-wider"
+                    >
+                        {isSubmitting ? "Saving…" : initial ? "Save Changes" : "Add Department"}
                     </button>
                 </div>
-            </div>
-
-            {/* ━━━ ERROR MESSAGE ━━━ */}
-            {submitError && (
-                <div className="mx-8 mt-6 p-4 rounded-xl bg-rose-50 border border-rose-200 text-xs font-bold text-rose-700 tracking-wide">
-                    {submitError}
-                </div>
-            )}
-
-            {/* ━━━ FORM CONTENT ━━━ */}
-            <div className="px-8 py-8 space-y-6">
-
-                {/* Branch */}
-                <div>
-                    <label className="block text-xs font-black text-slate-700 mb-2 tracking-widest uppercase">
-                        Branch
-                    </label>
-                    <select 
-                        {...register("branch_code")} 
-                        disabled={!!instVal} 
-                        className={`w-full px-4 py-3 bg-white border rounded-lg text-slate-900 font-medium placeholder:text-slate-400 transition focus:outline-none focus:ring-2 focus:ring-[#6B3F69]/20 focus:border-[#6B3F69] disabled:opacity-50 disabled:bg-slate-50 disabled:cursor-not-allowed ${
-                            errors.branch_code ? "border-rose-300" : "border-slate-200"
-                        }`}
-                    >
-                        <option value="">---------</option>
-                        {branches.map(b => (
-                            <option key={b.branch_code} value={b.branch_code}>
-                                {b.branch_name} ({b.branch_code})
-                            </option>
-                        ))}
-                    </select>
-                    <FieldError msg={errors.branch_code?.message} />
-                    {!instVal && !branchVal && (
-                        <p className="text-xs text-slate-400 mt-2">
-                            Pick institution OR branch — not both
-                        </p>
-                    )}
-                </div>
-
-                {/* Institution */}
-                <div>
-                    <label className="block text-xs font-black text-slate-700 mb-2 tracking-widest uppercase">
-                        Institution
-                    </label>
-                    <select 
-                        {...register("institution_code")} 
-                        disabled={!!branchVal} 
-                        className={`w-full px-4 py-3 bg-white border rounded-lg text-slate-900 font-medium placeholder:text-slate-400 transition focus:outline-none focus:ring-2 focus:ring-[#6B3F69]/20 focus:border-[#6B3F69] disabled:opacity-50 disabled:bg-slate-50 disabled:cursor-not-allowed ${
-                            errors.institution_code ? "border-rose-300" : "border-slate-200"
-                        }`}
-                    >
-                        <option value="">---------</option>
-                        {institutions.map(inst => (
-                            <option key={inst.inst_code} value={inst.inst_code}>
-                                {inst.name} ({inst.inst_code})
-                            </option>
-                        ))}
-                    </select>
-                    <FieldError msg={errors.institution_code?.message} />
-                </div>
-
-                {/* Department Code & Name (2 Column) */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                    <div>
-                        <label className="block text-xs font-black text-slate-700 mb-2 tracking-widest uppercase">
-                            Department Code
-                        </label>
-                        <input 
-                            type="text" 
-                            placeholder="E.G. HR, FIN, ACAD" 
-                            disabled={!!initial} 
-                            {...register("dept_code")} 
-                            className={`w-full px-4 py-3 bg-white border rounded-lg text-slate-900 font-medium placeholder:text-slate-400 transition focus:outline-none focus:ring-2 focus:ring-[#6B3F69]/20 focus:border-[#6B3F69] disabled:opacity-50 disabled:bg-slate-50 disabled:cursor-not-allowed ${
-                                errors.dept_code ? "border-rose-300" : "border-slate-200"
-                            }`}
-                        />
-                        <FieldError msg={errors.dept_code?.message} />
-                    </div>
-
-                    <div>
-                        <label className="block text-xs font-black text-slate-700 mb-2 tracking-widest uppercase">
-                            Department Name
-                        </label>
-                        <input 
-                            type="text" 
-                            placeholder="E.G. ACADEMIC" 
-                            {...register("dept_name")} 
-                            className={`w-full px-4 py-3 bg-white border rounded-lg text-slate-900 font-medium placeholder:text-slate-400 transition focus:outline-none focus:ring-2 focus:ring-[#6B3F69]/20 focus:border-[#6B3F69] ${
-                                errors.dept_name ? "border-rose-300" : "border-slate-200"
-                            }`}
-                        />
-                        <FieldError msg={errors.dept_name?.message} />
-                    </div>
-                </div>
-
-                {/* Description */}
-                <div>
-                    <label className="block text-xs font-black text-slate-700 mb-2 tracking-widest uppercase">
-                        Description
-                    </label>
-                    <input 
-                        type="text" 
-                        placeholder="BRIEF DESCRIPTION" 
-                        {...register("description")} 
-                        className={`w-full px-4 py-3 bg-white border rounded-lg text-slate-900 font-medium placeholder:text-slate-400 transition focus:outline-none focus:ring-2 focus:ring-[#6B3F69]/20 focus:border-[#6B3F69] ${
-                            errors.description ? "border-rose-300" : "border-slate-200"
-                        }`}
-                    />
-                    <FieldError msg={errors.description?.message} />
-                </div>
-
-            </div>
-
-            {/* ━━━ FOOTER ━━━ */}
-            <div className="px-8 py-6 border-t border-slate-100 bg-slate-50 flex justify-end gap-3">
-                <button 
-                    type="button" 
-                    onClick={onClose} 
-                    className="px-6 py-3 text-sm font-black text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-100 transition uppercase tracking-wider"
-                >
-                    Cancel
-                </button>
-                <button 
-                    type="submit" 
-                    disabled={isSubmitting}
-                    className="px-8 py-3 text-sm font-black text-white bg-[#6B3F69] rounded-lg hover:bg-[#5a3558] shadow-lg shadow-[#6B3F69]/20 transition active:scale-95 disabled:opacity-60 uppercase tracking-wider"
-                >
-                    {isSubmitting ? "Saving…" : initial ? "Save Changes" : "Add Department"}
-                </button>
-            </div>
-        </form>
-    </div>
-);
+            </form>
+        </div>
+    );
 }
 
 export default function DepartmentsPage() {
@@ -387,167 +382,153 @@ export default function DepartmentsPage() {
         }
     }
 
-    return (
-        <ProtectedLayout>
-            {deleteId && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm">
-                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-3 p-3 animate-in zoom-in-95 duration-200">
-                        <div className="flex items-center justify-center w-10 h-12 rounded-full bg-red-100 mx-auto mb-4"><Trash2 className="text-red-600 h-6 w-6" /></div>
-                        <h3 className="text-center text-lg font-semibold text-slate-900">Delete Department?</h3>
-                        {/* <p className="text-center text-sm text-slate-500 mt-1">Soft-delete — recoverable from backend.</p> */}
-                        <div className="flex gap-3 mt-6">
-                            <button onClick={() => setDeleteId(null)} disabled={deleteBusy} className="flex-1 px-2 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-200 transition disabled:opacity-50">Cancel</button>
-                            <button onClick={() => handleDelete(deleteId)} disabled={deleteBusy}
-                                className="flex-1 px-2 py-2 text-sm font-medium text-white bg-red-400 rounded-lg hover:bg-red-500 transition disabled:opacity-50">
-                                {deleteBusy ? "…" : "Delete"}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-            <DepartmentModal
-                open={modalOpen}
-                onClose={() => { setModalOpen(false); setEditTarget(null); }}
-                onSave={handleSave}
-                initial={editTarget}
-                institutions={institutions}
-                branches={branches}
-            />
+   
 
-            <div className="sm:p-3 lg:p-10 max-w-8xl mx-auto space-y-4 sm:space-y-6 animate-in fade-in duration-500">
-                {/* Header */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 sm:p-5 rounded-2xl border border-slate-100 shadow-sm backdrop-blur-md ">
-                    <div className="flex items-center gap-4">
-                        <div className="h-12 w-12 rounded-2xl bg-[#6B3F69] flex items-center justify-center text-white shadow-lg shadow-[#6B3F69]/20">
-                            <LayoutGrid size={22} strokeWidth={2.5} />
-                        </div>
-                        <div>
-                            <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight uppercase">Departments</h1>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Functional Organizational Units</p>
-                        </div>
-                    </div>
-                    <button
-                        onClick={() => { setEditTarget(null); setModalOpen(true); }}
-                        className="flex items-center justify-center gap-2 h-11 px-6 bg-[#6B3F69] rounded-lg text-white hover:bg-[#5A3458] transition-all shadow-lg shadow-[#6B3F69]/20 active:scale-95"
-                    >
-                        <Plus size={18} strokeWidth={3} />
-                        <span className="text-xs font-black uppercase tracking-widest">Add Department</span>
-                    </button>
-                </div>
-
-                {/* Stats Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-                    {stats.map((s) => (
-                        <div key={s.label} className={`bg-white p-4 sm:p-5 rounded-3xl border border-slate-100 shadow-sm hover:shadow-2xl ${s.shadow} hover:-translate-y-1 transition-all duration-300 group relative overflow-hidden`}>
-                            <div className={`absolute top-0 right-0 w-24 h-24 ${s.blob} blur-[60px] rounded-full -mr-8 -mt-8`} />
-                            <div className="flex items-start justify-between relative z-10">
-                                <div>
-                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">{s.label}</p>
-                                    {loading ? <Skeleton width="50px" height="32px" /> : (
-                                        <p className="text-2xl sm:text-3xl font-black text-slate-900 leading-none tracking-tighter">{s.value}</p>
-                                    )}
-                                </div>
-                                <div className={`h-12 w-12 rounded-2xl flex items-center justify-center ${s.bg} ${s.color} shadow-sm group-hover:scale-110 group-hover:rotate-3 transition-all duration-500`}>
-                                    <s.icon size={22} strokeWidth={2.5} />
-                                </div>
+        return (
+            <ProtectedLayout>
+                {/* Delete Confirmation Modal */}
+                {deleteId && (
+                    <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+                        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 animate-in zoom-in-95 duration-200">
+                            <div className="flex items-center justify-center w-12 h-12 rounded-full bg-red-100 mx-auto mb-4">
+                                <Trash2 className="text-red-600 h-6 w-6" />
+                            </div>
+                            <h3 className="text-center text-lg font-bold text-slate-900">Delete Department?</h3>
+                            {/* <p className="text-center text-xs text-slate-500 mt-2">This action cannot be undone. Please confirm you want to remove this unit.</p> */}
+                            <div className="flex gap-3 mt-6">
+                                <button onClick={() => setDeleteId(null)} disabled={deleteBusy} className="flex-1 px-4 py-2.5 text-xs font-black uppercase tracking-widest text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-slate-100 transition">
+                                    Cancel
+                                </button>
+                                <button onClick={() => handleDelete(deleteId)} disabled={deleteBusy} className="flex-1 px-4 py-2.5 text-xs font-black uppercase tracking-widest text-white bg-red-400 rounded-xl hover:bg-red-500 transition shadow-lg shadow-red-200">
+                                    {deleteBusy ? "..." : "Delete"}
+                                </button>
                             </div>
                         </div>
-                    ))}
-                </div>
-
-                {/* Search Bar */}
-                <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-2 sm:p-3">
-                    <div className="relative">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                        <input
-                            type="text"
-                            placeholder="Quickly search by name, code, or  Department code..."
-                            className="w-full pl-11 pr-4 py-3 border-0 bg-slate-50 rounded-lg text-xs font-bold uppercase tracking-widest placeholder:text-slate-400 focus:bg-white focus:ring-2 focus:ring-[#6B3F69]/20 outline-none transition"
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                        />
                     </div>
-                </div>
+                )}
 
-                {/* Departments List */}
-                {loading ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
-                        {[...Array(8)].map((_, i) => (
-                            <Skeleton key={i} height={180} className="rounded-3xl" />
+                <DepartmentModal
+                    open={modalOpen}
+                    onClose={() => { setModalOpen(false); setEditTarget(null); }}
+                    onSave={handleSave}
+                    initial={editTarget}
+                    institutions={institutions}
+                    branches={branches}
+                />
+
+                <div className="p-2 sm:p-4 lg:p-6 max-w-400 mx-auto space-y-6 animate-in fade-in duration-500">
+
+                    {/* Header: Responsive flex-col on mobile, flex-row on sm+ */}
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
+                        <div className="flex items-center gap-4">
+                            <div className="h-12 w-12 shrink-0 rounded-2xl bg-theme-800 flex items-center justify-center text-white shadow-lg shadow-theme-800/20">
+                                <LayoutGrid size={22} strokeWidth={2.5} />
+                            </div>
+                            <div>
+                                <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight uppercase">Departments</h1>
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Functional Organizational Units</p>
+                            </div>
+                        </div>
+                        <button
+                            onClick={() => { setEditTarget(null); setModalOpen(true); }}
+                            className="w-full md:w-auto flex items-center justify-center gap-2 h-12 px-8 bg-theme-800 rounded-xl text-white hover:bg-theme-900 transition-all shadow-lg shadow-theme-800/20 active:scale-95"
+                        >
+                            <Plus size={18} strokeWidth={3} />
+                            <span className="text-xs font-black uppercase tracking-widest">Add Department</span>
+                        </button>
+                    </div>
+
+                    {/* Stats Grid: 1 col on mobile, 2 on sm, 4 on lg */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        {stats.map((s) => (
+                            <div key={s.label} className={`bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-xl transition-all duration-300 group relative overflow-hidden`}>
+                                <div className="flex items-center justify-between relative z-10">
+                                    <div>
+                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">{s.label}</p>
+                                        {loading ? <Skeleton width="40px" height="28px" /> : (
+                                            <p className="text-2xl font-black text-slate-900 tracking-tighter">{s.value}</p>
+                                        )}
+                                    </div>
+                                    <div className={`h-12 w-12 rounded-2xl flex items-center justify-center ${s.bg} ${s.color} group-hover:scale-110 transition-transform`}>
+                                        <s.icon size={20} strokeWidth={2.5} />
+                                    </div>
+                                </div>
+                            </div>
                         ))}
                     </div>
-                ) : filtered.length === 0 ? (
-                    <div className="py-20 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-200">
-                        <div className="flex justify-center mb-4">
-                            <XCircle className="h-12 w-12 text-slate-300" />
-                        </div>
-                        <h4 className="text-sm font-black text-slate-900 uppercase tracking-widest">No departments found</h4>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Try adjusting your filters</p>
-                    </div>
-                ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
-                        {filtered.map((d, idx) => {
-                            const colors = DEPT_COLORS[idx % DEPT_COLORS.length];
-                            return (
-                                <div
-                                    key={d.id}
-                                    className="group bg-white rounded-2xl border border-slate-100 p-4 sm:p-5 shadow-sm hover:shadow-2xl hover:-translate-y-1.5 transition-all duration-500 relative overflow-hidden"
-                                >
-                                    <div className={`absolute top-0 right-0 w-24 h-24 ${colors.blob} blur-[60px] rounded-full -mr-8 -mt-8 transition-transform group-hover:scale-150`} />
 
-                                    <div className="relative z-10 flex flex-col h-full">
-                                        <div className="flex items-start justify-between mb-4">
-                                            <div className={`h-12 w-12 rounded-2xl ${colors.bg} ${colors.text} flex items-center justify-center shadow-sm group-hover:scale-110 group-hover:rotate-3 transition-transform duration-500`}>
-                                                <span className="text-xl font-black uppercase">
-                                                    {d.dept_name?.charAt(0)}
-                                                </span>
+                    {/* Search Bar */}
+                    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-2">
+                        <div className="relative">
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                            <input
+                                type="text"
+                                placeholder="Search by name, code, or institution..."
+                                className="w-full pl-11 pr-4 py-3.5 bg-slate-50/50 rounded-xl text-xs font-bold uppercase tracking-widest placeholder:text-slate-400 focus:bg-white focus:ring-2 focus:ring-theme-800/10 outline-none transition border-none"
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                            />
+                        </div>
+                    </div>
+
+                    {/* Departments List: 1 col mobile, 2 col tablet, 3 col desktop, 4 col wide */}
+                    {loading ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                            {[...Array(8)].map((_, i) => <Skeleton key={i} height={200} className="rounded-3xl" />)}
+                        </div>
+                    ) : filtered.length === 0 ? (
+                        <div className="py-20 text-center bg-slate-50 rounded-3xl border border-dashed border-slate-200">
+                            <XCircle className="h-12 w-12 text-slate-300 mx-auto mb-4" />
+                            <h4 className="text-sm font-black text-slate-900 uppercase tracking-widest">No results found</h4>
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4  md:grid-cols-4 gap-3">
+                            {filtered.map((d, idx) => {
+                                const colors = DEPT_COLORS[idx % DEPT_COLORS.length];
+                                return (
+                                    <div key={d.id} className="group bg-white rounded-3xl border border-slate-100 p-6 shadow-sm hover:shadow-2xl transition-all duration-500 relative overflow-hidden flex flex-col">
+                                        <div className="flex justify-between items-start mb-6">
+                                            <div className={`h-12 w-12 rounded-2xl ${colors.bg} ${colors.text} flex items-center justify-center text-xl font-black shadow-sm`}>
+                                                {d.dept_name?.charAt(0)}
                                             </div>
-                                            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all transform translate-x-2 group-hover:translate-x-0">
-                                                <button onClick={() => { setEditTarget(d); setModalOpen(true); }} className="p-2 text-slate-400  hover:bg-[#6B3F69]/10 rounded-lg transition-all">
-                                                    <Edit2 size={14} strokeWidth={2.5} />
+                                            <div className="flex gap-1 md:opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <button onClick={() => { setEditTarget(d); setModalOpen(true); }} className="p-2 text-slate-400 hover:bg-slate-100 rounded-lg transition-colors">
+                                                    <Edit2 size={16} />
                                                 </button>
-                                                <button onClick={() => setDeleteId(d.dept_code)} className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-all">
-                                                    <Trash2 size={14} strokeWidth={2.5} />
+                                                <button onClick={() => setDeleteId(d.dept_code)} className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-colors">
+                                                    <Trash2 size={16} />
                                                 </button>
                                             </div>
                                         </div>
 
-                                        <div className="mb-4">
-                                            <h3 className="font-black text-slate-900 text-sm uppercase tracking-tight truncate transition-colors">{d.dept_name}</h3>
-                                            <div className="flex items-center gap-2 mt-0.5">
-                                                <span className={`text-[10px] font-black uppercase tracking-[0.2em] ${colors.text}`}>
-                                                    {d.dept_code}
-                                                </span>
-                                                <span className="w-1 h-1 rounded-full bg-slate-200" />
-                                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest truncate">
-                                                    {d.institution_code || d.branch_code || "Global"}
-                                                </span>
-                                            </div>
+                                        <h3 className="font-black text-slate-900 text-sm uppercase tracking-tight mb-1 truncate">{d.dept_name}</h3>
+                                        <div className="flex items-center gap-2 mb-4">
+                                            <span className={`text-[10px] font-black uppercase tracking-widest ${colors.text}`}>{d.dept_code}</span>
+                                            <span className="w-1 h-1 rounded-full bg-slate-200" />
+                                            <span className="text-[10px] font-bold text-slate-400 uppercase truncate">{d.institution_code || d.branch_code || "Global"}</span>
                                         </div>
 
                                         {d.description && (
-                                            <p className="text-[11px] text-slate-500 leading-relaxed mb-4 line-clamp-2 italic opacity-80">
-                                                "{d.description}"
-                                            </p>
+                                            <p className="text-[11px] text-slate-500 leading-relaxed italic line-clamp-2 mb-6">"{d.description}"</p>
                                         )}
 
-                                        <div className="mt-auto pt-4 border-t border-slate-50 grid grid-cols-2 gap-3">
-                                            <div className="bg-slate-50/50 rounded-lg p-2 border border-slate-100/50">
-                                                <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Ins code</p>
+                                        <div className="mt-auto pt-4 border-t border-slate-50 grid grid-cols-2 gap-2">
+                                            <div className="bg-slate-50/50 rounded-xl p-2 border border-slate-100">
+                                                <p className="text-[7px] font-black text-slate-400 uppercase mb-1">Institution</p>
                                                 <p className="text-[10px] font-black text-slate-700 truncate">{d.institution_code || "—"}</p>
                                             </div>
-                                            <div className="bg-slate-50/50 rounded-lg p-2 border border-slate-100/50">
-                                                <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Bran code</p>
+                                            <div className="bg-slate-50/50 rounded-xl p-2 border border-slate-100">
+                                                <p className="text-[7px] font-black text-slate-400 uppercase mb-1">Branch</p>
                                                 <p className="text-[10px] font-black text-slate-700 truncate">{d.branch_code || "—"}</p>
                                             </div>
                                         </div>
                                     </div>
-                                </div>
-                            );
-                        })}
-                    </div>
-                )}
-            </div>
-        </ProtectedLayout>
-    );
-}
+                                );
+                            })}
+                        </div>
+                    )}
+                </div>
+            </ProtectedLayout>
+        );
+    }
+

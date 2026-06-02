@@ -230,7 +230,7 @@ export default function NewEmployeePage() {
               <li key={s.id} className="flex items-center flex-1 group">
                 <div className={`flex items-center gap-1.5 sm:gap-3 px-2 sm:px-4 py-2 sm:py-3 rounded-xl sm:rounded-2xl border transition-all duration-500 w-full justify-center sm:justify-start ${
                   active
-                    ? "bg-[#6B3F69] text-white border-[#6B3F69] shadow-xl shadow-[#6B3F69]/20 -translate-y-1"
+                    ? "bg-theme-800 text-white border-theme-800 shadow-xl shadow-theme-800/20 -translate-y-1"
                     : done
                     ? "bg-emerald-50 text-emerald-700 border-emerald-100 shadow-sm"
                     : "bg-white text-slate-400 border-slate-200 shadow-sm opacity-60"
@@ -565,7 +565,7 @@ export default function NewEmployeePage() {
               <button
                 type="button"
                 onClick={next}
-                className="inline-flex items-center gap-2 sm:gap-3 px-7 sm:px-10 h-12 sm:h-14 text-[10px] font-black uppercase tracking-widest text-white bg-[#6B3F69] rounded-xl sm:rounded-2xl hover:bg-[#5a3458] transition-all active:scale-95 shadow-xl shadow-[#6B3F69]/20"
+                className="inline-flex items-center gap-2 sm:gap-3 px-7 sm:px-10 h-12 sm:h-14 text-[10px] font-black uppercase tracking-widest text-white bg-theme-800 rounded-xl sm:rounded-2xl hover:bg-theme-900 transition-all active:scale-95 shadow-xl shadow-theme-800/20"
               >
                 Next Step <ChevronRight size={16} />
               </button>

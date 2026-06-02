@@ -5,6 +5,38 @@
   --color-brand-secondary: #60a5fa;
   --color-brand-dark: #1e293b;
   --color-brand-sidebar: #ffffff;
+  
+  /* Custom App Theme Colors */
+  --color-theme-900: #001D39;
+  --color-theme-800: #0A4174;
+  --color-theme-600: #49769F;
+  --color-theme-500: #4E8EA2;
+  --color-theme-400: #6EA2B3;
+  --color-theme-300: #7BBDE8;
+  --color-theme-100: #BDD8E9;
+
+  /* Overriding default blue and indigo to match the new theme */
+  --color-blue-50: var(--color-theme-100);
+  --color-blue-100: var(--color-theme-100);
+  --color-blue-200: var(--color-theme-300);
+  --color-blue-300: var(--color-theme-300);
+  --color-blue-400: var(--color-theme-400);
+  --color-blue-500: var(--color-theme-500);
+  --color-blue-600: var(--color-theme-600);
+  --color-blue-700: var(--color-theme-800);
+  --color-blue-800: var(--color-theme-800);
+  --color-blue-900: var(--color-theme-900);
+
+  --color-indigo-50: var(--color-theme-100);
+  --color-indigo-100: var(--color-theme-100);
+  --color-indigo-200: var(--color-theme-300);
+  --color-indigo-300: var(--color-theme-300);
+  --color-indigo-400: var(--color-theme-400);
+  --color-indigo-500: var(--color-theme-500);
+  --color-indigo-600: var(--color-theme-600);
+  --color-indigo-700: var(--color-theme-800);
+  --color-indigo-800: var(--color-theme-800);
+  --color-indigo-900: var(--color-theme-900);
 }
 
 :root {
