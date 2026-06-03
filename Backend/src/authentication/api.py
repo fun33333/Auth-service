@@ -230,11 +230,10 @@ def logout(request: HttpRequest, payload: LogoutRequest):
             reason='logout'
         )
         
-        # Revoke all refresh tokens for this employee
-        RefreshToken.objects.filter(
-            employee=request.auth,
-            is_revoked=False
-        ).update(is_revoked=True)
+        # Revoke all refresh tokens for this user (employee or superadmin)
+        is_sa = getattr(request.auth, 'is_superadmin', False)
+        filter_key = {'superadmin': request.auth} if is_sa else {'employee': request.auth}
+        RefreshToken.objects.filter(**filter_key, is_revoked=False).update(is_revoked=True)
         
         return 200, {"message": "Logged out successfully"}
     

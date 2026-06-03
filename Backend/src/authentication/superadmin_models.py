@@ -75,6 +75,10 @@ class SuperAdmin(SoftDeleteModel):
     def __str__(self):
         return f"{self.full_name} ({self.superadmin_code})"
     
+    @property
+    def is_superadmin(self):
+        return True
+
     def save(self, *args, **kwargs):
         # Ensure superadmin_code is uppercase
         if self.superadmin_code:

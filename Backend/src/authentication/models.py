@@ -238,10 +238,9 @@ class BlacklistedToken(models.Model):
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     
-    token = models.CharField(
-        max_length=500,
+    token = models.TextField(
         unique=True,
-        help_text="JWT access token"
+        help_text="JWT access token (RS256 tokens are ~700+ chars, TextField avoids length limit)"
     )
     
     blacklisted_at = models.DateTimeField(

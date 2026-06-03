@@ -26,6 +26,52 @@
 
 ## Change History
 
+### 2026-06-03 — SuperAdmin auth fix + logout security fix + BlacklistedToken field fix
+
+**Bugs fixed (3):**
+
+#### Bug 1 — `SuperAdmin` login always returned 401
+**Root cause:** `SuperAdmin` model had no `is_superadmin` attribute. `getattr(user, 'is_superadmin', False)` returned `False` for every SuperAdmin instance. Login code then built `cred_filter = {'employee': superadmin_obj}` (wrong FK), causing `UserCredentials.DoesNotExist` → 401. No SuperAdmin had ever been able to log in.
+
+**Affected endpoints:** `POST /api/auth/login`, `POST /api/auth/login-sis`, `GET /api/auth/me`
+
+**Fix:** Added `@property is_superadmin(self) → True` to `SuperAdmin` model.
+
+**File:** `authentication/superadmin_models.py`
+
+---
+
+#### Bug 2 — Logout did not revoke SuperAdmin refresh tokens (security)
+**Root cause:** `logout` endpoint hard-coded `RefreshToken.objects.filter(employee=request.auth, ...)`. When `request.auth` is a `SuperAdmin`, this filters on the wrong FK — no rows matched — refresh tokens were never revoked. SuperAdmin could reuse refresh tokens after logout.
+
+**Fix:** Dynamic filter based on user type — `{'superadmin': ...}` or `{'employee': ...}`.
+
+**File:** `authentication/api.py` (logout endpoint)
+
+---
+
+#### Bug 3 — Logout crashed for all users (`BlacklistedToken.token` too short)
+**Root cause:** `BlacklistedToken.token` was `CharField(max_length=500)`. RS256 JWT tokens are ~800–900 chars. DB rejected the insert → logout returned 401 → token was never blacklisted → users could reuse tokens after logout (security hole).
+
+**Fix:** Changed field to `TextField`. Migration `authentication/0005_blacklistedtoken_token_to_textfield` applied.
+
+**Files:** `authentication/models.py`, `authentication/migrations/0005_blacklistedtoken_token_to_textfield.py`
+
+---
+
+**Also present (pre-existing, already fixed in previous session):**
+
+- `employees/migrations/0017_employee_code_nullable_revert` — reverts migration 0016 which incorrectly added NOT NULL to `employee_code` column while model kept `null=True`. Employee creation without a primary assignment would crash. Migration 0017 restores nullable. Applied ✅
+
+**Test results:**
+- SuperAdmin login → `is_superadmin: true` in token ✅
+- `/me` for SuperAdmin → correct response ✅
+- Logout blacklists token ✅
+- Token rejected after logout (`401 Unauthorized`) ✅
+- Employee save without assignment → `employee_code=NULL`, no crash ✅
+
+---
+
 ### 2026-05-21 — Maryam UI merge + security cleanup
 
 **Branch:** `merge-dev → main` (merge commit `7e748fd`)
