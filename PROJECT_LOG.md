@@ -4,6 +4,24 @@
 
 ---
 
+## Change History
+
+### 2026-06-06 — Remove redundant `branch` FK from `EmployeeAssignment`
+
+**Problem:** `EmployeeAssignment.branch` FK was a second source of truth. `designation → department → branch` already provides the branch. Two stored values could silently diverge (impossible assignments).
+
+**Changes:**
+- `employees/models.py`: Removed `branch` FK from `EmployeeAssignment`. `save()` and `__str__()` now derive branch via `self.designation.department.branch`. `Institution.employee_count()` updated to filter via `department__branch__institution`.
+- `employees/admin.py`: Replaced `branch` in `list_display` with `branch_display` method. Removed `branch` from `list_filter` and `AssignmentInline.fields`.
+- `employees/api.py`: Updated `_assignment_institution()`, `_assignment_response()`, `create_assignment()`, `update_assignment()`, `create_employee()`, `update_employee()`, and both `prefetch_related` calls. Removed `branch_code` from `EmployeeAssignmentCreateSchema`, `EmployeeAssignmentUpdateSchema`, and `EmployeeUpdateSchema`.
+- `migrations/0018_remove_employeeassignment_branch.py`: Drops the column.
+
+**Tests:** `employees/tests_assignment_branch.py` — 11 tests (7 unit + 4 integration). All green.
+
+**Commit:** `b071cd1`
+
+---
+
 ## Feature Roadmap
 
 | Feature | Status | Notes |
