@@ -3,7 +3,6 @@ Tests for EmployeeAssignment after branch FK removal.
 Covers: model save() employee_code generation, __str__(), _assignment_institution() helper,
 and API endpoints POST/PUT/GET for assignments.
 """
-import json
 import pytest
 from datetime import date
 from employees.models import EmployeeAssignment
@@ -36,6 +35,7 @@ class TestAssignmentSaveEmployeeCode:
         self, employee, desig_global
     ):
         """save() uses dept_code as prefix when department has no branch."""
+        # Regression guard: global-dept path is unchanged by this refactor — passes before and after.
         asn = EmployeeAssignment.objects.create(
             employee=employee,
             department=desig_global.department,
@@ -53,6 +53,7 @@ class TestAssignmentSaveEmployeeCode:
         self, employee, desig_branch, desig_global
     ):
         """Non-primary assignment must not overwrite employee_code."""
+        # Regression guard: global-dept path is unchanged by this refactor — passes before and after.
         EmployeeAssignment.objects.create(
             employee=employee,
             department=desig_branch.department,
@@ -94,6 +95,7 @@ class TestAssignmentStr:
 
     @pytest.mark.django_db
     def test_str_uses_global_when_dept_has_no_branch(self, employee, desig_global):
+        # Regression guard: global-dept path is unchanged by this refactor — passes before and after.
         asn = EmployeeAssignment.objects.create(
             employee=employee,
             department=desig_global.department,
@@ -127,6 +129,7 @@ class TestAssignmentInstitution:
 
     @pytest.mark.django_db
     def test_returns_none_for_global_department(self, employee, desig_global):
+        # Regression guard: global-dept path is unchanged by this refactor — passes before and after.
         asn = EmployeeAssignment.objects.create(
             employee=employee,
             department=desig_global.department,
