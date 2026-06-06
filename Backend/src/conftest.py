@@ -2,9 +2,10 @@
 Pytest fixtures for auth-service tests.
 """
 import pytest
+import uuid
 from django.test import Client
-from employees.models import Department, Designation, Employee
-from datetime import date
+from employees.models import Department, Designation, Employee, Organization, Institution, Branch, EmployeeAssignment
+from datetime import date, date as _date
 
 
 @pytest.fixture
@@ -55,3 +56,63 @@ def sample_employee(db, sample_department, sample_designation):
         account_number="1234567890"
     )
     return employee
+
+
+# ── New fixtures matching current models ─────────────────────────────────────
+
+@pytest.fixture
+def org(db):
+    return Organization.objects.create(name="Test Org", org_code="TORG")
+
+
+@pytest.fixture
+def institution(db, org):
+    return Institution.objects.create(
+        organization=org, inst_code="TINST", name="Test Institution", inst_type="educational"
+    )
+
+
+@pytest.fixture
+def branch(db, institution):
+    return Branch.objects.create(
+        institution=institution, branch_code="TB01", branch_name="Test Branch"
+    )
+
+
+@pytest.fixture
+def dept_with_branch(db, branch):
+    return Department.objects.create(
+        branch=branch, dept_code="TDWB", dept_name="Dept With Branch"
+    )
+
+
+@pytest.fixture
+def dept_global(db, org):
+    return Department.objects.create(
+        organization=org, dept_code="TGLB", dept_name="Global Dept"
+    )
+
+
+@pytest.fixture
+def desig_branch(db, dept_with_branch):
+    return Designation.objects.create(
+        department=dept_with_branch, position_code="TB", position_name="Branch Role"
+    )
+
+
+@pytest.fixture
+def desig_global(db, dept_global):
+    return Designation.objects.create(
+        department=dept_global, position_code="TG", position_name="Global Role"
+    )
+
+
+@pytest.fixture
+def employee(db, org):
+    return Employee.objects.create(
+        organization=org,
+        full_name="Ali Hassan",
+        cnic=f"{uuid.uuid4().int % 10**13:013d}",
+        dob=_date(1990, 6, 1),
+        gender="male",
+    )
