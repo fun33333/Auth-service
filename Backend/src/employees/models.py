@@ -108,7 +108,7 @@ class Institution(SoftDeleteModel):
     def employee_count(self):
         from .models import EmployeeAssignment
         return EmployeeAssignment.objects.filter(
-            branch__institution=self, is_deleted=False
+            department__branch__institution=self, is_deleted=False
         ).values('employee').distinct().count()
 
 class Branch(SoftDeleteModel):
@@ -428,14 +428,6 @@ class EmployeeAssignment(SoftDeleteModel):
     
     employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='assignments')
     
-    branch = models.ForeignKey(
-        'Branch',
-        on_delete=models.CASCADE,
-        null=True,
-        blank=True,
-        related_name='assignments',
-        help_text="Branch where employee works (for branch-specific roles)"
-    )
     department = models.ForeignKey(Department, on_delete=models.PROTECT, related_name='assignments')
     designation = models.ForeignKey(Designation, on_delete=models.PROTECT, related_name='assignments')
     
@@ -464,16 +456,16 @@ class EmployeeAssignment(SoftDeleteModel):
         super().save(*args, **kwargs)
         
         if self.is_primary:
-            # Prefix logic: Use Department Code if Global, otherwise Institution Code
-            if self.department.is_global:
-                prefix = self.department.dept_code
+            # Prefix logic: derive branch from designation chain
+            dept = self.designation.department
+            if dept.is_global:
+                prefix = dept.dept_code
+            elif dept.branch_id:
+                prefix = dept.branch.branch_code
+            elif dept.institution_id:
+                prefix = dept.institution.inst_code
             else:
-                if self.branch:
-                    prefix = self.branch.branch_code
-                elif self.department.institution:
-                    prefix = self.department.institution.inst_code
-                else:
-                    prefix = self.department.organization.org_code if self.department.organization else self.department.dept_code
+                prefix = dept.organization.org_code if dept.organization_id else dept.dept_code
 
             shift_code = self.shift[0].upper() if self.shift != 'general' else 'G'
             year = str(self.joining_date.year)[-2:]
@@ -495,10 +487,11 @@ class EmployeeAssignment(SoftDeleteModel):
                 self._new_employee_code = new_code
 
     def __str__(self):
-        if self.branch:
-            scope = self.branch.branch_code
-        elif self.department.institution:
-            scope = self.department.institution.inst_code
+        dept = self.designation.department
+        if dept.branch_id:
+            scope = dept.branch.branch_code
+        elif dept.institution_id:
+            scope = dept.institution.inst_code
         else:
             scope = "Global"
         return f"{self.employee.full_name} - {self.designation.position_name} ({scope})"
