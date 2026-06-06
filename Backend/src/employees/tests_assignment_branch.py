@@ -3,6 +3,7 @@ Tests for EmployeeAssignment after branch FK removal.
 Covers: model save() employee_code generation, __str__(), _assignment_institution() helper,
 and API endpoints POST/PUT/GET for assignments.
 """
+import json
 import pytest
 from datetime import date
 from employees.models import EmployeeAssignment
@@ -140,3 +141,91 @@ class TestAssignmentInstitution:
         )
         result = _assignment_institution(asn)
         assert result is None
+
+
+# ── Integration: POST /api/employees/{key}/assignments ───────────────────────
+
+class TestCreateAssignmentAPI:
+
+    @pytest.mark.django_db
+    def test_create_assignment_returns_branch_from_department(
+        self, auth_client, desig_branch, branch
+    ):
+        client, employee = auth_client
+        url = f"/api/employees/employees/{employee.employee_id}/assignments"
+        payload = {
+            "department_code": desig_branch.department.dept_code,
+            "designation_code": desig_branch.position_code,
+            "joining_date": "2026-01-01",
+            "shift": "general",
+            "is_primary": True,
+        }
+        resp = client.post(url, data=json.dumps(payload), content_type="application/json")
+        assert resp.status_code == 201, resp.content
+        data = resp.json()
+        assert data["branch_code"] == branch.branch_code
+        assert data["branch_name"] == branch.branch_name
+
+    @pytest.mark.django_db
+    def test_create_assignment_branch_null_for_global_dept(
+        self, auth_client, desig_global
+    ):
+        # Regression guard: global-dept path is unchanged by this refactor — passes before and after.
+        client, employee = auth_client
+        url = f"/api/employees/employees/{employee.employee_id}/assignments"
+        payload = {
+            "department_code": desig_global.department.dept_code,
+            "designation_code": desig_global.position_code,
+            "joining_date": "2026-01-01",
+            "shift": "general",
+            "is_primary": True,
+        }
+        resp = client.post(url, data=json.dumps(payload), content_type="application/json")
+        assert resp.status_code == 201, resp.content
+        data = resp.json()
+        assert data["branch_code"] is None
+        assert data["branch_name"] is None
+
+
+# ── Integration: GET /api/employees/{id} ─────────────────────────────────────
+
+class TestGetEmployeeAssignmentBranch:
+
+    @pytest.mark.django_db
+    def test_get_employee_returns_branch_info_derived_from_dept(
+        self, auth_client, desig_branch, branch
+    ):
+        client, employee = auth_client
+        EmployeeAssignment.objects.create(
+            employee=employee,
+            department=desig_branch.department,
+            designation=desig_branch,
+            joining_date=date(2026, 1, 1),
+            is_primary=True,
+            shift='general',
+        )
+        resp = client.get(f"/api/employees/employees/{employee.employee_id}")
+        assert resp.status_code == 200, resp.content
+        asns = resp.json()["assignments"]
+        assert len(asns) == 1
+        assert asns[0]["branch_code"] == branch.branch_code
+
+    @pytest.mark.django_db
+    def test_get_employee_branch_na_for_global_dept(
+        self, auth_client, desig_global
+    ):
+        # Regression guard: global-dept path is unchanged by this refactor — passes before and after.
+        client, employee = auth_client
+        EmployeeAssignment.objects.create(
+            employee=employee,
+            department=desig_global.department,
+            designation=desig_global,
+            joining_date=date(2026, 1, 1),
+            is_primary=True,
+            shift='general',
+        )
+        resp = client.get(f"/api/employees/employees/{employee.employee_id}")
+        assert resp.status_code == 200, resp.content
+        asns = resp.json()["assignments"]
+        assert asns[0]["branch_name"] == "N/A"
+        assert asns[0]["branch_code"] is None

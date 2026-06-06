@@ -571,13 +571,12 @@ def _resolve_branch(branch_key: str):
 
 
 def _assignment_institution(asn):
-    """Derive institution from an assignment without using a stored FK.
-    Priority: branch.institution → department.institution → None (global).
-    """
-    if asn.branch_id and asn.branch.institution_id:
-        return asn.branch.institution
-    if asn.department_id and asn.department.institution_id:
-        return asn.department.institution
+    """Derive institution from assignment via designation.department chain."""
+    dept = asn.designation.department
+    if dept.branch_id and dept.branch.institution_id:
+        return dept.branch.institution
+    if dept.institution_id:
+        return dept.institution
     return None
 
 
@@ -816,12 +815,6 @@ def create_employee(request, payload: EmployeeCreateSchema):
             if not inst:
                 field_errors['institutionCode'] = ["Institution not found"]
         
-        branch = None
-        if payload.branchCode:
-            branch = Branch.objects.filter(branch_code=payload.branchCode).first()
-            if not branch:
-                field_errors['branchCode'] = ["Branch not found"]
-
         dept = Department.objects.filter(dept_code=payload.departmentCode).first()
         if not dept:
             field_errors['departmentCode'] = ["Department not found"]
@@ -867,7 +860,6 @@ def create_employee(request, payload: EmployeeCreateSchema):
 
             EmployeeAssignment.objects.create(
                 employee=employee,
-                branch=branch,
                 department=dept,
                 designation=designation,
                 joining_date=joining_date,
@@ -969,10 +961,12 @@ def list_employees(
         query = Employee.objects.filter(is_deleted=False).prefetch_related(
             'assignments',
             'assignments__department',
+            'assignments__department__branch',
+            'assignments__department__branch__institution',
             'assignments__department__institution',
             'assignments__designation',
-            'assignments__branch',
-            'assignments__branch__institution',
+            'assignments__designation__department',
+            'assignments__designation__department__branch',
         )
         
         # Apply search filter
@@ -1080,11 +1074,14 @@ def get_employee(request, employee_id: str):
     try:
         employee = Employee.objects.prefetch_related(
             'assignments',
-            'assignments__branch',
-            'assignments__branch__institution',
             'assignments__department',
+            'assignments__department__branch',
+            'assignments__department__branch__institution',
             'assignments__department__institution',
             'assignments__designation',
+            'assignments__designation__department',
+            'assignments__designation__department__branch',
+            'assignments__designation__department__branch__institution',
         ).filter(is_deleted=False).filter(
             models.Q(employee_id=employee_id) | models.Q(employee_code=employee_id)
         ).first()
@@ -1096,8 +1093,8 @@ def get_employee(request, employee_id: str):
             assignments.append({
                 'institution': _assignment_institution(asn).name if _assignment_institution(asn) else "Global",
                 'institution_code': _assignment_institution(asn).inst_code if _assignment_institution(asn) else None,
-                'branch_name': asn.branch.branch_name if asn.branch else "N/A",
-                'branch_code': asn.branch.branch_code if asn.branch else None,
+                'branch_name': asn.designation.department.branch.branch_name if asn.designation.department.branch_id else "N/A",
+                'branch_code': asn.designation.department.branch.branch_code if asn.designation.department.branch_id else None,
                 'department': asn.department.dept_name if asn.department else None,
                 'department_code': asn.department.dept_code if asn.department else None,
                 'designation': asn.designation.position_name if asn.designation else None,
@@ -1221,7 +1218,6 @@ class EmployeeUpdateSchema(BaseModel):
     # Primary assignment (flat, same shape as create payload)
     organizationCode: Optional[str] = None
     institutionCode: Optional[str] = None
-    branchCode: Optional[str] = None
     departmentCode: Optional[str] = None
     designationCode: Optional[str] = None
     joiningDate: Optional[str] = None
@@ -1337,12 +1333,6 @@ def update_employee(request, employee_id: str, payload: EmployeeUpdateSchema):
         if not inst:
             field_errors['institutionCode'] = ['Institution not found']
 
-    branch = None
-    if payload.branchCode:
-        branch = Branch.objects.filter(branch_code=payload.branchCode, is_deleted=False).first()
-        if not branch:
-            field_errors['branchCode'] = ['Branch not found']
-
     dept = None
     if payload.departmentCode:
         dept = Department.objects.filter(dept_code=payload.departmentCode, is_deleted=False).first()
@@ -1416,15 +1406,13 @@ def update_employee(request, employee_id: str, payload: EmployeeUpdateSchema):
 
             # Update primary assignment if any assignment field was provided
             assignment_fields_provided = any([
-                payload.institutionCode, payload.branchCode,
+                payload.institutionCode,
                 payload.departmentCode, payload.designationCode,
                 payload.joiningDate, payload.shift
             ])
             if assignment_fields_provided:
                 primary = employee.assignments.filter(is_primary=True, is_deleted=False).first()
                 if primary:
-                    if branch is not None:
-                        primary.branch = branch
                     if dept is not None:
                         primary.department = dept
                     if designation is not None:
@@ -1452,7 +1440,6 @@ def update_employee(request, employee_id: str, payload: EmployeeUpdateSchema):
 # ========================================
 
 class EmployeeAssignmentCreateSchema(BaseModel):
-    branch_code: Optional[str] = None
     department_code: str
     designation_code: str
     joining_date: Optional[str] = None
@@ -1468,7 +1455,6 @@ class EmployeeAssignmentCreateSchema(BaseModel):
 
 
 class EmployeeAssignmentUpdateSchema(BaseModel):
-    branch_code: Optional[str] = None
     department_code: Optional[str] = None
     designation_code: Optional[str] = None
     joining_date: Optional[str] = None
@@ -1492,8 +1478,8 @@ def _assignment_response(asn) -> dict:
         'id': str(asn.id),
         'institution': inst.name if inst else None,
         'institution_code': inst.inst_code if inst else None,
-        'branch_name': asn.branch.branch_name if asn.branch else None,
-        'branch_code': asn.branch.branch_code if asn.branch else None,
+        'branch_name': asn.designation.department.branch.branch_name if asn.designation.department.branch_id else None,
+        'branch_code': asn.designation.department.branch.branch_code if asn.designation.department.branch_id else None,
         'department': asn.department.dept_name,
         'department_code': asn.department.dept_code,
         'designation': asn.designation.position_name,
@@ -1527,12 +1513,6 @@ def create_assignment(request, employee_key: str, payload: EmployeeAssignmentCre
     if not desig:
         return 400, {'error': f"Designation '{payload.designation_code}' not found in this department"}
 
-    branch = None
-    if payload.branch_code:
-        branch = Branch.objects.filter(branch_code=payload.branch_code, is_deleted=False).first()
-        if not branch:
-            return 400, {'error': f"Branch '{payload.branch_code}' not found"}
-
     joining_date = None
     if payload.joining_date:
         try:
@@ -1548,7 +1528,6 @@ def create_assignment(request, employee_key: str, payload: EmployeeAssignmentCre
 
     asn = EmployeeAssignment.objects.create(
         employee=emp,
-        branch=branch,
         department=dept,
         designation=desig,
         joining_date=joining_date,
@@ -1590,15 +1569,6 @@ def update_assignment(request, employee_key: str, assignment_id: str, payload: E
         if not desig:
             return 400, {'error': f"Designation '{payload.designation_code}' not found in this department"}
         asn.designation = desig
-
-    if payload.branch_code is not None:
-        if payload.branch_code:
-            branch = Branch.objects.filter(branch_code=payload.branch_code, is_deleted=False).first()
-            if not branch:
-                return 400, {'error': f"Branch '{payload.branch_code}' not found"}
-            asn.branch = branch
-        else:
-            asn.branch = None
 
     if payload.joining_date is not None:
         try:

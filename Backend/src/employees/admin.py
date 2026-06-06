@@ -80,7 +80,7 @@ class DesignationAdmin(SoftDeleteAdmin):
 
 class AssignmentInline(admin.TabularInline):
     model = EmployeeAssignment
-    fields = ['branch', 'department', 'designation', 'joining_date', 'shift', 'is_primary', 'is_active']
+    fields = ['department', 'designation', 'joining_date', 'shift', 'is_primary', 'is_active']
     extra = 1
 
 
@@ -149,8 +149,8 @@ class EmployeeAdmin(SoftDeleteAdmin):
 
 @admin.register(EmployeeAssignment)
 class EmployeeAssignmentAdmin(SoftDeleteAdmin):
-    list_display = ['employee', 'designation', 'branch', 'institution_display', 'is_primary', 'is_deleted_badge']
-    list_filter = ['is_primary', 'shift', 'branch']
+    list_display = ['employee', 'designation', 'branch_display', 'institution_display', 'is_primary', 'is_deleted_badge']
+    list_filter = ['is_primary', 'shift']
     search_fields = ['employee__full_name', 'employee__employee_id']
 
     def save_model(self, request, obj, form, change):
@@ -163,6 +163,11 @@ class EmployeeAssignmentAdmin(SoftDeleteAdmin):
                 level=messages.SUCCESS
             )
             del obj._new_employee_code
+
+    def branch_display(self, obj):
+        dept = obj.designation.department
+        return dept.branch.branch_code if dept.branch_id else "—"
+    branch_display.short_description = 'Branch'
 
     def institution_display(self, obj):
         from employees.api import _assignment_institution

@@ -116,3 +116,13 @@ def employee(db, org):
         dob=_date(1990, 6, 1),
         gender="male",
     )
+
+
+@pytest.fixture
+def auth_client(db, employee):
+    """Django test client pre-loaded with a valid Bearer token for `employee`."""
+    from authentication.jwt_utils import generate_access_token
+    token = generate_access_token(employee)
+    client = Client()
+    client.defaults['HTTP_AUTHORIZATION'] = f'Bearer {token}'
+    return client, employee
