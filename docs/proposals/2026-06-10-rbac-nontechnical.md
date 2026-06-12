@@ -1,6 +1,6 @@
 # Role-Based Access Control — Business Proposal
 
-**Prepared by:** Engineering Team  
+**Prepared by:** Muhammad Ubaid  
 **Date:** June 10, 2026  
 **Audience:** Project Managers, Business Stakeholders, Team Leads  
 **Status:** Awaiting Approval
@@ -9,7 +9,7 @@
 
 ## Executive Summary
 
-Today, any employee who has access to the HR Management System can perform any action — create employees, modify departments, grant access to other systems, and more. There is no way to limit what a specific person can do within their role. This proposal introduces a **Role-Based Access Control (RBAC)** system that allows administrators to define job-specific roles (e.g., "HR Manager", "Branch Admin"), assign them to employees, and fine-tune individual permissions — all without requiring any software deployment or developer involvement.
+Today, any employee who has access to the HR Management System can perform any action — create employees, modify departments, grant access to other systems, and more. There is no way to limit what a specific person can do based on their job. This proposal introduces a **Role-Based Access Control (RBAC)** system that allows administrators to define job-specific roles (e.g., "HR Manager", "Branch Admin"), assign them to employees, and fine-tune individual access — all without any software deployment or developer involvement.
 
 ---
 
@@ -17,33 +17,26 @@ Today, any employee who has access to the HR Management System can perform any a
 
 ### 1. No Control Over Who Can Do What
 
-Currently, once an employee is given access to the system, they can perform every action available: adding employees, editing records, granting access to other services, creating departments, and more. There is no distinction between an HR assistant and an HR manager. **Everyone has full access.**
+Once an employee is given access to the system, they can perform every action available — adding employees, editing records, granting access to other services, creating departments, and more. There is no difference between an HR assistant and an HR manager. **Everyone has full access.**
 
-This is a security and compliance risk. If a junior employee's account is compromised, an attacker has full system access.
+This is a security and compliance risk. If one account is compromised, the attacker has full system control.
 
 ### 2. Adding Roles Requires a Developer
 
-Today's system has roles for HDMS (Help Desk) and VMS (Visitor Management) — but these roles are **hardcoded into the software**. Every time a new service is added and needs roles, an engineer must write code, test it, and deploy a new version. This is slow, expensive, and creates a dependency on the engineering team for what should be a simple admin task.
+The current system has roles for HDMS (Help Desk) and VMS (Visitor Management), but these roles are **hardcoded into the software**. Every time a new service needs roles, an engineer must write code, test it, and deploy a new version. This creates a permanent dependency on the engineering team for what should be a simple admin task.
 
-### 3. No Record of Who Has What Role
+### 3. No Clear Record of Who Has What Role
 
-There is no consolidated view of which employees have which roles and when those roles were assigned or changed. Auditing "who could access what, on which date" is not straightforward.
+There is no consolidated view of which employees have which roles and when those roles were assigned or changed. Answering "who had access to what on a given date" is not straightforward.
 
 ---
 
 ## Proposed Solution
 
-We propose building a flexible, admin-managed permission system with three simple concepts:
+A flexible, admin-managed system built on three simple concepts:
 
 ### Permissions — Individual Actions
-A permission is a single named action. Examples:
-- "Create Employee"
-- "Edit Employee"
-- "Delete Employee"
-- "Create Department"
-- "Grant System Access to Others"
-
-These are defined once by the engineering team and never need to change unless a genuinely new capability is added to the system.
+A permission is one named action (e.g., "Create Employee", "Create Department", "Grant System Access"). Defined once by engineering — never changes unless a genuinely new feature is added.
 
 ### Roles — Bundles of Permissions
 A role is a named group of permissions. Examples:
@@ -55,55 +48,108 @@ A role is a named group of permissions. Examples:
 | Branch Admin | Create Department, Create Branch, Edit Branch |
 | Read-Only Viewer | View Employees only |
 
-Administrators create and modify roles directly from the Services page — **no developer needed.**
+Administrators create and modify roles from the existing Services page — **no developer needed.**
 
 ### Individual Overrides — Fine-Tuning Per Person
-Sometimes one specific person needs more (or less) than their role provides. Examples:
-- Ali is an HR Assistant, but also needs "Create Department" permission → add it just for Ali
-- Fatima is an HR Manager, but should NOT be able to delete employees → block that permission for Fatima only
+When one specific person needs more or less than their role provides:
+- Ali (HR Assistant) also needs "Create Department" → add it just for Ali
+- Fatima (HR Manager) should NOT delete employees → block that permission for Fatima only
 
 **Effective access = Role permissions + individual additions − individual blocks**
 
 ---
 
-## How Administrators Will Use This
+## How Administrators Use This
 
-All management happens from the existing **Services page** in the application — no new screens to learn:
+All management from the existing **Services page** — no new screens:
 
-1. **Create a Role** → Go to Services → Auth tab → Roles → "New Role" → give it a name, tick the permissions it should have → Save
-2. **Assign a Role to an Employee** → Find the employee in the Services page → Assign Role → Select role → Save
-3. **Add/Remove Individual Permission** → Find the employee → Permissions tab → Add or block a specific permission
+1. **Create a Role** → Services → Auth tab → Roles → New Role → name it, tick permissions → Save
+2. **Assign a Role** → Find employee in Services page → Assign Role → Select → Save
+3. **Individual Override** → Find employee → add or block a specific permission
 
 No code. No deployments. Done in minutes.
 
 ---
 
-## Benefits
+## Business Benefits
 
 | Benefit | Detail |
 |---------|--------|
-| **Security** | Employees can only do what their job requires — nothing more |
-| **Self-Service** | Admins manage roles day-to-day without engineering support |
-| **Scalability** | When a new service is added, its roles are created as data, not code |
-| **Compliance** | Full audit trail: who was granted what role, by whom, on which date |
+| **Security** | Employees can only do what their job requires |
+| **Self-Service** | Admins manage roles without engineering support |
+| **Scalability** | New services get roles as data, not code |
+| **Compliance** | Full audit trail: who was granted what role, by whom, on what date |
 | **Flexibility** | Individual overrides handle exceptions without changing the whole role |
 
 ---
 
 ## What Is NOT Changing
 
-- HDMS (Help Desk) and VMS (Visitor Management) roles remain exactly as they are today — this proposal only affects the HR Management System (Auth-service) in this phase
-- Employee data, the org hierarchy (branches, departments, designations), and the login flow are unchanged
-- Existing employees will continue to work as normal during rollout
+- HDMS (Help Desk) and VMS (Visitor Management) roles are **untouched** in this phase
+- Employee data, org hierarchy, and the login flow are unchanged
+- Existing employees continue working normally throughout rollout
 
 ---
 
-## Effort and Timeline
+## Why Two Phases Instead of One?
 
-| Phase | Scope | Estimated Duration |
-|-------|-------|--------------------|
-| **MVP (this proposal)** | Backend permission engine + Services page update (Auth-service only) | ~2–3 weeks |
-| **Phase 2 (future)** | Migrate HDMS/VMS roles into the same system; scoped permissions per branch | ~2–3 weeks |
+| | Phase 1 (this proposal) | One Big Bang |
+|-|------------------------|--------------|
+| Scope | Auth-service only | Auth-service + HDMS + VMS together |
+| Delivery | ~3 weeks | ~6–8 weeks |
+| Risk | Low | High — HDMS production affected if anything fails |
+| Recommended? | ✅ Yes | ❌ No |
+
+Phase 2 (HDMS/VMS migration) follows after Phase 1 is stable. The two phases are independent — Phase 2 does not break Phase 1.
+
+---
+
+## Milestones
+
+**Start Date:** June 16, 2026 (1 developer)
+
+| Milestone | Target Date | Deliverable |
+|-----------|-------------|-------------|
+| **M1 — Foundation** | June 20, 2026 | Database design complete, permission definitions in place |
+| **M2 — Backend Complete** | June 27, 2026 | All API logic working, permission engine tested |
+| **M3 — Frontend Complete** | July 4, 2026 | Services page updated, roles manageable from UI |
+| **M4 — Internal Review** | July 8, 2026 | Staging deploy, bug fixes, stakeholder demo |
+
+**Target completion:** July 8, 2026
+
+---
+
+## Acceptance Criteria
+
+The project is complete when all of the following are confirmed:
+
+### Admin Capabilities
+- [ ] Admin can create a role with a custom name and permissions — no developer required
+- [ ] Admin can edit a role's permissions — changes apply immediately
+- [ ] Admin can delete a role
+- [ ] Admin can assign or remove a role from any employee
+- [ ] Admin can grant an extra permission to a specific employee
+- [ ] Admin can block a permission for a specific employee (even if their role includes it)
+
+### Employee Experience
+- [ ] Employee with "Create Employee" permission can create employees successfully
+- [ ] Employee without that permission receives an "Access Denied" response
+- [ ] An employee with no role assigned cannot perform any protected action
+- [ ] SuperAdmin retains full access regardless of roles
+
+### Stability
+- [ ] All existing HDMS and VMS role flows work without any change
+- [ ] All existing employees continue to work normally post-deployment
+- [ ] Permission checks do not slow down the application noticeably
+
+---
+
+## Effort Summary
+
+| Phase | Scope | Duration | Team |
+|-------|-------|----------|------|
+| **Phase 1 — MVP** | Auth-service RBAC | ~3 weeks | 1 developer |
+| **Phase 2 — Future** | HDMS/VMS migration | ~3 weeks | 1 developer |
 
 ---
 
@@ -111,18 +157,19 @@ No code. No deployments. Done in minutes.
 
 | Risk | Mitigation |
 |------|-----------|
-| Existing users lose access during migration | No existing data is changed in MVP — new system is additive only |
-| Admin assigns wrong role to employee | Audit log records every change; roles can be reassigned immediately |
-| Performance (checking permissions on every action) | Permission results are cached — no noticeable impact on response times |
+| Existing users affected during rollout | No existing data changed in Phase 1 — fully additive |
+| Admin assigns wrong role | Every change is logged with timestamp and who made it; roles reassignable immediately |
+| Performance impact | Permission results are cached — no noticeable slowdown |
 
 ---
 
 ## Recommendation
 
-Approve MVP scope. Begin Phase 2 planning after MVP is stable in production.
+Approve Phase 1 MVP. Phase 2 can be planned after Phase 1 is stable in production.
 
 **Approval requested from:** Project Manager, Technical Lead
 
 ---
 
-*Document prepared by Engineering Team — June 10, 2026*
+*Document prepared by Muhammad Ubaid — June 10, 2026*  
+*Revised: June 12, 2026 (PM feedback incorporated)*
