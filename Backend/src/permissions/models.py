@@ -393,3 +393,19 @@ class PermissionAudit(models.Model):
     
     def __str__(self):
         return f"{self.employee.full_name} - {self.get_action_display()} ({self.service})"
+
+
+class Permission(models.Model):
+    """Named action within a service. Defined by engineering via seed_permissions command."""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    codename = models.CharField(max_length=100, unique=True, help_text="e.g. 'employee.create'")
+    name = models.CharField(max_length=200, help_text="e.g. 'Create Employee'")
+    service = models.CharField(max_length=20, help_text="Service code this permission belongs to")
+    description = models.TextField(blank=True, default="")
+
+    class Meta:
+        db_table = "permissions_rbac_permission"
+        ordering = ["service", "codename"]
+
+    def __str__(self):
+        return f"{self.service} / {self.codename}"
