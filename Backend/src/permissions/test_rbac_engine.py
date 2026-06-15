@@ -151,3 +151,64 @@ class TestRequirePermissionDecorator:
         client = NinjaTestClient(test_router)
         response = client.get("/guarded", headers={"Authorization": f"Bearer {token}"})
         assert response.status_code == 200
+
+
+@pytest.fixture
+def sa_client(db, superadmin):
+    from authentication.jwt_utils import generate_access_token
+    from django.test import Client as DjangoClient
+    token = generate_access_token(superadmin)
+    client = DjangoClient()
+    client.defaults['HTTP_AUTHORIZATION'] = f'Bearer {token}'
+    return client
+
+
+@pytest.mark.django_db
+class TestRolesAPI:
+    def test_list_roles_returns_200(self, sa_client):
+        Role.objects.create(name="HR Manager", service="auth")
+        response = sa_client.get("/api/permissions/rbac/roles")
+        assert response.status_code == 200
+        assert any(r["name"] == "HR Manager" for r in response.json()["roles"])
+
+    def test_create_role_returns_201(self, sa_client):
+        response = sa_client.post(
+            "/api/permissions/rbac/roles",
+            data='{"name": "Finance Admin", "service": "auth", "description": ""}',
+            content_type="application/json",
+        )
+        assert response.status_code == 201
+        assert Role.objects.filter(name="Finance Admin").exists()
+
+    def test_create_role_with_permissions(self, sa_client):
+        Permission.objects.create(codename="branch.view", name="View Branch", service="auth")
+        response = sa_client.post(
+            "/api/permissions/rbac/roles",
+            data='{"name": "Branch Viewer", "service": "auth", "description": "", "permission_codenames": ["branch.view"]}',
+            content_type="application/json",
+        )
+        assert response.status_code == 201
+        assert Role.objects.get(name="Branch Viewer").permissions.filter(codename="branch.view").exists()
+
+    def test_update_role_returns_200(self, sa_client):
+        role = Role.objects.create(name="Old Name", service="auth")
+        response = sa_client.patch(
+            f"/api/permissions/rbac/roles/{role.id}",
+            data='{"name": "New Name"}',
+            content_type="application/json",
+        )
+        assert response.status_code == 200
+        role.refresh_from_db()
+        assert role.name == "New Name"
+
+    def test_delete_role_soft_deletes(self, sa_client):
+        role = Role.objects.create(name="Temp Role", service="auth")
+        response = sa_client.delete(f"/api/permissions/rbac/roles/{role.id}")
+        assert response.status_code == 200
+        assert Role.objects.filter(pk=role.pk).count() == 0
+        assert Role.all_objects.filter(pk=role.pk).count() == 1
+
+    def test_list_roles_requires_auth(self):
+        from django.test import Client as DjangoClient
+        response = DjangoClient().get("/api/permissions/rbac/roles")
+        assert response.status_code == 401
