@@ -409,3 +409,26 @@ class Permission(models.Model):
 
     def __str__(self):
         return f"{self.service} / {self.codename}"
+
+
+class Role(SoftDeleteModel):
+    """Named bundle of permissions. Created and managed by admins at runtime."""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=100, help_text="e.g. 'HR Manager'")
+    service = models.CharField(max_length=20, help_text="Service code this role applies to")
+    is_default = models.BooleanField(default=False, help_text="Pre-seeded default role")
+    description = models.TextField(blank=True, default="")
+    permissions = models.ManyToManyField(
+        Permission,
+        blank=True,
+        related_name="roles",
+        help_text="Permissions bundled into this role",
+    )
+
+    class Meta:
+        db_table = "permissions_rbac_role"
+        unique_together = [("name", "service")]
+        ordering = ["service", "name"]
+
+    def __str__(self):
+        return f"{self.service} / {self.name}"
