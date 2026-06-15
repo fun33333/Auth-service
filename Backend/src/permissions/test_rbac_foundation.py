@@ -119,3 +119,40 @@ class TestEmployeePermissionOverrideModel:
         )
         assert override.scope_content_type is None
         assert override.scope_object_id is None
+
+
+@pytest.mark.django_db
+class TestSeedPermissionsCommand:
+    def test_creates_30_permissions(self):
+        from django.core.management import call_command
+        call_command("seed_permissions", verbosity=0)
+        assert Permission.objects.count() == 30
+
+    def test_idempotent_run_twice(self):
+        from django.core.management import call_command
+        call_command("seed_permissions", verbosity=0)
+        call_command("seed_permissions", verbosity=0)
+        assert Permission.objects.count() == 30
+
+    def test_all_expected_codenames_exist(self):
+        from django.core.management import call_command
+        call_command("seed_permissions", verbosity=0)
+        expected = {
+            "employee.view", "employee.create", "employee.edit", "employee.delete",
+            "assignment.create", "assignment.edit", "assignment.delete",
+            "organization.view",
+            "institution.view", "institution.create", "institution.edit", "institution.delete",
+            "branch.view", "branch.create", "branch.edit", "branch.delete",
+            "department.view", "department.create", "department.edit", "department.delete",
+            "designation.view", "designation.create", "designation.edit", "designation.delete",
+            "service_access.view", "service_access.grant", "service_access.toggle",
+            "role.view", "role.manage",
+            "audit.view",
+        }
+        actual = set(Permission.objects.values_list("codename", flat=True))
+        assert expected == actual
+
+    def test_all_permissions_have_service_auth(self):
+        from django.core.management import call_command
+        call_command("seed_permissions", verbosity=0)
+        assert Permission.objects.exclude(service="auth").count() == 0
