@@ -126,3 +126,23 @@ def auth_client(db, employee):
     client = Client()
     client.defaults['HTTP_AUTHORIZATION'] = f'Bearer {token}'
     return client, employee
+
+
+@pytest.fixture
+def superadmin(db):
+    from authentication.superadmin_models import SuperAdmin
+    return SuperAdmin.objects.create(
+        superadmin_code="S-26-0001",
+        full_name="Test SuperAdmin",
+        email="superadmin@test.com",
+        is_active=True,
+    )
+
+
+@pytest.fixture
+def superadmin_auth_client(db, superadmin):
+    from authentication.jwt_utils import generate_access_token
+    token = generate_access_token(superadmin)
+    client = Client()
+    client.defaults['HTTP_AUTHORIZATION'] = f'Bearer {token}'
+    return client, superadmin
