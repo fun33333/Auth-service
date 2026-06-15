@@ -86,3 +86,68 @@ class TestHasPermission:
     def test_superadmin_always_returns_true(self, superadmin):
         assert has_permission(superadmin, "employee.delete") is True
         assert has_permission(superadmin, "nonexistent.permission") is True
+
+
+@pytest.mark.django_db
+class TestRequirePermissionDecorator:
+    def test_passes_when_employee_has_permission(self, employee):
+        from ninja import Router as NinjaRouter
+        from ninja.testing import TestClient as NinjaTestClient
+        from permissions.decorators import require_permission
+        from authentication.api import AuthBearer
+        from authentication.jwt_utils import generate_access_token
+
+        perm = Permission.objects.create(codename="employee.view", name="View Employees", service="auth")
+        role = Role.objects.create(name="Viewer", service="auth")
+        role.permissions.add(perm)
+        EmployeeRole.objects.create(employee=employee, role=role)
+
+        test_router = NinjaRouter()
+
+        @test_router.get("/guarded", auth=AuthBearer())
+        @require_permission("employee.view")
+        def guarded(request):
+            return {"ok": True}
+
+        token = generate_access_token(employee)
+        client = NinjaTestClient(test_router)
+        response = client.get("/guarded", headers={"Authorization": f"Bearer {token}"})
+        assert response.status_code == 200
+
+    def test_returns_403_when_employee_lacks_permission(self, employee):
+        from ninja import Router as NinjaRouter
+        from ninja.testing import TestClient as NinjaTestClient
+        from permissions.decorators import require_permission
+        from authentication.api import AuthBearer
+        from authentication.jwt_utils import generate_access_token
+
+        test_router = NinjaRouter()
+
+        @test_router.get("/guarded", auth=AuthBearer())
+        @require_permission("employee.delete")
+        def guarded(request):
+            return {"ok": True}
+
+        token = generate_access_token(employee)
+        client = NinjaTestClient(test_router)
+        response = client.get("/guarded", headers={"Authorization": f"Bearer {token}"})
+        assert response.status_code == 403
+
+    def test_superadmin_bypasses_check(self, superadmin):
+        from ninja import Router as NinjaRouter
+        from ninja.testing import TestClient as NinjaTestClient
+        from permissions.decorators import require_permission
+        from authentication.api import AuthBearer
+        from authentication.jwt_utils import generate_access_token
+
+        test_router = NinjaRouter()
+
+        @test_router.get("/guarded", auth=AuthBearer())
+        @require_permission("employee.delete")
+        def guarded(request):
+            return {"ok": True}
+
+        token = generate_access_token(superadmin)
+        client = NinjaTestClient(test_router)
+        response = client.get("/guarded", headers={"Authorization": f"Bearer {token}"})
+        assert response.status_code == 200
