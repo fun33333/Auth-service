@@ -6,6 +6,26 @@
 
 ## Change History
 
+### 2026-06-15 — RBAC M2 Backend API & Permission Engine
+
+**Feature:** Permission engine, decorator, and 9 RBAC management API endpoints.
+
+**Files added:**
+- `permissions/rbac.py` — `get_effective_permissions`, `has_permission`, `clear_permission_cache`. Redis cache 5-min TTL. Formula: (role perms ∪ allowed overrides) − denied overrides.
+- `permissions/decorators.py` — `@require_permission(codename)`. Raises `HttpError(403)` if denied. SuperAdmin bypasses unconditionally.
+- `permissions/rbac_api.py` — 9 endpoints at `/api/permissions/rbac/*`: roles CRUD (4), employee-role assignment (2), permission overrides (2), effective-permissions (1).
+- `permissions/test_rbac_engine.py` — 31 tests covering engine, decorator, all API endpoints.
+
+**conftest.py:** Added `superadmin` and `superadmin_auth_client` fixtures.
+
+**Routing:** `core/urls.py` — mounted `rbac_router` at `/api/permissions/rbac`.
+
+**Tests:** 51/51 pass (M1 + M2 combined).
+
+**Commits:** `06152cf` → `af23e7f` → `46e4674` → `99a14d7`
+
+---
+
 ### 2026-06-15 — RBAC M1 Foundation
 
 **Feature:** Dynamic RBAC system foundation — 4 new models, migrations, seed command, admin registration.
@@ -63,7 +83,7 @@
 | Tighten CORS / ALLOWED_HOSTS for prod | **Planned** | Currently `*` — acceptable for dev, must gate before prod |
 | Audit log UI wiring | **Planned** | `/api/audit/*` endpoints exist; frontend page is scaffold only |
 | RBAC M1 — Foundation models | **Done** | Permission, Role, EmployeeRole, EmployeePermissionOverride + seed_permissions + admin |
-| RBAC M2 — Backend enforcement | **Planned** | Middleware/decorator to check permissions at API layer |
+| RBAC M2 — Backend enforcement | **Done** | Permission engine + @require_permission decorator + 9 RBAC API endpoints |
 | RBAC M3 — Frontend gating | **Planned** | Frontend permission checks based on JWT/API response |
 | Content-Types-based `Department` parent | **Future** | Replace 3 nullable FKs (org/institution/branch) with Generic FK per arch report §4 |
 
