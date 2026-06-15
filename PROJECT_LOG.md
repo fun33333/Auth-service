@@ -6,6 +6,30 @@
 
 ## Change History
 
+### 2026-06-15 — RBAC M1 Foundation
+
+**Feature:** Dynamic RBAC system foundation — 4 new models, migrations, seed command, admin registration.
+
+**Models added (`permissions/models.py`):**
+- `Permission` — plain model, codename/name/service. Engineering-defined via seed command.
+- `Role` (SoftDeleteModel) — named permission bundle per service. M2M to Permission.
+- `EmployeeRole` (SoftDeleteModel) — assigns a role to an employee. GenericFK scope fields (null = global, Phase 2 will fill for branch/institution scoping).
+- `EmployeePermissionOverride` (SoftDeleteModel) — per-employee grant or block overriding role defaults.
+
+**Migrations:** `0007_rbac_permission`, `0008_rbac_role`, `0009_rbac_employee_role_and_override` — all apply clean.
+
+**Management command:** `permissions/management/commands/seed_permissions.py` — 30 permissions covering all existing API endpoints. Idempotent (safe to re-run).
+
+**Admin:** `PermissionAdmin`, `RoleAdmin`, `EmployeeRoleAdmin`, `EmployeePermissionOverrideAdmin` registered in `permissions/admin.py`.
+
+**Tests:** `permissions/test_rbac_foundation.py` — 20 tests. All pass.
+
+**Commits:** `3e16894` (models) → `c0a516a` (seed command) → `6c79e7c` (admin)
+
+**Note:** 10 pre-existing errors in `permissions/tests.py` (`dept_sector` fixture) — not caused by M1 changes.
+
+---
+
 ### 2026-06-06 — Remove redundant `branch` FK from `EmployeeAssignment`
 
 **Problem:** `EmployeeAssignment.branch` FK was a second source of truth. `designation → department → branch` already provides the branch. Two stored values could silently diverge (impossible assignments).
@@ -38,6 +62,9 @@
 | OpenAPI → TS type generation | **Planned** | Exploit the monorepo layout; sync backend schemas into `frontend/src/types/` |
 | Tighten CORS / ALLOWED_HOSTS for prod | **Planned** | Currently `*` — acceptable for dev, must gate before prod |
 | Audit log UI wiring | **Planned** | `/api/audit/*` endpoints exist; frontend page is scaffold only |
+| RBAC M1 — Foundation models | **Done** | Permission, Role, EmployeeRole, EmployeePermissionOverride + seed_permissions + admin |
+| RBAC M2 — Backend enforcement | **Planned** | Middleware/decorator to check permissions at API layer |
+| RBAC M3 — Frontend gating | **Planned** | Frontend permission checks based on JWT/API response |
 | Content-Types-based `Department` parent | **Future** | Replace 3 nullable FKs (org/institution/branch) with Generic FK per arch report §4 |
 
 ---
