@@ -1,5 +1,6 @@
 import pytest
-from permissions.models import Permission, Role
+from django.core.exceptions import ValidationError
+from permissions.models import Permission, Role, EmployeeRole, EmployeePermissionOverride
 
 
 @pytest.mark.django_db
@@ -51,3 +52,70 @@ class TestRoleModel:
     def test_is_default_false_by_default(self):
         role = Role.objects.create(name="Viewer", service="auth")
         assert role.is_default is False
+
+
+@pytest.mark.django_db
+class TestEmployeeRoleModel:
+    def test_assign_global_role(self, employee):
+        role = Role.objects.create(name="HR Manager", service="auth")
+        er = EmployeeRole.objects.create(employee=employee, role=role)
+        assert er.pk is not None
+        assert er.scope_content_type is None
+        assert er.scope_object_id is None
+
+    def test_str_shows_global(self, employee):
+        role = Role.objects.create(name="HR Manager", service="auth")
+        er = EmployeeRole.objects.create(employee=employee, role=role)
+        assert "(global)" in str(er)
+
+    def test_duplicate_role_assignment_raises(self, employee):
+        role = Role.objects.create(name="HR Manager", service="auth")
+        EmployeeRole.objects.create(employee=employee, role=role)
+        with pytest.raises(ValidationError):
+            EmployeeRole(employee=employee, role=role).full_clean()
+
+    def test_soft_delete_role_assignment(self, employee):
+        role = Role.objects.create(name="HR Manager", service="auth")
+        er = EmployeeRole.objects.create(employee=employee, role=role)
+        er.soft_delete()
+        assert EmployeeRole.objects.filter(pk=er.pk).count() == 0
+        assert EmployeeRole.all_objects.filter(pk=er.pk).count() == 1
+
+
+@pytest.mark.django_db
+class TestEmployeePermissionOverrideModel:
+    def test_create_allow_override(self, employee):
+        perm = Permission.objects.create(
+            codename="department.create", name="Create Department", service="auth"
+        )
+        override = EmployeePermissionOverride.objects.create(
+            employee=employee, permission=perm, is_allowed=True
+        )
+        assert override.is_allowed is True
+        assert "ALLOW" in str(override)
+
+    def test_create_deny_override(self, employee):
+        perm = Permission.objects.create(
+            codename="employee.delete", name="Delete Employee", service="auth"
+        )
+        override = EmployeePermissionOverride.objects.create(
+            employee=employee, permission=perm, is_allowed=False
+        )
+        assert override.is_allowed is False
+        assert "DENY" in str(override)
+
+    def test_duplicate_override_raises(self, employee):
+        perm = Permission.objects.create(
+            codename="employee.delete", name="Delete Employee", service="auth"
+        )
+        EmployeePermissionOverride.objects.create(employee=employee, permission=perm, is_allowed=False)
+        with pytest.raises(ValidationError):
+            EmployeePermissionOverride(employee=employee, permission=perm, is_allowed=True).full_clean()
+
+    def test_scope_fields_null_by_default(self, employee):
+        perm = Permission.objects.create(codename="branch.create", name="Create Branch", service="auth")
+        override = EmployeePermissionOverride.objects.create(
+            employee=employee, permission=perm, is_allowed=True
+        )
+        assert override.scope_content_type is None
+        assert override.scope_object_id is None
