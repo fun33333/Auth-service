@@ -409,10 +409,117 @@ function RoleManagementPanel() {
 }
 
 function OverridesPanel({ employeeId }: { employeeId: string }) {
-  // Stub — full implementation in Task 6
+  const [allPermissions, setAllPermissions] = useState<RbacPermission[]>([]);
+  const [overrides, setOverrides] = useState<Array<{ id: string; permission_codename: string; is_allowed: boolean }>>([]);
+  const [loading, setLoading] = useState(true);
+  const [adding, setAdding] = useState(false);
+  const [selectedPerm, setSelectedPerm] = useState('');
+  const [isAllowed, setIsAllowed] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    rbacService.listPermissions('auth')
+      .then(data => setAllPermissions(data.permissions))
+      .finally(() => setLoading(false));
+  }, [employeeId]);
+
+  const handleAdd = async () => {
+    if (!selectedPerm) return;
+    setSaving(true);
+    try {
+      const ov = await rbacService.createOverride(employeeId, selectedPerm, isAllowed);
+      setOverrides(prev => [...prev, { id: ov.id, permission_codename: ov.permission_codename, is_allowed: ov.is_allowed }]);
+      setSelectedPerm('');
+      setAdding(false);
+      toast.success(`${isAllowed ? 'ALLOW' : 'DENY'} override added`);
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to add override');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleRemove = async (id: string) => {
+    try {
+      await rbacService.removeOverride(id);
+      setOverrides(prev => prev.filter(o => o.id !== id));
+      toast.success('Override removed');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to remove override');
+    }
+  };
+
+  if (loading) return (
+    <div className="bg-slate-50 rounded-xl p-4 mt-1 border border-slate-100 flex items-center gap-2 text-slate-400 text-xs">
+      <Loader2 className="h-4 w-4 animate-spin" /> Loading permissions...
+    </div>
+  );
+
   return (
-    <div className="bg-slate-50 rounded-xl p-4 mt-1 border border-slate-100 text-xs text-slate-400">
-      Overrides panel loading... (employee: {employeeId})
+    <div className="bg-slate-50 rounded-xl p-4 mt-1 border border-slate-100">
+      <div className="flex items-center justify-between mb-3">
+        <h4 className="text-xs font-bold text-slate-600 uppercase tracking-wider">Permission Overrides</h4>
+        <button
+          onClick={() => setAdding(!adding)}
+          className="flex items-center gap-1 px-2.5 py-1 text-[10px] font-semibold bg-theme-800 text-white rounded-lg hover:bg-theme-900 transition"
+        >
+          <Plus className="h-3 w-3" /> Add Override
+        </button>
+      </div>
+
+      {adding && (
+        <div className="flex flex-wrap items-center gap-2 mb-3 p-3 bg-white rounded-lg border border-slate-100">
+          <select
+            value={selectedPerm}
+            onChange={e => setSelectedPerm(e.target.value)}
+            className="flex-1 min-w-40 h-8 px-2 text-xs border border-slate-200 rounded-md"
+          >
+            <option value="">Select permission...</option>
+            {allPermissions.map(p => (
+              <option key={p.codename} value={p.codename}>{p.name} ({p.codename})</option>
+            ))}
+          </select>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setIsAllowed(true)}
+              className={`px-2 py-1 text-[10px] font-semibold rounded ${isAllowed ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}
+            >ALLOW</button>
+            <button
+              type="button"
+              onClick={() => setIsAllowed(false)}
+              className={`px-2 py-1 text-[10px] font-semibold rounded ${!isAllowed ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-500'}`}
+            >DENY</button>
+          </div>
+          <button
+            onClick={handleAdd}
+            disabled={!selectedPerm || saving}
+            className="px-3 h-8 text-[10px] font-semibold bg-theme-600 text-white rounded-md disabled:opacity-50 flex items-center gap-1"
+          >
+            {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />} Save
+          </button>
+        </div>
+      )}
+
+      {overrides.length === 0 ? (
+        <p className="text-[10px] text-slate-400">No overrides. Use &quot;Add Override&quot; to grant or block specific permissions.</p>
+      ) : (
+        <div className="space-y-1">
+          {overrides.map(ov => (
+            <div key={ov.id} className="flex items-center justify-between p-2 bg-white rounded-lg border border-slate-100">
+              <div className="flex items-center gap-2">
+                <span className={`px-1.5 py-0.5 text-[10px] font-bold rounded ${ov.is_allowed ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
+                  {ov.is_allowed ? 'ALLOW' : 'DENY'}
+                </span>
+                <span className="text-[11px] font-mono text-slate-600">{ov.permission_codename}</span>
+              </div>
+              <button onClick={() => handleRemove(ov.id)} className="text-slate-400 hover:text-rose-500 transition">
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
