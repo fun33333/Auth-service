@@ -26,16 +26,25 @@
   - **Dynamic role dropdown** in provision modal — fetches from API for auth service; HDMS/VMS remain hardcoded. Password section hidden for auth (no credentials needed).
   - **OverridesPanel** — per-employee expandable panel; ALLOW/DENY individual permissions inline.
 
-**Tests:** 38/38 pass (31 M2 + 7 new M3 backend tests). TypeScript: 0 errors.
+**Security fixes (post-testing):**
+- `AssignRoleIn.employee_id` changed from `uuid.UUID` to `str` — frontend sends varchar employee code (e.g. `IAK-0001`), not UUID. Consistent with HDMS/VMS grant endpoints.
+- `SuperAdminBearer` added to RBAC router — all 12 RBAC management endpoints now require superadmin JWT. Regular employees get 401.
+- 5 security tests added confirming employee + unauthenticated access is blocked.
+
+**Tests:** 43/43 pass. TypeScript: 0 errors.
 
 **Acceptance criteria:**
 - [x] A: Auth tab visible on `/service` page alongside HDMS/VMS
 - [x] B: Admin can create/edit/delete roles with permission checkboxes — no code deployment
-- [x] C: Provision modal role dropdown is API-driven for auth service
+- [x] C: Provision modal role dropdown is API-driven for auth service; role assignment posts correctly
 - [x] D: Per-employee overrides panel functional (add ALLOW/DENY, remove)
 
+**Known gaps (M4 backlog):**
+- RBAC permissions not enforced on non-RBAC endpoints (`/api/employees/*`, `/api/departments/*`, etc.) — any authenticated employee can call them
+- Missing edge case tests (duplicate assignment 400, nonexistent employee 404, etc.)
+
 **Branch:** `feat/rbac-m3-frontend`
-**Commits:** `2048ade` → `5630a9e` → `d332b09` → `16d4ec1` → `404c357` → `398b074`
+**Commits:** `2048ade` → `5630a9e` → `d332b09` → `16d4ec1` → `404c357` → `398b074` → `d4ebffe` → `15f75a2`
 
 ---
 
