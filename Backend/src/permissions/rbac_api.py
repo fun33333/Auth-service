@@ -66,7 +66,7 @@ class EmployeeRoleOut(Schema):
 
 
 class AssignRoleIn(Schema):
-    employee_id: uuid.UUID
+    employee_id: str  # varchar employee code e.g. "AIT01-G-26-H-0001"
     role_id: uuid.UUID
 
 
@@ -179,7 +179,7 @@ def delete_role(request: HttpRequest, role_id: uuid.UUID):
 def assign_role(request: HttpRequest, payload: AssignRoleIn):
     from employees.models import Employee
     try:
-        employee = Employee.objects.get(pk=payload.employee_id, is_deleted=False)
+        employee = Employee.objects.get(employee_id=payload.employee_id, is_deleted=False)
     except Employee.DoesNotExist:
         return 404, {"error": "Employee not found"}
     try:

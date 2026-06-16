@@ -220,7 +220,7 @@ class TestEmployeeRoleAssignmentAPI:
         role = Role.objects.create(name="HR Manager", service="auth")
         response = sa_client.post(
             "/api/permissions/rbac/employee-roles",
-            data=f'{{"employee_id": "{employee.id}", "role_id": "{role.id}"}}',
+            data=f'{{"employee_id": "{employee.employee_id}", "role_id": "{role.id}"}}',
             content_type="application/json",
         )
         assert response.status_code == 201
@@ -232,7 +232,7 @@ class TestEmployeeRoleAssignmentAPI:
         role = Role.objects.create(name="HR Manager", service="auth")
         sa_client.post(
             "/api/permissions/rbac/employee-roles",
-            data=f'{{"employee_id": "{employee.id}", "role_id": "{role.id}"}}',
+            data=f'{{"employee_id": "{employee.employee_id}", "role_id": "{role.id}"}}',
             content_type="application/json",
         )
         assert cache.get(_CACHE_KEY.format(str(employee.id))) is None
@@ -248,7 +248,7 @@ class TestEmployeeRoleAssignmentAPI:
         fake_id = "00000000-0000-0000-0000-000000000000"
         response = sa_client.post(
             "/api/permissions/rbac/employee-roles",
-            data=f'{{"employee_id": "{employee.id}", "role_id": "{fake_id}"}}',
+            data=f'{{"employee_id": "{employee.employee_id}", "role_id": "{fake_id}"}}',
             content_type="application/json",
         )
         assert response.status_code == 404
