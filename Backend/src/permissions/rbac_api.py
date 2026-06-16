@@ -90,14 +90,42 @@ class EffectivePermissionsOut(Schema):
     has_all_permissions: bool = False
 
 
+class PermissionOut(Schema):
+    codename: str
+    name: str
+    service: str
+    description: str
+
+
+class PermissionListOut(Schema):
+    permissions: List[PermissionOut]
+    count: int
+
+
+class RoleDetailOut(Schema):
+    id: str
+    name: str
+    service: str
+    is_default: bool
+    description: str
+    permission_codenames: List[str]
+
+
+class EmployeeRoleListOut(Schema):
+    assignments: List[EmployeeRoleOut]
+    count: int
+
+
 # ── Roles CRUD ────────────────────────────────────────────────────────────────
 
 @router.get("/roles", response={200: RoleListOut, 401: ErrorOut}, auth=AuthBearer())
-def list_roles(request: HttpRequest):
-    roles = Role.objects.all()
+def list_roles(request: HttpRequest, service: Optional[str] = None):
+    qs = Role.objects.all()
+    if service:
+        qs = qs.filter(service=service)
     return 200, RoleListOut(
-        roles=[RoleOut.from_role(r) for r in roles],
-        count=roles.count(),
+        roles=[RoleOut.from_role(r) for r in qs],
+        count=qs.count(),
     )
 
 
@@ -218,6 +246,58 @@ def remove_override(request: HttpRequest, override_id: uuid.UUID):
     clear_permission_cache(str(override.employee_id))
     override.soft_delete()
     return 200, {"message": "Override removed"}
+
+
+# ── Permissions List ──────────────────────────────────────────────────────────
+
+@router.get("/permissions", response={200: PermissionListOut, 401: ErrorOut}, auth=AuthBearer())
+def list_permissions(request: HttpRequest, service: Optional[str] = None):
+    qs = Permission.objects.all()
+    if service:
+        qs = qs.filter(service=service)
+    return 200, PermissionListOut(
+        permissions=[PermissionOut(codename=p.codename, name=p.name, service=p.service, description=p.description) for p in qs],
+        count=qs.count(),
+    )
+
+
+# ── Role Detail ───────────────────────────────────────────────────────────────
+
+@router.get("/roles/{role_id}", response={200: RoleDetailOut, 404: ErrorOut, 401: ErrorOut}, auth=AuthBearer())
+def get_role_detail(request: HttpRequest, role_id: uuid.UUID):
+    try:
+        role = Role.objects.get(pk=role_id)
+    except Role.DoesNotExist:
+        return 404, {"error": "Role not found"}
+    return 200, RoleDetailOut(
+        id=str(role.id),
+        name=role.name,
+        service=role.service,
+        is_default=role.is_default,
+        description=role.description,
+        permission_codenames=list(role.permissions.values_list("codename", flat=True)),
+    )
+
+
+# ── Employee Roles List ───────────────────────────────────────────────────────
+
+@router.get("/employee-roles", response={200: EmployeeRoleListOut, 401: ErrorOut}, auth=AuthBearer())
+def list_employee_roles(request: HttpRequest, employee_id: Optional[uuid.UUID] = None):
+    qs = EmployeeRole.objects.filter(is_deleted=False).select_related("role", "employee")
+    if employee_id:
+        qs = qs.filter(employee_id=employee_id)
+    return 200, EmployeeRoleListOut(
+        assignments=[
+            EmployeeRoleOut(
+                id=str(er.id),
+                employee_id=str(er.employee_id),
+                role_id=str(er.role_id),
+                role_name=er.role.name,
+                granted_at=er.granted_at.isoformat(),
+            ) for er in qs
+        ],
+        count=qs.count(),
+    )
 
 
 # ── Effective Permissions ─────────────────────────────────────────────────────

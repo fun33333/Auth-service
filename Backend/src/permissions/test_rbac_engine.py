@@ -322,3 +322,68 @@ class TestEffectivePermissionsAPI:
         fake_id = "00000000-0000-0000-0000-000000000000"
         response = sa_client.get(f"/api/permissions/rbac/effective-permissions/{fake_id}")
         assert response.status_code == 404
+
+
+@pytest.mark.django_db
+class TestPermissionsListAPI:
+    def test_list_permissions_returns_all(self, sa_client):
+        Permission.objects.create(codename="employee.view", name="View Employees", service="auth")
+        Permission.objects.create(codename="branch.view", name="View Branches", service="auth")
+        response = sa_client.get("/api/permissions/rbac/permissions")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["count"] >= 2
+        codenames = [p["codename"] for p in data["permissions"]]
+        assert "employee.view" in codenames
+
+    def test_list_permissions_filter_by_service(self, sa_client):
+        Permission.objects.create(codename="employee.view", name="View Employees", service="auth")
+        Permission.objects.create(codename="ticket.view", name="View Tickets", service="hdms")
+        response = sa_client.get("/api/permissions/rbac/permissions?service=auth")
+        assert response.status_code == 200
+        for p in response.json()["permissions"]:
+            assert p["service"] == "auth"
+
+
+@pytest.mark.django_db
+class TestRoleDetailAPI:
+    def test_get_role_detail_returns_permission_codenames(self, sa_client):
+        perm = Permission.objects.create(codename="branch.view", name="View Branch", service="auth")
+        role = Role.objects.create(name="Viewer", service="auth")
+        role.permissions.add(perm)
+        response = sa_client.get(f"/api/permissions/rbac/roles/{role.id}")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["name"] == "Viewer"
+        assert "branch.view" in data["permission_codenames"]
+
+    def test_get_role_detail_404_on_missing(self, sa_client):
+        response = sa_client.get("/api/permissions/rbac/roles/00000000-0000-0000-0000-000000000000")
+        assert response.status_code == 404
+
+
+@pytest.mark.django_db
+class TestEmployeeRolesListAPI:
+    def test_list_all_employee_roles(self, sa_client, employee):
+        role = Role.objects.create(name="HR Manager", service="auth")
+        EmployeeRole.objects.create(employee=employee, role=role)
+        response = sa_client.get("/api/permissions/rbac/employee-roles")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["count"] >= 1
+
+    def test_filter_by_employee_id(self, sa_client, employee):
+        role = Role.objects.create(name="HR Manager", service="auth")
+        EmployeeRole.objects.create(employee=employee, role=role)
+        response = sa_client.get(f"/api/permissions/rbac/employee-roles?employee_id={employee.id}")
+        assert response.status_code == 200
+        results = response.json()["assignments"]
+        assert all(r["employee_id"] == str(employee.id) for r in results)
+
+    def test_list_roles_service_filter(self, sa_client):
+        Role.objects.create(name="Auth Role", service="auth")
+        Role.objects.create(name="HDMS Role", service="hdms")
+        response = sa_client.get("/api/permissions/rbac/roles?service=auth")
+        assert response.status_code == 200
+        for r in response.json()["roles"]:
+            assert r["service"] == "auth"
