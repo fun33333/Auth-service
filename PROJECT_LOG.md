@@ -6,6 +6,39 @@
 
 ## Change History
 
+### 2026-06-16 — RBAC M3 Frontend: Auth Subsystem Tab + Role Management UI
+
+**Feature:** Admin-facing UI for RBAC — roles, employee assignments, and per-employee permission overrides. No more developer involvement for runtime role changes.
+
+**Backend additions (`permissions/rbac_api.py`):**
+- `GET /api/permissions/rbac/permissions?service=` — list all permissions, filterable by service
+- `GET /api/permissions/rbac/roles/{role_id}` — role detail with `permission_codenames[]`
+- `GET /api/permissions/rbac/employee-roles?employee_id=` — list assignments, filterable by employee
+- `GET /api/permissions/rbac/roles?service=` — updated existing endpoint to accept service filter
+
+**Frontend additions:**
+
+- `frontend/src/services/rbacService.ts` (new) — typed API client wrapping `fetchWithAuth` for all 12 RBAC operations (listPermissions, listRoles, getRole, createRole, updateRole, deleteRole, listEmployeeRoles, assignRole, removeRoleAssignment, createOverride, removeOverride, getEffectivePermissions).
+
+- `frontend/src/app/service/page.tsx` — major extension:
+  - **Auth tab** added alongside HDMS/VMS tabs. Shows employee-role assignment table.
+  - **RoleManagementPanel** — create/edit/delete auth roles with permission checkbox modal.
+  - **Dynamic role dropdown** in provision modal — fetches from API for auth service; HDMS/VMS remain hardcoded. Password section hidden for auth (no credentials needed).
+  - **OverridesPanel** — per-employee expandable panel; ALLOW/DENY individual permissions inline.
+
+**Tests:** 38/38 pass (31 M2 + 7 new M3 backend tests). TypeScript: 0 errors.
+
+**Acceptance criteria:**
+- [x] A: Auth tab visible on `/service` page alongside HDMS/VMS
+- [x] B: Admin can create/edit/delete roles with permission checkboxes — no code deployment
+- [x] C: Provision modal role dropdown is API-driven for auth service
+- [x] D: Per-employee overrides panel functional (add ALLOW/DENY, remove)
+
+**Branch:** `feat/rbac-m3-frontend`
+**Commits:** `2048ade` → `5630a9e` → `d332b09` → `16d4ec1` → `404c357` → `398b074`
+
+---
+
 ### 2026-06-15 — RBAC M2 Backend API & Permission Engine
 
 **Feature:** Permission engine, decorator, and 9 RBAC management API endpoints.
