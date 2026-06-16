@@ -2,11 +2,22 @@ import uuid
 from typing import Optional, List
 from django.http import HttpRequest
 from ninja import Router, Schema
-from authentication.api import AuthBearer
+from ninja.security import HttpBearer
 from permissions.models import Permission, Role, EmployeeRole, EmployeePermissionOverride
 from permissions.rbac import clear_permission_cache
 
-router = Router(tags=["RBAC Management"])
+
+class SuperAdminBearer(HttpBearer):
+    def authenticate(self, request: HttpRequest, token: str):
+        from authentication.api import AuthBearer
+        from authentication.superadmin_models import SuperAdmin
+        user = AuthBearer().authenticate(request, token)
+        if not isinstance(user, SuperAdmin):
+            return None
+        return user
+
+
+router = Router(tags=["RBAC Management"], auth=SuperAdminBearer())
 
 
 # ── Schemas ───────────────────────────────────────────────────────────────────
@@ -118,7 +129,7 @@ class EmployeeRoleListOut(Schema):
 
 # ── Roles CRUD ────────────────────────────────────────────────────────────────
 
-@router.get("/roles", response={200: RoleListOut, 401: ErrorOut}, auth=AuthBearer())
+@router.get("/roles", response={200: RoleListOut, 401: ErrorOut})
 def list_roles(request: HttpRequest, service: Optional[str] = None):
     qs = Role.objects.all()
     if service:
@@ -129,7 +140,7 @@ def list_roles(request: HttpRequest, service: Optional[str] = None):
     )
 
 
-@router.post("/roles", response={201: RoleOut, 400: ErrorOut, 401: ErrorOut}, auth=AuthBearer())
+@router.post("/roles", response={201: RoleOut, 400: ErrorOut, 401: ErrorOut})
 def create_role(request: HttpRequest, payload: RoleCreateIn):
     if Role.objects.filter(name=payload.name, service=payload.service).exists():
         return 400, {"error": f"Role '{payload.name}' already exists for service '{payload.service}'"}
@@ -143,7 +154,7 @@ def create_role(request: HttpRequest, payload: RoleCreateIn):
     return 201, RoleOut.from_role(role)
 
 
-@router.patch("/roles/{role_id}", response={200: RoleOut, 404: ErrorOut, 401: ErrorOut}, auth=AuthBearer())
+@router.patch("/roles/{role_id}", response={200: RoleOut, 404: ErrorOut, 401: ErrorOut})
 def update_role(request: HttpRequest, role_id: uuid.UUID, payload: RoleUpdateIn):
     try:
         role = Role.objects.get(pk=role_id)
@@ -161,7 +172,7 @@ def update_role(request: HttpRequest, role_id: uuid.UUID, payload: RoleUpdateIn)
     return 200, RoleOut.from_role(role)
 
 
-@router.delete("/roles/{role_id}", response={200: MessageOut, 404: ErrorOut, 401: ErrorOut}, auth=AuthBearer())
+@router.delete("/roles/{role_id}", response={200: MessageOut, 404: ErrorOut, 401: ErrorOut})
 def delete_role(request: HttpRequest, role_id: uuid.UUID):
     try:
         role = Role.objects.get(pk=role_id)
@@ -175,7 +186,7 @@ def delete_role(request: HttpRequest, role_id: uuid.UUID):
 
 # ── Employee Role Assignments ─────────────────────────────────────────────────
 
-@router.post("/employee-roles", response={201: EmployeeRoleOut, 404: ErrorOut, 400: ErrorOut, 401: ErrorOut}, auth=AuthBearer())
+@router.post("/employee-roles", response={201: EmployeeRoleOut, 404: ErrorOut, 400: ErrorOut, 401: ErrorOut})
 def assign_role(request: HttpRequest, payload: AssignRoleIn):
     from employees.models import Employee
     try:
@@ -199,7 +210,7 @@ def assign_role(request: HttpRequest, payload: AssignRoleIn):
     )
 
 
-@router.delete("/employee-roles/{er_id}", response={200: MessageOut, 404: ErrorOut, 401: ErrorOut}, auth=AuthBearer())
+@router.delete("/employee-roles/{er_id}", response={200: MessageOut, 404: ErrorOut, 401: ErrorOut})
 def remove_role_assignment(request: HttpRequest, er_id: uuid.UUID):
     try:
         er = EmployeeRole.objects.get(pk=er_id)
@@ -212,7 +223,7 @@ def remove_role_assignment(request: HttpRequest, er_id: uuid.UUID):
 
 # ── Permission Overrides ──────────────────────────────────────────────────────
 
-@router.post("/overrides", response={201: OverrideOut, 404: ErrorOut, 400: ErrorOut, 401: ErrorOut}, auth=AuthBearer())
+@router.post("/overrides", response={201: OverrideOut, 404: ErrorOut, 400: ErrorOut, 401: ErrorOut})
 def create_override(request: HttpRequest, payload: CreateOverrideIn):
     from employees.models import Employee
     try:
@@ -237,7 +248,7 @@ def create_override(request: HttpRequest, payload: CreateOverrideIn):
     )
 
 
-@router.delete("/overrides/{override_id}", response={200: MessageOut, 404: ErrorOut, 401: ErrorOut}, auth=AuthBearer())
+@router.delete("/overrides/{override_id}", response={200: MessageOut, 404: ErrorOut, 401: ErrorOut})
 def remove_override(request: HttpRequest, override_id: uuid.UUID):
     try:
         override = EmployeePermissionOverride.objects.get(pk=override_id)
@@ -250,7 +261,7 @@ def remove_override(request: HttpRequest, override_id: uuid.UUID):
 
 # ── Permissions List ──────────────────────────────────────────────────────────
 
-@router.get("/permissions", response={200: PermissionListOut, 401: ErrorOut}, auth=AuthBearer())
+@router.get("/permissions", response={200: PermissionListOut, 401: ErrorOut})
 def list_permissions(request: HttpRequest, service: Optional[str] = None):
     qs = Permission.objects.all()
     if service:
@@ -263,7 +274,7 @@ def list_permissions(request: HttpRequest, service: Optional[str] = None):
 
 # ── Role Detail ───────────────────────────────────────────────────────────────
 
-@router.get("/roles/{role_id}", response={200: RoleDetailOut, 404: ErrorOut, 401: ErrorOut}, auth=AuthBearer())
+@router.get("/roles/{role_id}", response={200: RoleDetailOut, 404: ErrorOut, 401: ErrorOut})
 def get_role_detail(request: HttpRequest, role_id: uuid.UUID):
     try:
         role = Role.objects.get(pk=role_id)
@@ -281,7 +292,7 @@ def get_role_detail(request: HttpRequest, role_id: uuid.UUID):
 
 # ── Employee Roles List ───────────────────────────────────────────────────────
 
-@router.get("/employee-roles", response={200: EmployeeRoleListOut, 401: ErrorOut}, auth=AuthBearer())
+@router.get("/employee-roles", response={200: EmployeeRoleListOut, 401: ErrorOut})
 def list_employee_roles(request: HttpRequest, employee_id: Optional[uuid.UUID] = None):
     qs = EmployeeRole.objects.filter(is_deleted=False).select_related("role", "employee")
     if employee_id:
@@ -302,7 +313,7 @@ def list_employee_roles(request: HttpRequest, employee_id: Optional[uuid.UUID] =
 
 # ── Effective Permissions ─────────────────────────────────────────────────────
 
-@router.get("/effective-permissions/{target_id}", response={200: EffectivePermissionsOut, 404: ErrorOut, 401: ErrorOut}, auth=AuthBearer())
+@router.get("/effective-permissions/{target_id}", response={200: EffectivePermissionsOut, 404: ErrorOut, 401: ErrorOut})
 def get_effective_permissions_view(request: HttpRequest, target_id: uuid.UUID, is_superadmin: bool = False):
     from authentication.superadmin_models import SuperAdmin
     from permissions.rbac import get_effective_permissions

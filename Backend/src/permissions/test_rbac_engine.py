@@ -387,3 +387,48 @@ class TestEmployeeRolesListAPI:
         assert response.status_code == 200
         for r in response.json()["roles"]:
             assert r["service"] == "auth"
+
+
+@pytest.mark.django_db
+class TestRBACAuthorizationGuard:
+    """Regular employees must not access any RBAC management endpoint."""
+
+    def test_employee_cannot_list_roles(self, auth_client):
+        client, _ = auth_client
+        assert client.get("/api/permissions/rbac/roles").status_code == 401
+
+    def test_employee_cannot_create_role(self, auth_client):
+        client, _ = auth_client
+        response = client.post(
+            "/api/permissions/rbac/roles",
+            data='{"name": "Evil Role", "service": "auth", "description": ""}',
+            content_type="application/json",
+        )
+        assert response.status_code == 401
+
+    def test_employee_cannot_assign_role(self, auth_client, employee):
+        client, _ = auth_client
+        role = Role.objects.create(name="HR Manager", service="auth")
+        response = client.post(
+            "/api/permissions/rbac/employee-roles",
+            data=f'{{"employee_id": "{employee.employee_id}", "role_id": "{role.id}"}}',
+            content_type="application/json",
+        )
+        assert response.status_code == 401
+
+    def test_employee_cannot_create_override(self, auth_client, employee):
+        client, _ = auth_client
+        Permission.objects.create(codename="branch.create", name="Create Branch", service="auth")
+        response = client.post(
+            "/api/permissions/rbac/overrides",
+            data=f'{{"employee_id": "{employee.id}", "permission_codename": "branch.create", "is_allowed": true}}',
+            content_type="application/json",
+        )
+        assert response.status_code == 401
+
+    def test_unauthenticated_cannot_access(self):
+        from django.test import Client as DjangoClient
+        c = DjangoClient()
+        assert c.get("/api/permissions/rbac/roles").status_code == 401
+        assert c.get("/api/permissions/rbac/permissions").status_code == 401
+        assert c.get("/api/permissions/rbac/employee-roles").status_code == 401
