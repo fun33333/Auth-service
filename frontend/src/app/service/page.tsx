@@ -6,6 +6,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { fetchWithAuth } from '@/utils/api';
+import { rbacService, type EmployeeRoleAssignment } from '@/services/rbacService';
 import {
   Shield,
   Eye,
@@ -21,7 +22,8 @@ import {
   Power,
   X,
   Calendar,
-  Building
+  Building,
+  Edit
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
@@ -200,7 +202,74 @@ const accessFormSchema = z.object({
 type AccessFormValues = z.infer<typeof accessFormSchema>;
 
 // ==========================================
-// 4. INLINE COMPONENT: ASYNC SEARCH SELECT
+// 4. AUTH TAB COMPONENTS
+// ==========================================
+
+function OverridesPanel({ employeeId }: { employeeId: string }) {
+  // Stub — full implementation in Task 6
+  return (
+    <div className="bg-slate-50 rounded-xl p-4 mt-1 border border-slate-100 text-xs text-slate-400">
+      Overrides panel loading... (employee: {employeeId})
+    </div>
+  );
+}
+
+function AuthAssignmentRow({
+  assignment,
+  onRemove,
+}: {
+  assignment: EmployeeRoleAssignment;
+  onRemove: (id: string) => Promise<void>;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const [removing, setRemoving] = useState(false);
+
+  return (
+    <>
+      <tr className="hover:bg-slate-50/50 transition">
+        <td className="px-6 py-4 font-mono text-[11px]">{assignment.employee_id}</td>
+        <td className="px-6 py-4">
+          <span className="px-2 py-1 bg-theme-50 text-theme-700 text-[10px] font-bold rounded-md uppercase tracking-wider">
+            {assignment.role_name}
+          </span>
+        </td>
+        <td className="px-6 py-4 font-mono text-[10px] text-slate-400">
+          {new Date(assignment.granted_at).toLocaleDateString()}
+        </td>
+        <td className="px-6 py-4 text-right">
+          <div className="flex items-center justify-end gap-2">
+            <button
+              onClick={() => setExpanded(!expanded)}
+              className="inline-flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-semibold border border-slate-200 rounded-lg hover:bg-slate-50 transition text-slate-600"
+            >
+              <Edit className="h-3 w-3" /> Overrides
+            </button>
+            <button
+              onClick={async () => {
+                setRemoving(true);
+                try { await onRemove(assignment.id); } finally { setRemoving(false); }
+              }}
+              disabled={removing}
+              className="inline-flex items-center justify-center p-2 rounded-lg border border-rose-100 text-rose-600 hover:bg-rose-50 transition"
+            >
+              {removing ? <Loader2 className="h-4 w-4 animate-spin" /> : <X className="h-4 w-4" />}
+            </button>
+          </div>
+        </td>
+      </tr>
+      {expanded && (
+        <tr>
+          <td colSpan={4} className="px-6 pb-4">
+            <OverridesPanel employeeId={assignment.employee_id} />
+          </td>
+        </tr>
+      )}
+    </>
+  );
+}
+
+// ==========================================
+// 5. INLINE COMPONENT: ASYNC SEARCH SELECT
 // ==========================================
 function AsyncSearchSelect({
   fetchOptions,
@@ -264,10 +333,12 @@ export default function ServiceAccessManagement() {
   const [users, setUsers] = useState<any[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
-  const [selectedSubsystem, setSelectedSubsystem] = useState<'hdms' | 'vms'>('hdms');
+  const [selectedSubsystem, setSelectedSubsystem] = useState<'hdms' | 'vms' | 'auth'>('hdms');
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [authAssignments, setAuthAssignments] = useState<EmployeeRoleAssignment[]>([]);
+  const [loadingAuth, setLoadingAuth] = useState(false);
 
   const currentAdmin = { id: 1, name: "Alexander Wright (Superadmin)" };
 
@@ -326,7 +397,15 @@ export default function ServiceAccessManagement() {
   };
 
   useEffect(() => {
-    fetchUsersList();
+    if (selectedSubsystem === 'auth') {
+      setLoadingAuth(true);
+      rbacService.listEmployeeRoles()
+        .then(data => setAuthAssignments(data.assignments))
+        .catch(() => setAuthAssignments([]))
+        .finally(() => setLoadingAuth(false));
+    } else {
+      fetchUsersList();
+    }
   }, [selectedSubsystem, searchQuery, roleFilter, statusFilter]);
 
   useEffect(() => {
@@ -433,10 +512,18 @@ export default function ServiceAccessManagement() {
                 >
                   VMS Subsystem
                 </button>
+                <button
+                  onClick={() => { setSelectedSubsystem('auth'); setRoleFilter(''); }}
+                  className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all ${selectedSubsystem === 'auth' ? 'bg-white text-theme-700 shadow-sm border border-slate-200' : 'text-slate-600 hover:text-slate-800'}`}
+                >
+                  Auth Subsystem
+                </button>
               </div>
               
               <div className="text-xs text-slate-400 font-mono">
-                {users.length} provisioned {selectedSubsystem.toUpperCase()} credentials
+                {selectedSubsystem === 'auth'
+                  ? `${authAssignments.length} auth role assignments`
+                  : `${users.length} provisioned ${selectedSubsystem.toUpperCase()} credentials`}
               </div>
             </div>
 
@@ -512,78 +599,116 @@ export default function ServiceAccessManagement() {
 
           {/* Table Listing */}
           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-            {loadingUsers ? (
-              <div className="p-20 flex flex-col items-center justify-center gap-3 text-slate-400">
-                <Loader2 className="h-8 w-8 animate-spin text-theme-500" />
-                <span className="text-xs font-medium">Resolving access profiles directory...</span>
-              </div>
-            ) : users.length === 0 ? (
-              <div className="p-20 text-center text-slate-400 text-xs font-medium">
-                No active service access records found matching the criteria.
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="bg-slate-50/75 border-b border-slate-100 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                      <th className="px-6 py-4">Employee Details</th>
-                      <th className="px-6 py-4">System Service</th>
-                      <th className="px-6 py-4">Assigned Role</th>
-                      <th className="px-6 py-4">Department</th>
-                      <th className="px-6 py-4">Status</th>
-                      <th className="px-6 py-4">Last Interaction</th>
-                      <th className="px-6 py-4">Provision Date</th>
-                      <th className="px-6 py-4 text-right">Access Controls</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-50 text-xs text-slate-600">
-                    {users.map((user) => (
-                      <tr key={user.id} className="hover:bg-slate-50/50 transition">
-                        <td className="px-6 py-4">
-                          <div className="font-semibold text-slate-800">{user.name}</div>
-                          <div className="text-[10px] text-slate-400 font-mono mt-0.5">{user.employee_code}</div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className="px-2 py-1 bg-theme-50 text-theme-700 text-[10px] font-bold rounded-md uppercase tracking-wider">
-                            {selectedSubsystem}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 font-mono text-[11px] capitalize">{user.role}</td>
-                        <td className="px-6 py-4 text-slate-500">{user.department || '—'}</td>
-                        <td className="px-6 py-4">
-                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold ${user.status === 'active' ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>
-                            <span className={`w-1.5 h-1.5 rounded-full ${user.status === 'active' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
-                            {user.status}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 font-mono text-[10px] text-slate-400">
-                          {user.last_login ? new Date(user.last_login).toLocaleString() : 'Never'}
-                        </td>
-                        <td className="px-6 py-4 font-mono text-[10px] text-slate-400">
-                          {user.join_date ? new Date(user.join_date).toLocaleDateString() : '—'}
-                        </td>
-                        <td className="px-6 py-4 text-right">
-                          <button
-                            onClick={async () => {
-                              try {
-                                const res = await accessService.toggleAccess(user.employee_code, selectedSubsystem);
-                                toast.success(res.message || "Successfully toggled access status.");
-                                fetchUsersList();
-                              } catch (err: any) {
-                                toast.error(err.message || "Failed to toggle status.");
-                              }
-                            }}
-                            className={`inline-flex items-center justify-center p-2 rounded-lg border transition ${user.status === 'active' ? 'border-rose-100 text-rose-600 hover:bg-rose-50' : 'border-emerald-100 text-emerald-600 hover:bg-emerald-50'}`}
-                            title={user.status === 'active' ? 'Deactivate Access' : 'Activate Access'}
-                          >
-                            <Power className="h-4 w-4" />
-                          </button>
-                        </td>
+            {selectedSubsystem === 'auth' ? (
+              loadingAuth ? (
+                <div className="p-20 flex flex-col items-center justify-center gap-3 text-slate-400">
+                  <Loader2 className="h-8 w-8 animate-spin text-theme-500" />
+                  <span className="text-xs font-medium">Loading Auth role assignments...</span>
+                </div>
+              ) : authAssignments.length === 0 ? (
+                <div className="p-20 text-center text-slate-400 text-xs font-medium">
+                  No Auth service role assignments found.
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-slate-50/75 border-b border-slate-100 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                        <th className="px-6 py-4">Employee ID</th>
+                        <th className="px-6 py-4">Role</th>
+                        <th className="px-6 py-4">Granted At</th>
+                        <th className="px-6 py-4 text-right">Actions</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody className="divide-y divide-slate-50 text-xs text-slate-600">
+                      {authAssignments.map((assignment) => (
+                        <AuthAssignmentRow
+                          key={assignment.id}
+                          assignment={assignment}
+                          onRemove={async (id) => {
+                            await rbacService.removeRoleAssignment(id);
+                            setAuthAssignments(prev => prev.filter(a => a.id !== id));
+                          }}
+                        />
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )
+            ) : (
+              loadingUsers ? (
+                <div className="p-20 flex flex-col items-center justify-center gap-3 text-slate-400">
+                  <Loader2 className="h-8 w-8 animate-spin text-theme-500" />
+                  <span className="text-xs font-medium">Resolving access profiles directory...</span>
+                </div>
+              ) : users.length === 0 ? (
+                <div className="p-20 text-center text-slate-400 text-xs font-medium">
+                  No active service access records found matching the criteria.
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-slate-50/75 border-b border-slate-100 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                        <th className="px-6 py-4">Employee Details</th>
+                        <th className="px-6 py-4">System Service</th>
+                        <th className="px-6 py-4">Assigned Role</th>
+                        <th className="px-6 py-4">Department</th>
+                        <th className="px-6 py-4">Status</th>
+                        <th className="px-6 py-4">Last Interaction</th>
+                        <th className="px-6 py-4">Provision Date</th>
+                        <th className="px-6 py-4 text-right">Access Controls</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-50 text-xs text-slate-600">
+                      {users.map((user) => (
+                        <tr key={user.id} className="hover:bg-slate-50/50 transition">
+                          <td className="px-6 py-4">
+                            <div className="font-semibold text-slate-800">{user.name}</div>
+                            <div className="text-[10px] text-slate-400 font-mono mt-0.5">{user.employee_code}</div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className="px-2 py-1 bg-theme-50 text-theme-700 text-[10px] font-bold rounded-md uppercase tracking-wider">
+                              {selectedSubsystem}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 font-mono text-[11px] capitalize">{user.role}</td>
+                          <td className="px-6 py-4 text-slate-500">{user.department || '—'}</td>
+                          <td className="px-6 py-4">
+                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold ${user.status === 'active' ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>
+                              <span className={`w-1.5 h-1.5 rounded-full ${user.status === 'active' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+                              {user.status}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 font-mono text-[10px] text-slate-400">
+                            {user.last_login ? new Date(user.last_login).toLocaleString() : 'Never'}
+                          </td>
+                          <td className="px-6 py-4 font-mono text-[10px] text-slate-400">
+                            {user.join_date ? new Date(user.join_date).toLocaleDateString() : '—'}
+                          </td>
+                          <td className="px-6 py-4 text-right">
+                            <button
+                              onClick={async () => {
+                                try {
+                                  const res = await accessService.toggleAccess(user.employee_code, selectedSubsystem);
+                                  toast.success(res.message || "Successfully toggled access status.");
+                                  fetchUsersList();
+                                } catch (err: any) {
+                                  toast.error(err.message || "Failed to toggle status.");
+                                }
+                              }}
+                              className={`inline-flex items-center justify-center p-2 rounded-lg border transition ${user.status === 'active' ? 'border-rose-100 text-rose-600 hover:bg-rose-50' : 'border-emerald-100 text-emerald-600 hover:bg-emerald-50'}`}
+                              title={user.status === 'active' ? 'Deactivate Access' : 'Activate Access'}
+                            >
+                              <Power className="h-4 w-4" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )
             )}
           </div>
         </main>
