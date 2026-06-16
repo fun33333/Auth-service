@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { fetchWithAuth } from '@/utils/api';
-import { rbacService, type EmployeeRoleAssignment } from '@/services/rbacService';
+import { rbacService, type EmployeeRoleAssignment, type RbacRole, type RbacRoleDetail, type RbacPermission } from '@/services/rbacService';
 import {
   Shield,
   Eye,
@@ -204,6 +204,191 @@ type AccessFormValues = z.infer<typeof accessFormSchema>;
 // ==========================================
 // 4. AUTH TAB COMPONENTS
 // ==========================================
+
+function RoleManagementPanel() {
+  const [roles, setRoles] = useState<RbacRole[]>([]);
+  const [allPermissions, setAllPermissions] = useState<RbacPermission[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showModal, setShowModal] = useState(false);
+  const [editingRole, setEditingRole] = useState<RbacRoleDetail | null>(null);
+  const [processing, setProcessing] = useState(false);
+  const [formName, setFormName] = useState('');
+  const [formDescription, setFormDescription] = useState('');
+  const [formPermissions, setFormPermissions] = useState<string[]>([]);
+
+  useEffect(() => {
+    Promise.all([rbacService.listRoles('auth'), rbacService.listPermissions('auth')])
+      .then(([rolesData, permsData]) => {
+        setRoles(rolesData.roles);
+        setAllPermissions(permsData.permissions);
+      })
+      .finally(() => setLoading(false));
+  }, []);
+
+  const openCreate = () => {
+    setFormName(''); setFormDescription(''); setFormPermissions([]);
+    setEditingRole(null); setShowModal(true);
+  };
+
+  const openEdit = async (role: RbacRole) => {
+    const detail = await rbacService.getRole(role.id);
+    setFormName(detail.name); setFormDescription(detail.description);
+    setFormPermissions(detail.permission_codenames);
+    setEditingRole(detail); setShowModal(true);
+  };
+
+  const handleSave = async () => {
+    setProcessing(true);
+    try {
+      if (editingRole) {
+        await rbacService.updateRole(editingRole.id, {
+          name: formName, description: formDescription, permission_codenames: formPermissions,
+        });
+        toast.success('Role updated');
+      } else {
+        await rbacService.createRole({
+          name: formName, service: 'auth', description: formDescription, permission_codenames: formPermissions,
+        });
+        toast.success('Role created');
+      }
+      const updated = await rbacService.listRoles('auth');
+      setRoles(updated.roles);
+      setShowModal(false);
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to save role');
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const handleDelete = async (role: RbacRole) => {
+    if (!confirm(`Delete role "${role.name}"? This cannot be undone.`)) return;
+    try {
+      await rbacService.deleteRole(role.id);
+      setRoles(prev => prev.filter(r => r.id !== role.id));
+      toast.success('Role deleted');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to delete role');
+    }
+  };
+
+  const togglePermission = (codename: string) =>
+    setFormPermissions(prev =>
+      prev.includes(codename) ? prev.filter(c => c !== codename) : [...prev, codename],
+    );
+
+  if (loading) return (
+    <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm mb-5 flex items-center gap-3 text-slate-400">
+      <Loader2 className="h-5 w-5 animate-spin" />
+      <span className="text-xs">Loading roles...</span>
+    </div>
+  );
+
+  return (
+    <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm mb-5">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-sm font-bold text-slate-700 uppercase tracking-wider">Auth Roles</h2>
+        <button
+          onClick={openCreate}
+          className="flex items-center gap-1.5 bg-theme-800 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-theme-900 transition"
+        >
+          <Plus className="h-3.5 w-3.5" /> New Role
+        </button>
+      </div>
+
+      {roles.length === 0 ? (
+        <p className="text-xs text-slate-400">No auth roles defined. Create one above.</p>
+      ) : (
+        <div className="flex flex-wrap gap-2">
+          {roles.map(role => (
+            <div key={role.id} className="flex items-center gap-2 border border-slate-200 rounded-lg px-3 py-2">
+              <span className="text-xs font-semibold text-slate-700">{role.name}</span>
+              <span className="text-[10px] text-slate-400 font-mono">{role.permission_count} perms</span>
+              <button onClick={() => openEdit(role)} className="text-slate-400 hover:text-theme-600 transition">
+                <Edit className="h-3.5 w-3.5" />
+              </button>
+              <button onClick={() => handleDelete(role)} className="text-slate-400 hover:text-rose-600 transition">
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {showModal && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setShowModal(false)} />
+          <div className="flex min-h-full items-center justify-center p-4">
+            <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg border border-slate-100 p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-sm font-bold text-slate-800">
+                  {editingRole ? 'Edit Role' : 'Create Auth Role'}
+                </h3>
+                <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-600">
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="text-xs font-medium text-slate-500 block mb-1">Role Name</label>
+                  <input
+                    type="text"
+                    value={formName}
+                    onChange={e => setFormName(e.target.value)}
+                    placeholder="e.g. HR Manager"
+                    className="w-full h-9 px-3 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-theme-500"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-slate-500 block mb-1">Description (optional)</label>
+                  <input
+                    type="text"
+                    value={formDescription}
+                    onChange={e => setFormDescription(e.target.value)}
+                    placeholder="Brief description"
+                    className="w-full h-9 px-3 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-theme-500"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-slate-500 block mb-2">Permissions</label>
+                  <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto p-2 border border-slate-100 rounded-lg">
+                    {allPermissions.map(perm => (
+                      <label key={perm.codename} className="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-1 rounded">
+                        <input
+                          type="checkbox"
+                          checked={formPermissions.includes(perm.codename)}
+                          onChange={() => togglePermission(perm.codename)}
+                          className="rounded border-slate-300 text-theme-600"
+                        />
+                        <span className="text-xs text-slate-600">{perm.name}</span>
+                      </label>
+                    ))}
+                  </div>
+                  <p className="text-[10px] text-slate-400 mt-1">{formPermissions.length} selected</p>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 mt-5 pt-4 border-t border-slate-100">
+                <button onClick={() => setShowModal(false)} className="px-4 h-9 text-xs border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50">
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSave}
+                  disabled={!formName.trim() || processing}
+                  className="px-4 h-9 text-xs font-semibold bg-theme-600 text-white rounded-lg hover:bg-theme-700 disabled:opacity-50 flex items-center gap-1.5"
+                >
+                  {processing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+                  {editingRole ? 'Save Changes' : 'Create Role'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 function OverridesPanel({ employeeId }: { employeeId: string }) {
   // Stub — full implementation in Task 6
@@ -596,6 +781,9 @@ export default function ServiceAccessManagement() {
               </button>
             </div>
           </div>
+
+          {/* Role Management Panel — Auth only */}
+          {selectedSubsystem === 'auth' && <RoleManagementPanel />}
 
           {/* Table Listing */}
           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
