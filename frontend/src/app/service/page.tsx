@@ -79,7 +79,8 @@ const accessService = {
     return [
       { id: 1, name: "HDMS (Help Desk)", code: "hdms" },
       { id: 2, name: "VMS (Visitor Management)", code: "vms" },
-      { id: 3, name: "SIS (Student Information)", code: "sis" }
+      { id: 3, name: "Auth (RBAC Roles)", code: "auth" },
+      { id: 4, name: "SIS (Student Information)", code: "sis" },
     ];
   },
   getHdmsUsers: async (params: { search?: string; role?: string; status?: string }): Promise<{ results: any[] }> => {
@@ -113,6 +114,18 @@ const accessService = {
     return res.json();
   },
   createAccess: async (payload: AccessPayload): Promise<{ message?: string }> => {
+    if (payload.service_code === 'auth') {
+      const res = await fetchWithAuth('/permissions/rbac/employee-roles', {
+        method: 'POST',
+        body: JSON.stringify({ employee_id: payload.employee_id, role_id: payload.role }),
+      });
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({})) as { error?: string };
+        throw new Error(errorData.error || 'Failed to assign auth role.');
+      }
+      return { message: 'Auth role assigned successfully.' };
+    }
+
     let url = '';
     const bodyPayload: Record<string, unknown> = {
       employee_id: payload.employee_id,
@@ -120,7 +133,7 @@ const accessService = {
       role: payload.role,
       change_password: true
     };
-    
+
     if (payload.service_code === 'hdms') {
       url = '/permissions/grant-hdms-access';
     } else if (payload.service_code === 'vms') {
@@ -133,9 +146,9 @@ const accessService = {
       method: 'POST',
       body: JSON.stringify(bodyPayload),
     });
-    
+
     if (!res.ok) {
-      const errorData = await res.json().catch(() => ({}));
+      const errorData = await res.json().catch(() => ({})) as { error?: string };
       throw new Error(errorData.error || 'Target server rejected access transaction configuration.');
     }
     return res.json();
@@ -166,12 +179,7 @@ const accessFormSchema = z.object({
   service_code: z.string().min(1, 'Service selection is required'),
   role: z.string().optional(),
   is_active: z.boolean(),
-  password: z.string()
-    .min(8, 'Password must be at least 8 characters')
-    .regex(/[A-Z]/, 'Must contain at least one uppercase letter')
-    .regex(/[a-z]/, 'Must contain at least one lowercase letter')
-    .regex(/[0-9]/, 'Must contain at least one digit')
-    .regex(/^[A-Za-z0-9]+$/, 'Password must be alphanumeric only (no special characters)'),
+  password: z.string(),
   confirm_password: z.string(),
   granted_at: z.string().min(1, 'Grant date/time is required'),
   granted_by: z.number(),
@@ -189,12 +197,22 @@ const accessFormSchema = z.object({
   message: "SuperAdmin selection is required",
   path: ["superadmin_id"]
 }).refine((data) => {
-  if ((data.service_code === 'hdms' || data.service_code === 'vms') && !data.role) return false;
+  if ((data.service_code === 'hdms' || data.service_code === 'vms' || data.service_code === 'auth') && !data.role) return false;
   return true;
 }, {
   message: "Role selection is required for this service",
   path: ["role"]
-}).refine((data) => data.password === data.confirm_password, {
+}).refine((data) => {
+  if (data.service_code === 'auth') return true;
+  const pwd = data.password || '';
+  return pwd.length >= 8 && /[A-Z]/.test(pwd) && /[a-z]/.test(pwd) && /[0-9]/.test(pwd) && /^[A-Za-z0-9]+$/.test(pwd);
+}, {
+  message: "Password must be 8+ chars, alphanumeric with upper, lower, and digit",
+  path: ["password"]
+}).refine((data) => {
+  if (data.service_code === 'auth') return true;
+  return data.password === data.confirm_password;
+}, {
   message: "Passwords do not match",
   path: ["confirm_password"]
 });
@@ -548,6 +566,8 @@ export default function ServiceAccessManagement() {
   const passwordVal = watch('password') || '';
   const isActiveVal = watch('is_active');
   const serviceCodeVal = watch('service_code');
+  const [dynamicRoles, setDynamicRoles] = useState<{ value: string; label: string }[]>([]);
+  const [loadingRoles, setLoadingRoles] = useState(false);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -601,6 +621,36 @@ export default function ServiceAccessManagement() {
   useEffect(() => {
     setValue('role', '');
   }, [serviceCodeVal, setValue]);
+
+  useEffect(() => {
+    if (!serviceCodeVal) { setDynamicRoles([]); return; }
+    if (serviceCodeVal === 'hdms') {
+      setDynamicRoles([
+        { value: 'requestor', label: 'Requestor (Can only create tickets)' },
+        { value: 'assignee', label: 'Assignee (Can be assigned tickets)' },
+        { value: 'moderator', label: 'Moderator (Full ticket management)' },
+        { value: 'admin', label: 'Administrator (Full system access)' },
+      ]);
+      return;
+    }
+    if (serviceCodeVal === 'vms') {
+      setDynamicRoles([
+        { value: 'security_staff', label: 'Security Staff' },
+        { value: 'receptionist', label: 'Receptionist' },
+        { value: 'admin', label: 'Administrator (Full control)' },
+      ]);
+      return;
+    }
+    if (serviceCodeVal === 'auth') {
+      setLoadingRoles(true);
+      rbacService.listRoles('auth')
+        .then(data => setDynamicRoles(data.roles.map(r => ({ value: r.id, label: r.name }))))
+        .catch(() => setDynamicRoles([]))
+        .finally(() => setLoadingRoles(false));
+      return;
+    }
+    setDynamicRoles([]);
+  }, [serviceCodeVal]);
 
   const getPasswordStrength = (pwd: string) => {
     let score = 0;
@@ -993,7 +1043,7 @@ export default function ServiceAccessManagement() {
                         {errors.service_code && <p className="text-xs text-rose-500 mt-1">{errors.service_code.message}</p>}
                       </div>
 
-                      {watch('service_code') && (watch('service_code') === 'hdms' || watch('service_code') === 'vms') && (
+                      {watch('service_code') && watch('service_code') !== 'sis' && (
                         <div>
                           <label className="text-xs font-medium text-slate-500 block mb-1.5">Access Role Assignment</label>
                           <div className="relative w-full">
@@ -1001,16 +1051,17 @@ export default function ServiceAccessManagement() {
                               {...register('role')}
                               className="w-full h-10 px-3 py-2 text-sm bg-white border border-slate-200 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-theme-500 transition-colors cursor-pointer appearance-none text-slate-600"
                               defaultValue=""
+                              disabled={loadingRoles}
                             >
-                              <option value="" disabled hidden>Select assigned system role...</option>
-                              {serviceRoles[watch('service_code')]?.map((r) => (
-                                <option key={r.value} value={r.value}>
-                                  {r.label}
-                                </option>
+                              <option value="" disabled hidden>
+                                {loadingRoles ? 'Loading roles...' : 'Select assigned system role...'}
+                              </option>
+                              {dynamicRoles.map((r) => (
+                                <option key={r.value} value={r.value}>{r.label}</option>
                               ))}
                             </select>
                             <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-400">
-                              <ChevronsUpDown className="h-4 w-4" />
+                              {loadingRoles ? <Loader2 className="h-4 w-4 animate-spin" /> : <ChevronsUpDown className="h-4 w-4" />}
                             </div>
                           </div>
                           {errors.role && <p className="text-xs text-rose-500 mt-1">{errors.role.message}</p>}
@@ -1039,8 +1090,8 @@ export default function ServiceAccessManagement() {
                     </div>
                   </div>
 
-                  {/* SECTION 3: Credentials & Handshakes */}
-                  <div className="rounded-xl bg-white p-5 border border-slate-100 shadow-sm space-y-3">
+                  {/* SECTION 3: Credentials & Handshakes — hidden for auth service (no password needed) */}
+                  {watch('service_code') !== 'auth' && <div className="rounded-xl bg-white p-5 border border-slate-100 shadow-sm space-y-3">
                     <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-400">03. Credentials & Handshakes</h2>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
@@ -1082,7 +1133,7 @@ export default function ServiceAccessManagement() {
                         {errors.confirm_password && <p className="text-xs text-rose-500 mt-1">{errors.confirm_password.message}</p>}
                       </div>
                     </div>
-                  </div>
+                  </div>}
 
                   {/* SECTION 4: System Ledger Metadata */}
                   <div className="rounded-lg bg-white p-5 border border-slate-100 shadow-sm space-y-3">
