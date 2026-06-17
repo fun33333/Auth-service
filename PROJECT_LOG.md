@@ -10,11 +10,11 @@
 
 **Feature:** Every non-RBAC endpoint now enforces RBAC. Unauthenticated → 401. Missing permission → 403.
 
-**Files changed:**
-- `permissions/rbac.py` — added `require_permission(codename)` decorator. Raises `HttpError(403)` on missing permission. SuperAdmin bypasses.
-- `employees/api.py` — added `auth=AuthBearer()` at router level; applied `@require_permission` to all 29 endpoints (organizations, institutions, branches, departments, designations, employees, assignments). Removed redundant per-endpoint `auth=AuthBearer()` from 5 endpoints.
-- `permissions/api.py` — added `auth=AuthBearer()` at router level; applied `@require_permission` to all 12 non-RBAC endpoints (service access views, grant-hdms, grant-vms, toggle-access). Removed redundant per-endpoint `auth=AuthBearer()`.
-- `audit/api.py` — added `auth=AuthBearer()` at router level; applied `@require_permission("audit.view")`.
+**Core enforcement (`permissions/rbac.py`, `employees/api.py`, `permissions/api.py`, `audit/api.py`):**
+- `require_permission(codename)` decorator — raises `HttpError(403)`, SuperAdmin bypasses.
+- `employees/api.py` — router-level `AuthBearer` + `@require_permission` on all 29 endpoints.
+- `permissions/api.py` — router-level `AuthBearer` + `@require_permission` on 12 non-RBAC endpoints.
+- `audit/api.py` — router-level `AuthBearer` + `@require_permission("audit.view")`.
 
 **Codename mapping:**
 - `organization.view`, `institution.*`, `branch.*`, `department.*`, `designation.*` — org hierarchy
@@ -22,11 +22,23 @@
 - `service_access.view/grant/toggle` — service provisioning
 - `audit.view` — audit logs
 
-**Tests:** 43/43 pass (`permissions/test_rbac_engine.py`). `python manage.py check` clean.
+**Bug fixes (post-deployment testing):**
+- `core/settings.py` — `CORS_ALLOW_HEADERS = ['*']` → explicit list including `Authorization`. Firefox blocks `*` wildcard for credentialed requests per Fetch spec.
+- `permissions/signals.py` + `permissions/apps.py` — `m2m_changed` signal on `Role.permissions`: auto-clears Redis cache for all affected employees when role permissions change via Django admin or any ORM call. Previously only API-level changes cleared cache.
+- `rbac_api.py` — `POST /overrides` returns 409 if DENY override targets a permission already granted by employee's role. Accepts `force=true` to bypass. Frontend shows confirm dialog on 409.
+- `frontend/Dockerfile` — `NEXT_PUBLIC_API_URL` as build ARG (overridable). Previously hardcoded prod URL.
+- `docker-compose.dev.yml` — auth-frontend now starts via Docker with `ports: 3005:3000` and `NEXT_PUBLIC_API_URL=http://localhost:8000/api`. Single `docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d` starts both services.
 
-**Note:** `permissions/tests.py::TestGrantHdmsAccessAPI` has a pre-existing fixture error (`dept_sector` field mismatch) unrelated to M4.
+**Tests:** 43/43 pass. `python manage.py check` clean.
+
+**Known gaps (M5 backlog):**
+- Frontend pages show white screen on 403 — no "Access Denied" UI
+- `pytest` not in `requirements.txt` — tests can't run inside Docker container
+- `employee.view` missing from `seed_permissions` command (added manually to roles)
 
 **Branch:** `feat/rbac-m4-enforcement`
+**PR:** #3 — https://github.com/fun33333/Auth-service/pull/3
+**Commits:** `806ef3a` → `88dcf22` → `4a58ae6` → `fd9d671` → `94c9b11`
 
 ---
 
