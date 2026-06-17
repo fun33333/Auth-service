@@ -6,6 +6,42 @@
 
 ## Change History
 
+### 2026-06-17 — RBAC M4: Enforce Permissions on All API Endpoints
+
+**Feature:** Every non-RBAC endpoint now enforces RBAC. Unauthenticated → 401. Missing permission → 403.
+
+**Core enforcement (`permissions/rbac.py`, `employees/api.py`, `permissions/api.py`, `audit/api.py`):**
+- `require_permission(codename)` decorator — raises `HttpError(403)`, SuperAdmin bypasses.
+- `employees/api.py` — router-level `AuthBearer` + `@require_permission` on all 29 endpoints.
+- `permissions/api.py` — router-level `AuthBearer` + `@require_permission` on 12 non-RBAC endpoints.
+- `audit/api.py` — router-level `AuthBearer` + `@require_permission("audit.view")`.
+
+**Codename mapping:**
+- `organization.view`, `institution.*`, `branch.*`, `department.*`, `designation.*` — org hierarchy
+- `employee.view/create/edit/delete`, `assignment.create/edit/delete` — employee management
+- `service_access.view/grant/toggle` — service provisioning
+- `audit.view` — audit logs
+
+**Bug fixes (post-deployment testing):**
+- `core/settings.py` — `CORS_ALLOW_HEADERS = ['*']` → explicit list including `Authorization`. Firefox blocks `*` wildcard for credentialed requests per Fetch spec.
+- `permissions/signals.py` + `permissions/apps.py` — `m2m_changed` signal on `Role.permissions`: auto-clears Redis cache for all affected employees when role permissions change via Django admin or any ORM call. Previously only API-level changes cleared cache.
+- `rbac_api.py` — `POST /overrides` returns 409 if DENY override targets a permission already granted by employee's role. Accepts `force=true` to bypass. Frontend shows confirm dialog on 409.
+- `frontend/Dockerfile` — `NEXT_PUBLIC_API_URL` as build ARG (overridable). Previously hardcoded prod URL.
+- `docker-compose.dev.yml` — auth-frontend now starts via Docker with `ports: 3005:3000` and `NEXT_PUBLIC_API_URL=http://localhost:8000/api`. Single `docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d` starts both services.
+
+**Tests:** 43/43 pass. `python manage.py check` clean.
+
+**Known gaps (M5 backlog):**
+- Frontend pages show white screen on 403 — no "Access Denied" UI
+- `pytest` not in `requirements.txt` — tests can't run inside Docker container
+- `employee.view` missing from `seed_permissions` command (added manually to roles)
+
+**Branch:** `feat/rbac-m4-enforcement`
+**PR:** #3 — https://github.com/fun33333/Auth-service/pull/3
+**Commits:** `806ef3a` → `88dcf22` → `4a58ae6` → `fd9d671` → `94c9b11`
+
+---
+
 ### 2026-06-16 — RBAC M3 Frontend: Auth Subsystem Tab + Role Management UI
 
 **Feature:** Admin-facing UI for RBAC — roles, employee assignments, and per-employee permission overrides. No more developer involvement for runtime role changes.

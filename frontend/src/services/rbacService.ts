@@ -134,6 +134,7 @@ async function createOverride(
   employeeId: string,
   permissionCodename: string,
   isAllowed: boolean,
+  force = false,
 ): Promise<PermissionOverride> {
   const res = await fetchWithAuth('/permissions/rbac/overrides', {
     method: 'POST',
@@ -141,8 +142,15 @@ async function createOverride(
       employee_id: employeeId,
       permission_codename: permissionCodename,
       is_allowed: isAllowed,
+      force,
     }),
   });
+  if (res.status === 409) {
+    const err = await res.json().catch(() => ({})) as { error?: string };
+    const e = new Error(err.error || 'Conflict') as Error & { status: number };
+    e.status = 409;
+    throw e;
+  }
   if (!res.ok) {
     const err = await res.json().catch(() => ({})) as { error?: string };
     throw new Error(err.error || 'Failed to create override');
