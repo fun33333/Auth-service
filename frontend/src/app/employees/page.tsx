@@ -14,6 +14,7 @@ import {
 import IDCard from '@/components/IDCard';
 import Skeleton from '@/components/Skeleton';
 import { fetchWithAuth } from '@/utils/api';
+import AccessDenied from '@/components/AccessDenied';
 import toast from "react-hot-toast";
 
 // --- Types ---
@@ -343,6 +344,7 @@ const DetailModal = ({ employee, open, onClose }: { employee: Employee | null, o
 export default function EmployeesPage() {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
+  const [forbidden, setForbidden] = useState(false);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [employmentTypeFilter, setEmploymentTypeFilter] = useState('All');
@@ -357,6 +359,7 @@ export default function EmployeesPage() {
     try {
       setLoading(true);
       const res = await fetchWithAuth('/employees/employees')
+      if (res.status === 403) { setForbidden(true); return; }
       if (res.ok) {
         const data = await res.json();
         // Handle both Array response and { employees: Array } response
@@ -408,6 +411,8 @@ export default function EmployeesPage() {
     male: Array.isArray(employees) ? employees.filter(e => (e.gender || '').toLowerCase() === 'male').length : 0,
     female: Array.isArray(employees) ? employees.filter(e => (e.gender || '').toLowerCase() === 'female').length : 0,
   };
+  if (forbidden) return <ProtectedLayout><AccessDenied permission="employee.view" /></ProtectedLayout>;
+
   // employees main page
   return (
     <ProtectedLayout>

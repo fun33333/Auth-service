@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import ProtectedLayout from "@/components/ProtectedLayout";
 import { fetchWithAuth } from "@/utils/api";
+import AccessDenied from "@/components/AccessDenied";
 import {
     Plus, Search, Edit2, Trash2, X,
     LayoutGrid, CheckCircle2, XCircle, Users,
@@ -270,6 +271,7 @@ export default function DepartmentsPage() {
     const [institutions, setInstitutions] = useState<Institution[]>([]);
     const [branches, setBranches] = useState<Branch[]>([]);
     const [loading, setLoading] = useState(true);
+    const [forbidden, setForbidden] = useState(false);
     const [search, setSearch] = useState("");
     const [modalOpen, setModalOpen] = useState(false);
     const [editTarget, setEditTarget] = useState<Department | null>(null);
@@ -284,6 +286,9 @@ export default function DepartmentsPage() {
                 fetchWithAuth("/employees/institutions"),
                 fetchWithAuth("/employees/branches"),
             ]);
+            if (deptRes.status === 403 || instRes.status === 403 || brRes.status === 403) {
+                setForbidden(true); return;
+            }
             if (deptRes.ok) {
                 const data = await deptRes.json();
                 setDepartments(Array.isArray(data) ? data : data.departments || []);
@@ -383,6 +388,8 @@ export default function DepartmentsPage() {
     }
 
    
+
+        if (forbidden) return <ProtectedLayout><AccessDenied permission="department.view" /></ProtectedLayout>;
 
         return (
             <ProtectedLayout>

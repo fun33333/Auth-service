@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import ProtectedLayout from "@/components/ProtectedLayout";
 import { fetchWithAuth } from "@/utils/api";
+import AccessDenied from "@/components/AccessDenied";
 import { Plus, Search, Edit2, Trash2, X, Briefcase, CheckCircle2, XCircle, Filter,   LayoutGrid } from "lucide-react";
 import { useForm, SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -167,6 +168,7 @@ export default function DesignationsPage() {
   const [designations, setDesignations] = useState<Designation[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState(true);
+  const [forbidden, setForbidden] = useState(false);
   const [search, setSearch] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Designation | null>(null);
@@ -180,6 +182,7 @@ export default function DesignationsPage() {
         fetchWithAuth("/employees/designations"),
         fetchWithAuth("/employees/departments"),
       ]);
+      if (desigRes.status === 403 || deptRes.status === 403) { setForbidden(true); return; }
       if (desigRes.ok) {
         const data = await desigRes.json();
         setDesignations(Array.isArray(data) ? data : data.designations || []);
@@ -269,6 +272,8 @@ export default function DesignationsPage() {
       setDeleteId(null);
     }
   }
+
+  if (forbidden) return <ProtectedLayout><AccessDenied permission="designation.view" /></ProtectedLayout>;
 
   return (
     <ProtectedLayout>
