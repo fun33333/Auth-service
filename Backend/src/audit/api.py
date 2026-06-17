@@ -2,8 +2,10 @@ from ninja import Router, Schema
 from typing import List, Optional
 from audit.models import AuditLog
 from datetime import datetime
+from authentication.api import AuthBearer
+from permissions.rbac import require_permission
 
-router = Router(tags=["audit"])
+router = Router(tags=["audit"], auth=AuthBearer())
 
 class AuditLogSchema(Schema):
     id: str
@@ -15,6 +17,7 @@ class AuditLogSchema(Schema):
     notes: Optional[str] = None
 
 @router.get("/logs", response=List[AuditLogSchema])
+@require_permission("audit.view")
 def list_audit_logs(request, limit: int = 10):
     """
     Get the most recent system activity logs.

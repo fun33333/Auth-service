@@ -1,4 +1,6 @@
+from functools import wraps
 from django.core.cache import cache
+from ninja.errors import HttpError
 from authentication.superadmin_models import SuperAdmin
 from permissions.models import Permission, EmployeeRole, EmployeePermissionOverride
 
@@ -49,3 +51,18 @@ def has_permission(user, codename: str) -> bool:
 def clear_permission_cache(employee_id: str) -> None:
     """Invalidate cached permission set for one employee."""
     cache.delete(_CACHE_KEY.format(employee_id))
+
+
+def require_permission(codename: str):
+    """Decorator that enforces a permission check on a Django Ninja endpoint.
+    Requires router-level auth=AuthBearer() so request.auth is populated.
+    SuperAdmin bypasses all checks. Employee must have codename in effective permissions.
+    """
+    def decorator(func):
+        @wraps(func)
+        def wrapper(request, *args, **kwargs):
+            if not has_permission(request.auth, codename):
+                raise HttpError(403, "Permission denied")
+            return func(request, *args, **kwargs)
+        return wrapper
+    return decorator

@@ -16,6 +16,7 @@ from django.http import HttpRequest
 from ninja import Router, Schema
 from ninja.security import HttpBearer
 from authentication.api import AuthBearer
+from permissions.rbac import require_permission
 from permissions.utils import (
     get_service_accesses,
     has_service_access,
@@ -24,7 +25,7 @@ from permissions.utils import (
     get_employee_permissions
 )
 
-router = Router(tags=["Permissions"])
+router = Router(tags=["Permissions"], auth=AuthBearer())
 
 
 from typing import Optional
@@ -78,7 +79,8 @@ class GrantHdmsAccessResponse(Schema):
 
 # ================== Endpoints ==================
 
-@router.get("/services", response={200: ServiceListResponse, 401: ErrorResponse}, auth=AuthBearer())
+@router.get("/services", response={200: ServiceListResponse, 401: ErrorResponse})
+@require_permission("service_access.view")
 def get_available_services(request: HttpRequest):
     """
     Get list of services the authenticated employee can access.
@@ -96,7 +98,8 @@ def get_available_services(request: HttpRequest):
     }
 
 
-@router.get("/check/{service}", response={200: ServiceAccessResponse, 401: ErrorResponse}, auth=AuthBearer())
+@router.get("/check/{service}", response={200: ServiceAccessResponse, 401: ErrorResponse})
+@require_permission("service_access.view")
 def check_service_access(request: HttpRequest, service: str):
     """
     Check if employee has access to a specific service.
@@ -131,7 +134,8 @@ def check_service_access(request: HttpRequest, service: str):
     }
 
 
-@router.get("/hdms-role", response={200: HdmsRoleResponse, 401: ErrorResponse}, auth=AuthBearer())
+@router.get("/hdms-role", response={200: HdmsRoleResponse, 401: ErrorResponse})
+@require_permission("service_access.view")
 def get_hdms_role_info(request: HttpRequest):
     """
     Get HDMS role information for authenticated employee.
@@ -152,7 +156,8 @@ def get_hdms_role_info(request: HttpRequest):
     }
 
 
-@router.get("/sis-role", response={200: SisRoleResponse, 401: ErrorResponse}, auth=AuthBearer())
+@router.get("/sis-role", response={200: SisRoleResponse, 401: ErrorResponse})
+@require_permission("service_access.view")
 def get_sis_role_info(request: HttpRequest):
     """
     Get SIS role information for authenticated employee.
@@ -175,6 +180,7 @@ def get_sis_role_info(request: HttpRequest):
     }
 
 @router.post("/grant-hdms-access", response={201: dict, 200: dict, 400: dict})
+@require_permission("service_access.grant")
 def grant_hdms_access(request, payload: GrantHdmsAccessSchema):
     """
     Grant HDMS access to an employee.
@@ -283,6 +289,7 @@ def grant_hdms_access(request, payload: GrantHdmsAccessSchema):
 
 
 @router.get("/hdms-access/{employee_id}", response={200: dict, 404: dict})
+@require_permission("service_access.view")
 def check_employee_hdms_access(request, employee_id: str):
     """
     Check if an employee has HDMS access (for Grant Permission modal).
@@ -340,6 +347,7 @@ class HdmsUsersListResponse(Schema):
 
 
 @router.get("/hdms-users", response={200: HdmsUsersListResponse})
+@require_permission("service_access.view")
 def list_hdms_users(
     request,
     search: str = None,
@@ -449,6 +457,7 @@ class GrantVmsAccessSchema(BaseModel):
 
 
 @router.post("/grant-vms-access", response={201: dict, 200: dict, 400: dict})
+@require_permission("service_access.grant")
 def grant_vms_access(request, payload: GrantVmsAccessSchema):
     """
     Grant VMS access to an employee with a role.
@@ -532,6 +541,7 @@ def grant_vms_access(request, payload: GrantVmsAccessSchema):
 
 
 @router.get("/vms-access/{employee_id}", response={200: dict, 404: dict})
+@require_permission("service_access.view")
 def check_employee_vms_access(request, employee_id: str):
     """Check if an employee has VMS access and their current role."""
     try:
@@ -559,7 +569,8 @@ def check_employee_vms_access(request, employee_id: str):
         }
 
 
-@router.get("/vms-role", response={200: dict, 401: dict}, auth=AuthBearer())
+@router.get("/vms-role", response={200: dict, 401: dict})
+@require_permission("service_access.view")
 def get_vms_role_info(request: HttpRequest):
     """Get VMS role for the authenticated employee."""
     employee = request.auth
@@ -572,6 +583,7 @@ def get_vms_role_info(request: HttpRequest):
 
 
 @router.get("/vms-users", response={200: dict})
+@require_permission("service_access.view")
 def list_vms_users(
     request,
     search: str = None,
@@ -639,7 +651,8 @@ def list_vms_users(
     return 200, {"results": users, "count": len(users)}
 
 
-@router.post("/toggle-access", response={200: dict, 400: dict}, auth=AuthBearer())
+@router.post("/toggle-access", response={200: dict, 400: dict})
+@require_permission("service_access.toggle")
 def toggle_service_access(request, employee_id: str, service: str):
     """Toggle service access (active/inactive) for a user."""
     try:

@@ -6,6 +6,30 @@
 
 ## Change History
 
+### 2026-06-17 — RBAC M4: Enforce Permissions on All API Endpoints
+
+**Feature:** Every non-RBAC endpoint now enforces RBAC. Unauthenticated → 401. Missing permission → 403.
+
+**Files changed:**
+- `permissions/rbac.py` — added `require_permission(codename)` decorator. Raises `HttpError(403)` on missing permission. SuperAdmin bypasses.
+- `employees/api.py` — added `auth=AuthBearer()` at router level; applied `@require_permission` to all 29 endpoints (organizations, institutions, branches, departments, designations, employees, assignments). Removed redundant per-endpoint `auth=AuthBearer()` from 5 endpoints.
+- `permissions/api.py` — added `auth=AuthBearer()` at router level; applied `@require_permission` to all 12 non-RBAC endpoints (service access views, grant-hdms, grant-vms, toggle-access). Removed redundant per-endpoint `auth=AuthBearer()`.
+- `audit/api.py` — added `auth=AuthBearer()` at router level; applied `@require_permission("audit.view")`.
+
+**Codename mapping:**
+- `organization.view`, `institution.*`, `branch.*`, `department.*`, `designation.*` — org hierarchy
+- `employee.view/create/edit/delete`, `assignment.create/edit/delete` — employee management
+- `service_access.view/grant/toggle` — service provisioning
+- `audit.view` — audit logs
+
+**Tests:** 43/43 pass (`permissions/test_rbac_engine.py`). `python manage.py check` clean.
+
+**Note:** `permissions/tests.py::TestGrantHdmsAccessAPI` has a pre-existing fixture error (`dept_sector` field mismatch) unrelated to M4.
+
+**Branch:** `feat/rbac-m4-enforcement`
+
+---
+
 ### 2026-06-16 — RBAC M3 Frontend: Auth Subsystem Tab + Role Management UI
 
 **Feature:** Admin-facing UI for RBAC — roles, employee assignments, and per-employee permission overrides. No more developer involvement for runtime role changes.

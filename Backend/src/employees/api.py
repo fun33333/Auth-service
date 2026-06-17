@@ -17,7 +17,10 @@ from django.shortcuts import get_object_or_404
 import re
 import logging
 
-router = Router(tags=["employees"])
+from authentication.api import AuthBearer
+from permissions.rbac import require_permission
+
+router = Router(tags=["employees"], auth=AuthBearer())
 logger = logging.getLogger(__name__)
 
 
@@ -314,7 +317,6 @@ class DesignationUpdateSchema(BaseModel):
     position_name: Optional[str] = None
     description: Optional[str] = None
 
-from authentication.api import AuthBearer
 
 
 
@@ -325,6 +327,7 @@ from authentication.api import AuthBearer
 # ========================================
 
 @router.get("/organizations", response=List[dict])
+@require_permission("organization.view")
 def list_organizations(request):
     """
     ONLY READ-ONLY (Fixed Master Org)
@@ -349,6 +352,7 @@ def list_organizations(request):
 
 
 @router.get("/institutions", response=List[InstitutionSchema])
+@require_permission("institution.view")
 def list_institutions(request):
     """Get all active institutions"""
     institutions = Institution.objects.filter(is_deleted=False)
@@ -372,6 +376,7 @@ def list_institutions(request):
 
 
 @router.post("/institutions", response={201: InstitutionSchema, 400: ErrorResponseSchema})
+@require_permission("institution.create")
 def create_institution(request, payload: InstitutionCreateSchema):
     """Create a new institution"""
     try:
@@ -416,6 +421,7 @@ def create_institution(request, payload: InstitutionCreateSchema):
     "/institutions/{institution_id}",
     response={200: InstitutionSchema, 404: ErrorResponseSchema}
 )
+@require_permission("institution.view")
 def get_institution(request, institution_id: str):
     """Get single institution"""
     inst = Institution.objects.filter(
@@ -443,6 +449,7 @@ def get_institution(request, institution_id: str):
     "/institutions/{institution_id}",
     response={200: InstitutionSchema, 404: ErrorResponseSchema}
 )
+@require_permission("institution.edit")
 def update_institution(request, institution_id: str, payload: InstitutionUpdateSchema):
     """Update institution"""
     inst = Institution.objects.filter(
@@ -487,6 +494,7 @@ def update_institution(request, institution_id: str, payload: InstitutionUpdateS
     "/institutions/{institution_id}",
     response={200: dict, 404: ErrorResponseSchema}
 )
+@require_permission("institution.delete")
 def delete_institution(request, institution_id: str):
     """Soft delete institution"""
     inst = Institution.objects.filter(
@@ -503,6 +511,7 @@ def delete_institution(request, institution_id: str):
     return 200, {"message": "Institution deleted successfully"}
 
 @router.get("/branches", response=List[BranchSchema])
+@require_permission("branch.view")
 def list_branches(request, institution_code: str = None):
     """Get all active branches, optionally filtered by institution"""
     query = Branch.objects.filter(is_deleted=False)
@@ -513,6 +522,7 @@ def list_branches(request, institution_code: str = None):
 
 
 @router.post("/branches", response={201: BranchSchema, 400: ErrorResponseSchema})
+@require_permission("branch.create")
 def create_branch(request, payload: BranchCreateSchema):
     """Create a new branch under an institution"""
     try:
@@ -581,6 +591,7 @@ def _assignment_institution(asn):
 
 
 @router.put("/branches/{branch_key}", response={200: BranchSchema, 400: ErrorResponseSchema, 404: ErrorResponseSchema})
+@require_permission("branch.edit")
 def update_branch(request, branch_key: str, payload: BranchUpdateSchema):
     """Update a branch. Accepts branch_id or branch_code as key."""
     branch = _resolve_branch(branch_key)
@@ -620,6 +631,7 @@ def update_branch(request, branch_key: str, payload: BranchUpdateSchema):
 
 
 @router.delete("/branches/{branch_key}", response={200: dict, 404: ErrorResponseSchema})
+@require_permission("branch.delete")
 def delete_branch(request, branch_key: str):
     """Soft delete a branch. Accepts branch_id or branch_code as key."""
     branch = _resolve_branch(branch_key)
@@ -631,6 +643,7 @@ def delete_branch(request, branch_key: str):
 
 
 @router.get("/departments", response=List[dict])
+@require_permission("department.view")
 def list_departments(request, branch_code: str = None, institution_code: str = None):
     """Get departments, optionally filtered by hierarchy"""
     query = Department.objects.filter(is_deleted=False)
@@ -653,6 +666,7 @@ def list_departments(request, branch_code: str = None, institution_code: str = N
     ]
 
 @router.post("/departments", response={201: dict, 400: ErrorResponseSchema})
+@require_permission("department.create")
 def create_department(request, payload: DepartmentCreateSchema):
     """Create a new department"""
     import re
@@ -692,6 +706,7 @@ def create_department(request, payload: DepartmentCreateSchema):
 
 
 @router.get("/departments/{dept_code}", response={200: dict, 404: ErrorResponseSchema})
+@require_permission("department.view")
 def get_department(request, dept_code: str):
     """Get single department with employee count and designations"""
     try:
@@ -714,6 +729,7 @@ def get_department(request, dept_code: str):
 
 
 @router.put("/departments/{dept_code}", response={200: dict, 400: ErrorResponseSchema, 404: ErrorResponseSchema})
+@require_permission("department.edit")
 def update_department(request, dept_code: str, payload: DepartmentUpdateSchema):
     """Update department details"""
     try:
@@ -741,6 +757,7 @@ def update_department(request, dept_code: str, payload: DepartmentUpdateSchema):
 
 
 @router.delete("/departments/{dept_code}", response={200: dict, 400: ErrorResponseSchema, 404: ErrorResponseSchema})
+@require_permission("department.delete")
 def delete_department(request, dept_code: str):
     """Soft delete a department (only if no active employees)"""
     try:
@@ -755,6 +772,7 @@ def delete_department(request, dept_code: str):
 
 
 @router.get("/designations", response=List[dict])
+@require_permission("designation.view")
 def list_designations(request, department_code: str = None):
     """Get designations, optionally filtered by department"""
     query = Designation.objects.filter(is_deleted=False)
@@ -765,6 +783,7 @@ def list_designations(request, department_code: str = None):
 
 
 @router.post("/designations", response={201: dict, 400: ErrorResponseSchema})
+@require_permission("designation.create")
 def create_designation(request, payload: DesignationCreateSchema):
     """Create a new designation under a department"""
     try:
@@ -795,8 +814,8 @@ def create_designation(request, payload: DesignationCreateSchema):
     "/employees",
     response={201: dict, 400: dict},
     summary="Create New Employee",
-    auth=AuthBearer()
 )
+@require_permission("employee.create")
 def create_employee(request, payload: EmployeeCreateSchema):
     """Create a new employee. Accepts JSON body. Resume upload moved to a separate endpoint."""
     field_errors = {}
@@ -879,6 +898,7 @@ def create_employee(request, payload: EmployeeCreateSchema):
 
 
 @router.get("/designations/{designation_id}", response={200: dict, 404: ErrorResponseSchema})
+@require_permission("designation.view")
 def get_designation(request, designation_id: str):
     """Get single designation details"""
     try:
@@ -898,6 +918,7 @@ def get_designation(request, designation_id: str):
 
 
 @router.put("/designations/{designation_id}", response={200: dict, 400: ErrorResponseSchema, 404: ErrorResponseSchema})
+@require_permission("designation.edit")
 def update_designation(request, designation_id: str, payload: DesignationUpdateSchema):
     """Update designation details"""
     try:
@@ -920,6 +941,7 @@ def update_designation(request, designation_id: str, payload: DesignationUpdateS
 
 
 @router.delete("/designations/{designation_id}", response={200: dict, 400: ErrorResponseSchema, 404: ErrorResponseSchema})
+@require_permission("designation.delete")
 def delete_designation(request, designation_id: str):
     """Soft delete a designation (only if no active employees)"""
     try:
@@ -936,6 +958,7 @@ def delete_designation(request, designation_id: str):
         return 404, {"error": "Designation not found"}
 
 @router.get("/employees", response=dict)
+@require_permission("employee.view")
 def list_employees(
     request,
     page: int = 1,
@@ -1047,6 +1070,7 @@ def list_employees(
 
 
 @router.get("/employees/by-user/{user_id}", response=dict)
+@require_permission("employee.view")
 def get_employee_by_user_id(request, user_id: str):
     """
     Lightweight lookup by Employee.id (UUID) — used by HDMS ticket-service
@@ -1067,6 +1091,7 @@ def get_employee_by_user_id(request, user_id: str):
 
 
 @router.get("/employees/{employee_id}", response=dict)
+@require_permission("employee.view")
 def get_employee(request, employee_id: str):
     """
     Get single employee details. Accepts either employee_id or employee_code.
@@ -1156,6 +1181,7 @@ def get_employee(request, employee_id: str):
 
 
 @router.delete("/employees/{employee_id}", response=dict)
+@require_permission("employee.delete")
 def delete_employee(request, employee_id: str):
     """
     Soft delete an employee by setting is_deleted=True.
@@ -1310,8 +1336,8 @@ class EmployeeUpdateSchema(BaseModel):
     "/employees/{employee_id}",
     response={200: dict, 400: dict, 404: dict},
     summary="Update Employee",
-    auth=AuthBearer()
 )
+@require_permission("employee.edit")
 def update_employee(request, employee_id: str, payload: EmployeeUpdateSchema):
     """
     Partial update of an employee. Only fields present in the request body are applied.
@@ -1494,8 +1520,8 @@ def _assignment_response(asn) -> dict:
 @router.post(
     "/employees/{employee_key}/assignments",
     response={201: dict, 400: dict, 404: dict},
-    auth=AuthBearer()
 )
+@require_permission("assignment.create")
 def create_assignment(request, employee_key: str, payload: EmployeeAssignmentCreateSchema):
     """Add a new assignment to an employee."""
     emp = Employee.objects.filter(
@@ -1541,8 +1567,8 @@ def create_assignment(request, employee_key: str, payload: EmployeeAssignmentCre
 @router.put(
     "/employees/{employee_key}/assignments/{assignment_id}",
     response={200: dict, 400: dict, 404: dict},
-    auth=AuthBearer()
 )
+@require_permission("assignment.edit")
 def update_assignment(request, employee_key: str, assignment_id: str, payload: EmployeeAssignmentUpdateSchema):
     """Update a specific assignment."""
     emp = Employee.objects.filter(
@@ -1592,8 +1618,8 @@ def update_assignment(request, employee_key: str, assignment_id: str, payload: E
 @router.delete(
     "/employees/{employee_key}/assignments/{assignment_id}",
     response={200: dict, 400: dict, 404: dict},
-    auth=AuthBearer()
 )
+@require_permission("assignment.delete")
 def delete_assignment(request, employee_key: str, assignment_id: str):
     """Soft-delete an assignment. Cannot delete the last remaining assignment."""
     emp = Employee.objects.filter(
