@@ -92,6 +92,7 @@ class CreateOverrideIn(Schema):
     employee_id: uuid.UUID
     permission_codename: str
     is_allowed: bool
+    force: bool = False  # bypass 409 role-conflict warning
 
 
 class EffectivePermissionsOut(Schema):
@@ -223,7 +224,7 @@ def remove_role_assignment(request: HttpRequest, er_id: uuid.UUID):
 
 # ── Permission Overrides ──────────────────────────────────────────────────────
 
-@router.post("/overrides", response={201: OverrideOut, 404: ErrorOut, 400: ErrorOut, 401: ErrorOut})
+@router.post("/overrides", response={201: OverrideOut, 404: ErrorOut, 400: ErrorOut, 401: ErrorOut, 409: ErrorOut})
 def create_override(request: HttpRequest, payload: CreateOverrideIn):
     from employees.models import Employee
     try:
@@ -236,6 +237,15 @@ def create_override(request: HttpRequest, payload: CreateOverrideIn):
         return 404, {"error": f"Permission '{payload.permission_codename}' not found"}
     if EmployeePermissionOverride.objects.filter(employee=employee, permission=perm, is_deleted=False).exists():
         return 400, {"error": "Override already exists for this employee + permission"}
+    if not payload.is_allowed and not payload.force:
+        role_codenames = set(
+            Permission.objects.filter(
+                roles__employee_roles__employee=employee,
+                roles__employee_roles__is_deleted=False,
+            ).values_list("codename", flat=True)
+        )
+        if payload.permission_codename in role_codenames:
+            return 409, {"error": f"Role already grants '{payload.permission_codename}'. DENY override will block it. Confirm to proceed anyway."}
     override = EmployeePermissionOverride.objects.create(
         employee=employee, permission=perm, is_allowed=payload.is_allowed
     )

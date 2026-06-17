@@ -423,17 +423,25 @@ function OverridesPanel({ employeeId }: { employeeId: string }) {
       .finally(() => setLoading(false));
   }, [employeeId]);
 
-  const handleAdd = async () => {
+  const handleAdd = async (force = false) => {
     if (!selectedPerm) return;
     setSaving(true);
     try {
-      const ov = await rbacService.createOverride(employeeId, selectedPerm, isAllowed);
+      const ov = await rbacService.createOverride(employeeId, selectedPerm, isAllowed, force);
       setOverrides(prev => [...prev, { id: ov.id, permission_codename: ov.permission_codename, is_allowed: ov.is_allowed }]);
       setSelectedPerm('');
       setAdding(false);
       toast.success(`${isAllowed ? 'ALLOW' : 'DENY'} override added`);
     } catch (err: any) {
-      toast.error(err.message || 'Failed to add override');
+      if (err.status === 409) {
+        const confirmed = window.confirm(`⚠️ ${err.message}\n\nProceed anyway?`);
+        if (confirmed) {
+          setSaving(false);
+          return handleAdd(true);
+        }
+      } else {
+        toast.error(err.message || 'Failed to add override');
+      }
     } finally {
       setSaving(false);
     }
