@@ -3,7 +3,7 @@ Django Admin configuration for Permissions app.
 """
 from django.contrib import admin
 from django.utils.html import format_html
-from .models import ServiceAccess, HdmsRole, PermissionAudit
+from .models import ServiceAccess, HdmsRole, PermissionAudit, Permission, Role, EmployeeRole, EmployeePermissionOverride
 
 
 @admin.register(ServiceAccess)
@@ -198,3 +198,42 @@ class PermissionAuditAdmin(admin.ModelAdmin):
     def has_delete_permission(self, request, obj=None):
         # Audit logs should not be deleted
         return False
+
+
+@admin.register(Permission)
+class PermissionAdmin(admin.ModelAdmin):
+    list_display = ["codename", "name", "service"]
+    list_filter = ["service"]
+    search_fields = ["codename", "name"]
+    ordering = ["service", "codename"]
+    readonly_fields = ["codename", "service"]
+
+
+@admin.register(Role)
+class RoleAdmin(admin.ModelAdmin):
+    list_display = ["name", "service", "is_default", "permission_count"]
+    list_filter = ["service", "is_default"]
+    search_fields = ["name"]
+    filter_horizontal = ["permissions"]
+
+    def permission_count(self, obj):
+        return obj.permissions.count()
+    permission_count.short_description = "# Permissions"
+
+
+@admin.register(EmployeeRole)
+class EmployeeRoleAdmin(admin.ModelAdmin):
+    list_display = ["employee", "role", "granted_by", "granted_at"]
+    list_filter = ["role__service"]
+    search_fields = ["employee__full_name", "role__name"]
+    raw_id_fields = ["employee", "role", "granted_by"]
+    readonly_fields = ["granted_at"]
+
+
+@admin.register(EmployeePermissionOverride)
+class EmployeePermissionOverrideAdmin(admin.ModelAdmin):
+    list_display = ["employee", "permission", "is_allowed", "granted_by", "granted_at"]
+    list_filter = ["is_allowed", "permission__service"]
+    search_fields = ["employee__full_name", "permission__codename"]
+    raw_id_fields = ["employee", "permission", "granted_by"]
+    readonly_fields = ["granted_at"]

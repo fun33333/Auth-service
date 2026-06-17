@@ -6,6 +6,92 @@
 
 ## Change History
 
+### 2026-06-16 — RBAC M3 Frontend: Auth Subsystem Tab + Role Management UI
+
+**Feature:** Admin-facing UI for RBAC — roles, employee assignments, and per-employee permission overrides. No more developer involvement for runtime role changes.
+
+**Backend additions (`permissions/rbac_api.py`):**
+- `GET /api/permissions/rbac/permissions?service=` — list all permissions, filterable by service
+- `GET /api/permissions/rbac/roles/{role_id}` — role detail with `permission_codenames[]`
+- `GET /api/permissions/rbac/employee-roles?employee_id=` — list assignments, filterable by employee
+- `GET /api/permissions/rbac/roles?service=` — updated existing endpoint to accept service filter
+
+**Frontend additions:**
+
+- `frontend/src/services/rbacService.ts` (new) — typed API client wrapping `fetchWithAuth` for all 12 RBAC operations (listPermissions, listRoles, getRole, createRole, updateRole, deleteRole, listEmployeeRoles, assignRole, removeRoleAssignment, createOverride, removeOverride, getEffectivePermissions).
+
+- `frontend/src/app/service/page.tsx` — major extension:
+  - **Auth tab** added alongside HDMS/VMS tabs. Shows employee-role assignment table.
+  - **RoleManagementPanel** — create/edit/delete auth roles with permission checkbox modal.
+  - **Dynamic role dropdown** in provision modal — fetches from API for auth service; HDMS/VMS remain hardcoded. Password section hidden for auth (no credentials needed).
+  - **OverridesPanel** — per-employee expandable panel; ALLOW/DENY individual permissions inline.
+
+**Security fixes (post-testing):**
+- `AssignRoleIn.employee_id` changed from `uuid.UUID` to `str` — frontend sends varchar employee code (e.g. `IAK-0001`), not UUID. Consistent with HDMS/VMS grant endpoints.
+- `SuperAdminBearer` added to RBAC router — all 12 RBAC management endpoints now require superadmin JWT. Regular employees get 401.
+- 5 security tests added confirming employee + unauthenticated access is blocked.
+
+**Tests:** 43/43 pass. TypeScript: 0 errors.
+
+**Acceptance criteria:**
+- [x] A: Auth tab visible on `/service` page alongside HDMS/VMS
+- [x] B: Admin can create/edit/delete roles with permission checkboxes — no code deployment
+- [x] C: Provision modal role dropdown is API-driven for auth service; role assignment posts correctly
+- [x] D: Per-employee overrides panel functional (add ALLOW/DENY, remove)
+
+**Known gaps (M4 backlog):**
+- RBAC permissions not enforced on non-RBAC endpoints (`/api/employees/*`, `/api/departments/*`, etc.) — any authenticated employee can call them
+- Missing edge case tests (duplicate assignment 400, nonexistent employee 404, etc.)
+
+**Branch:** `feat/rbac-m3-frontend`
+**Commits:** `2048ade` → `5630a9e` → `d332b09` → `16d4ec1` → `404c357` → `398b074` → `d4ebffe` → `15f75a2`
+
+---
+
+### 2026-06-15 — RBAC M2 Backend API & Permission Engine
+
+**Feature:** Permission engine, decorator, and 9 RBAC management API endpoints.
+
+**Files added:**
+- `permissions/rbac.py` — `get_effective_permissions`, `has_permission`, `clear_permission_cache`. Redis cache 5-min TTL. Formula: (role perms ∪ allowed overrides) − denied overrides.
+- `permissions/decorators.py` — `@require_permission(codename)`. Raises `HttpError(403)` if denied. SuperAdmin bypasses unconditionally.
+- `permissions/rbac_api.py` — 9 endpoints at `/api/permissions/rbac/*`: roles CRUD (4), employee-role assignment (2), permission overrides (2), effective-permissions (1).
+- `permissions/test_rbac_engine.py` — 31 tests covering engine, decorator, all API endpoints.
+
+**conftest.py:** Added `superadmin` and `superadmin_auth_client` fixtures.
+
+**Routing:** `core/urls.py` — mounted `rbac_router` at `/api/permissions/rbac`.
+
+**Tests:** 51/51 pass (M1 + M2 combined).
+
+**Commits:** `06152cf` → `af23e7f` → `46e4674` → `99a14d7`
+
+---
+
+### 2026-06-15 — RBAC M1 Foundation
+
+**Feature:** Dynamic RBAC system foundation — 4 new models, migrations, seed command, admin registration.
+
+**Models added (`permissions/models.py`):**
+- `Permission` — plain model, codename/name/service. Engineering-defined via seed command.
+- `Role` (SoftDeleteModel) — named permission bundle per service. M2M to Permission.
+- `EmployeeRole` (SoftDeleteModel) — assigns a role to an employee. GenericFK scope fields (null = global, Phase 2 will fill for branch/institution scoping).
+- `EmployeePermissionOverride` (SoftDeleteModel) — per-employee grant or block overriding role defaults.
+
+**Migrations:** `0007_rbac_permission`, `0008_rbac_role`, `0009_rbac_employee_role_and_override` — all apply clean.
+
+**Management command:** `permissions/management/commands/seed_permissions.py` — 30 permissions covering all existing API endpoints. Idempotent (safe to re-run).
+
+**Admin:** `PermissionAdmin`, `RoleAdmin`, `EmployeeRoleAdmin`, `EmployeePermissionOverrideAdmin` registered in `permissions/admin.py`.
+
+**Tests:** `permissions/test_rbac_foundation.py` — 20 tests. All pass.
+
+**Commits:** `3e16894` (models) → `c0a516a` (seed command) → `6c79e7c` (admin)
+
+**Note:** 10 pre-existing errors in `permissions/tests.py` (`dept_sector` fixture) — not caused by M1 changes.
+
+---
+
 ### 2026-06-06 — Remove redundant `branch` FK from `EmployeeAssignment`
 
 **Problem:** `EmployeeAssignment.branch` FK was a second source of truth. `designation → department → branch` already provides the branch. Two stored values could silently diverge (impossible assignments).
@@ -38,6 +124,9 @@
 | OpenAPI → TS type generation | **Planned** | Exploit the monorepo layout; sync backend schemas into `frontend/src/types/` |
 | Tighten CORS / ALLOWED_HOSTS for prod | **Planned** | Currently `*` — acceptable for dev, must gate before prod |
 | Audit log UI wiring | **Planned** | `/api/audit/*` endpoints exist; frontend page is scaffold only |
+| RBAC M1 — Foundation models | **Done** | Permission, Role, EmployeeRole, EmployeePermissionOverride + seed_permissions + admin |
+| RBAC M2 — Backend enforcement | **Done** | Permission engine + @require_permission decorator + 9 RBAC API endpoints |
+| RBAC M3 — Frontend gating | **Planned** | Frontend permission checks based on JWT/API response |
 | Content-Types-based `Department` parent | **Future** | Replace 3 nullable FKs (org/institution/branch) with Generic FK per arch report §4 |
 
 ---

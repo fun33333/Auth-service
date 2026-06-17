@@ -393,3 +393,147 @@ class PermissionAudit(models.Model):
     
     def __str__(self):
         return f"{self.employee.full_name} - {self.get_action_display()} ({self.service})"
+
+
+class Permission(models.Model):
+    """Named action within a service. Defined by engineering via seed_permissions command."""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    codename = models.CharField(max_length=100, unique=True, help_text="e.g. 'employee.create'")
+    name = models.CharField(max_length=200, help_text="e.g. 'Create Employee'")
+    service = models.CharField(max_length=20, help_text="Service code this permission belongs to")
+    description = models.TextField(blank=True, default="")
+
+    class Meta:
+        db_table = "permissions_rbac_permission"
+        ordering = ["service", "codename"]
+
+    def __str__(self):
+        return f"{self.service} / {self.codename}"
+
+
+class Role(SoftDeleteModel):
+    """Named bundle of permissions. Created and managed by admins at runtime."""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=100, help_text="e.g. 'HR Manager'")
+    service = models.CharField(max_length=20, help_text="Service code this role applies to")
+    is_default = models.BooleanField(default=False, help_text="Pre-seeded default role")
+    description = models.TextField(blank=True, default="")
+    permissions = models.ManyToManyField(
+        Permission,
+        blank=True,
+        related_name="roles",
+        help_text="Permissions bundled into this role",
+    )
+
+    class Meta:
+        db_table = "permissions_rbac_role"
+        unique_together = [("name", "service")]
+        ordering = ["service", "name"]
+
+    def __str__(self):
+        return f"{self.service} / {self.name}"
+
+
+class EmployeeRole(SoftDeleteModel):
+    """Assignment of a role to an employee. scope null = global."""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    employee = models.ForeignKey(
+        Employee,
+        on_delete=models.CASCADE,
+        related_name="employee_roles",
+    )
+    role = models.ForeignKey(
+        Role,
+        on_delete=models.CASCADE,
+        related_name="employee_roles",
+    )
+    # Phase 2: fill to restrict to a specific Branch or Institution. MVP: always null.
+    scope_content_type = models.ForeignKey(
+        "contenttypes.ContentType",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+    )
+    scope_object_id = models.UUIDField(null=True, blank=True)
+    granted_by = models.ForeignKey(
+        Employee,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="granted_employee_roles",
+    )
+    granted_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "permissions_rbac_employee_role"
+
+    def clean(self):
+        qs = EmployeeRole.objects.filter(
+            employee=self.employee,
+            role=self.role,
+            scope_content_type=self.scope_content_type,
+            scope_object_id=self.scope_object_id,
+        )
+        if self.pk:
+            qs = qs.exclude(pk=self.pk)
+        if qs.exists():
+            raise ValidationError("Employee already has this role at this scope.")
+
+    def __str__(self):
+        scope = f" @ {self.scope_object_id}" if self.scope_object_id else " (global)"
+        return f"{self.employee} → {self.role}{scope}"
+
+
+class EmployeePermissionOverride(SoftDeleteModel):
+    """Per-employee permission grant or block that overrides role defaults."""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    employee = models.ForeignKey(
+        Employee,
+        on_delete=models.CASCADE,
+        related_name="permission_overrides",
+    )
+    permission = models.ForeignKey(
+        Permission,
+        on_delete=models.CASCADE,
+        related_name="employee_overrides",
+    )
+    is_allowed = models.BooleanField(
+        help_text="True = grant extra permission. False = block permission from role.",
+    )
+    # Phase 2: scope restricts override to a Branch or Institution. MVP: always null.
+    scope_content_type = models.ForeignKey(
+        "contenttypes.ContentType",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+    )
+    scope_object_id = models.UUIDField(null=True, blank=True)
+    granted_by = models.ForeignKey(
+        Employee,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="granted_permission_overrides",
+    )
+    granted_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "permissions_rbac_employee_permission_override"
+
+    def clean(self):
+        qs = EmployeePermissionOverride.objects.filter(
+            employee=self.employee,
+            permission=self.permission,
+            scope_content_type=self.scope_content_type,
+            scope_object_id=self.scope_object_id,
+        )
+        if self.pk:
+            qs = qs.exclude(pk=self.pk)
+        if qs.exists():
+            raise ValidationError("Employee already has an override for this permission at this scope.")
+
+    def __str__(self):
+        action = "ALLOW" if self.is_allowed else "DENY"
+        return f"{action}: {self.employee} → {self.permission}"

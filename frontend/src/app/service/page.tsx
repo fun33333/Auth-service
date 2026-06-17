@@ -6,6 +6,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { fetchWithAuth } from '@/utils/api';
+import { rbacService, type EmployeeRoleAssignment, type RbacRole, type RbacRoleDetail, type RbacPermission } from '@/services/rbacService';
 import {
   Shield,
   Eye,
@@ -21,7 +22,8 @@ import {
   Power,
   X,
   Calendar,
-  Building
+  Building,
+  Edit
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
@@ -77,7 +79,8 @@ const accessService = {
     return [
       { id: 1, name: "HDMS (Help Desk)", code: "hdms" },
       { id: 2, name: "VMS (Visitor Management)", code: "vms" },
-      { id: 3, name: "SIS (Student Information)", code: "sis" }
+      { id: 3, name: "Auth (RBAC Roles)", code: "auth" },
+      { id: 4, name: "SIS (Student Information)", code: "sis" },
     ];
   },
   getHdmsUsers: async (params: { search?: string; role?: string; status?: string }): Promise<{ results: any[] }> => {
@@ -111,6 +114,18 @@ const accessService = {
     return res.json();
   },
   createAccess: async (payload: AccessPayload): Promise<{ message?: string }> => {
+    if (payload.service_code === 'auth') {
+      const res = await fetchWithAuth('/permissions/rbac/employee-roles', {
+        method: 'POST',
+        body: JSON.stringify({ employee_id: payload.employee_id, role_id: payload.role }),
+      });
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({})) as { error?: string };
+        throw new Error(errorData.error || 'Failed to assign auth role.');
+      }
+      return { message: 'Auth role assigned successfully.' };
+    }
+
     let url = '';
     const bodyPayload: Record<string, unknown> = {
       employee_id: payload.employee_id,
@@ -118,7 +133,7 @@ const accessService = {
       role: payload.role,
       change_password: true
     };
-    
+
     if (payload.service_code === 'hdms') {
       url = '/permissions/grant-hdms-access';
     } else if (payload.service_code === 'vms') {
@@ -131,9 +146,9 @@ const accessService = {
       method: 'POST',
       body: JSON.stringify(bodyPayload),
     });
-    
+
     if (!res.ok) {
-      const errorData = await res.json().catch(() => ({}));
+      const errorData = await res.json().catch(() => ({})) as { error?: string };
       throw new Error(errorData.error || 'Target server rejected access transaction configuration.');
     }
     return res.json();
@@ -164,12 +179,7 @@ const accessFormSchema = z.object({
   service_code: z.string().min(1, 'Service selection is required'),
   role: z.string().optional(),
   is_active: z.boolean(),
-  password: z.string()
-    .min(8, 'Password must be at least 8 characters')
-    .regex(/[A-Z]/, 'Must contain at least one uppercase letter')
-    .regex(/[a-z]/, 'Must contain at least one lowercase letter')
-    .regex(/[0-9]/, 'Must contain at least one digit')
-    .regex(/^[A-Za-z0-9]+$/, 'Password must be alphanumeric only (no special characters)'),
+  password: z.string(),
   confirm_password: z.string(),
   granted_at: z.string().min(1, 'Grant date/time is required'),
   granted_by: z.number(),
@@ -187,12 +197,22 @@ const accessFormSchema = z.object({
   message: "SuperAdmin selection is required",
   path: ["superadmin_id"]
 }).refine((data) => {
-  if ((data.service_code === 'hdms' || data.service_code === 'vms') && !data.role) return false;
+  if ((data.service_code === 'hdms' || data.service_code === 'vms' || data.service_code === 'auth') && !data.role) return false;
   return true;
 }, {
   message: "Role selection is required for this service",
   path: ["role"]
-}).refine((data) => data.password === data.confirm_password, {
+}).refine((data) => {
+  if (data.service_code === 'auth') return true;
+  const pwd = data.password || '';
+  return pwd.length >= 8 && /[A-Z]/.test(pwd) && /[a-z]/.test(pwd) && /[0-9]/.test(pwd) && /^[A-Za-z0-9]+$/.test(pwd);
+}, {
+  message: "Password must be 8+ chars, alphanumeric with upper, lower, and digit",
+  path: ["password"]
+}).refine((data) => {
+  if (data.service_code === 'auth') return true;
+  return data.password === data.confirm_password;
+}, {
   message: "Passwords do not match",
   path: ["confirm_password"]
 });
@@ -200,7 +220,366 @@ const accessFormSchema = z.object({
 type AccessFormValues = z.infer<typeof accessFormSchema>;
 
 // ==========================================
-// 4. INLINE COMPONENT: ASYNC SEARCH SELECT
+// 4. AUTH TAB COMPONENTS
+// ==========================================
+
+function RoleManagementPanel() {
+  const [roles, setRoles] = useState<RbacRole[]>([]);
+  const [allPermissions, setAllPermissions] = useState<RbacPermission[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showModal, setShowModal] = useState(false);
+  const [editingRole, setEditingRole] = useState<RbacRoleDetail | null>(null);
+  const [processing, setProcessing] = useState(false);
+  const [formName, setFormName] = useState('');
+  const [formDescription, setFormDescription] = useState('');
+  const [formPermissions, setFormPermissions] = useState<string[]>([]);
+
+  useEffect(() => {
+    Promise.all([rbacService.listRoles('auth'), rbacService.listPermissions('auth')])
+      .then(([rolesData, permsData]) => {
+        setRoles(rolesData.roles);
+        setAllPermissions(permsData.permissions);
+      })
+      .finally(() => setLoading(false));
+  }, []);
+
+  const openCreate = () => {
+    setFormName(''); setFormDescription(''); setFormPermissions([]);
+    setEditingRole(null); setShowModal(true);
+  };
+
+  const openEdit = async (role: RbacRole) => {
+    const detail = await rbacService.getRole(role.id);
+    setFormName(detail.name); setFormDescription(detail.description);
+    setFormPermissions(detail.permission_codenames);
+    setEditingRole(detail); setShowModal(true);
+  };
+
+  const handleSave = async () => {
+    setProcessing(true);
+    try {
+      if (editingRole) {
+        await rbacService.updateRole(editingRole.id, {
+          name: formName, description: formDescription, permission_codenames: formPermissions,
+        });
+        toast.success('Role updated');
+      } else {
+        await rbacService.createRole({
+          name: formName, service: 'auth', description: formDescription, permission_codenames: formPermissions,
+        });
+        toast.success('Role created');
+      }
+      const updated = await rbacService.listRoles('auth');
+      setRoles(updated.roles);
+      setShowModal(false);
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to save role');
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const handleDelete = async (role: RbacRole) => {
+    if (!confirm(`Delete role "${role.name}"? This cannot be undone.`)) return;
+    try {
+      await rbacService.deleteRole(role.id);
+      setRoles(prev => prev.filter(r => r.id !== role.id));
+      toast.success('Role deleted');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to delete role');
+    }
+  };
+
+  const togglePermission = (codename: string) =>
+    setFormPermissions(prev =>
+      prev.includes(codename) ? prev.filter(c => c !== codename) : [...prev, codename],
+    );
+
+  if (loading) return (
+    <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm mb-5 flex items-center gap-3 text-slate-400">
+      <Loader2 className="h-5 w-5 animate-spin" />
+      <span className="text-xs">Loading roles...</span>
+    </div>
+  );
+
+  return (
+    <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm mb-5">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-sm font-bold text-slate-700 uppercase tracking-wider">Auth Roles</h2>
+        <button
+          onClick={openCreate}
+          className="flex items-center gap-1.5 bg-theme-800 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-theme-900 transition"
+        >
+          <Plus className="h-3.5 w-3.5" /> New Role
+        </button>
+      </div>
+
+      {roles.length === 0 ? (
+        <p className="text-xs text-slate-400">No auth roles defined. Create one above.</p>
+      ) : (
+        <div className="flex flex-wrap gap-2">
+          {roles.map(role => (
+            <div key={role.id} className="flex items-center gap-2 border border-slate-200 rounded-lg px-3 py-2">
+              <span className="text-xs font-semibold text-slate-700">{role.name}</span>
+              <span className="text-[10px] text-slate-400 font-mono">{role.permission_count} perms</span>
+              <button onClick={() => openEdit(role)} className="text-slate-400 hover:text-theme-600 transition">
+                <Edit className="h-3.5 w-3.5" />
+              </button>
+              <button onClick={() => handleDelete(role)} className="text-slate-400 hover:text-rose-600 transition">
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {showModal && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setShowModal(false)} />
+          <div className="flex min-h-full items-center justify-center p-4">
+            <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg border border-slate-100 p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-sm font-bold text-slate-800">
+                  {editingRole ? 'Edit Role' : 'Create Auth Role'}
+                </h3>
+                <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-600">
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="text-xs font-medium text-slate-500 block mb-1">Role Name</label>
+                  <input
+                    type="text"
+                    value={formName}
+                    onChange={e => setFormName(e.target.value)}
+                    placeholder="e.g. HR Manager"
+                    className="w-full h-9 px-3 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-theme-500"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-slate-500 block mb-1">Description (optional)</label>
+                  <input
+                    type="text"
+                    value={formDescription}
+                    onChange={e => setFormDescription(e.target.value)}
+                    placeholder="Brief description"
+                    className="w-full h-9 px-3 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-theme-500"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-slate-500 block mb-2">Permissions</label>
+                  <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto p-2 border border-slate-100 rounded-lg">
+                    {allPermissions.map(perm => (
+                      <label key={perm.codename} className="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-1 rounded">
+                        <input
+                          type="checkbox"
+                          checked={formPermissions.includes(perm.codename)}
+                          onChange={() => togglePermission(perm.codename)}
+                          className="rounded border-slate-300 text-theme-600"
+                        />
+                        <span className="text-xs text-slate-600">{perm.name}</span>
+                      </label>
+                    ))}
+                  </div>
+                  <p className="text-[10px] text-slate-400 mt-1">{formPermissions.length} selected</p>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 mt-5 pt-4 border-t border-slate-100">
+                <button onClick={() => setShowModal(false)} className="px-4 h-9 text-xs border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50">
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSave}
+                  disabled={!formName.trim() || processing}
+                  className="px-4 h-9 text-xs font-semibold bg-theme-600 text-white rounded-lg hover:bg-theme-700 disabled:opacity-50 flex items-center gap-1.5"
+                >
+                  {processing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+                  {editingRole ? 'Save Changes' : 'Create Role'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function OverridesPanel({ employeeId }: { employeeId: string }) {
+  const [allPermissions, setAllPermissions] = useState<RbacPermission[]>([]);
+  const [overrides, setOverrides] = useState<Array<{ id: string; permission_codename: string; is_allowed: boolean }>>([]);
+  const [loading, setLoading] = useState(true);
+  const [adding, setAdding] = useState(false);
+  const [selectedPerm, setSelectedPerm] = useState('');
+  const [isAllowed, setIsAllowed] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    rbacService.listPermissions('auth')
+      .then(data => setAllPermissions(data.permissions))
+      .finally(() => setLoading(false));
+  }, [employeeId]);
+
+  const handleAdd = async () => {
+    if (!selectedPerm) return;
+    setSaving(true);
+    try {
+      const ov = await rbacService.createOverride(employeeId, selectedPerm, isAllowed);
+      setOverrides(prev => [...prev, { id: ov.id, permission_codename: ov.permission_codename, is_allowed: ov.is_allowed }]);
+      setSelectedPerm('');
+      setAdding(false);
+      toast.success(`${isAllowed ? 'ALLOW' : 'DENY'} override added`);
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to add override');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleRemove = async (id: string) => {
+    try {
+      await rbacService.removeOverride(id);
+      setOverrides(prev => prev.filter(o => o.id !== id));
+      toast.success('Override removed');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to remove override');
+    }
+  };
+
+  if (loading) return (
+    <div className="bg-slate-50 rounded-xl p-4 mt-1 border border-slate-100 flex items-center gap-2 text-slate-400 text-xs">
+      <Loader2 className="h-4 w-4 animate-spin" /> Loading permissions...
+    </div>
+  );
+
+  return (
+    <div className="bg-slate-50 rounded-xl p-4 mt-1 border border-slate-100">
+      <div className="flex items-center justify-between mb-3">
+        <h4 className="text-xs font-bold text-slate-600 uppercase tracking-wider">Permission Overrides</h4>
+        <button
+          onClick={() => setAdding(!adding)}
+          className="flex items-center gap-1 px-2.5 py-1 text-[10px] font-semibold bg-theme-800 text-white rounded-lg hover:bg-theme-900 transition"
+        >
+          <Plus className="h-3 w-3" /> Add Override
+        </button>
+      </div>
+
+      {adding && (
+        <div className="flex flex-wrap items-center gap-2 mb-3 p-3 bg-white rounded-lg border border-slate-100">
+          <select
+            value={selectedPerm}
+            onChange={e => setSelectedPerm(e.target.value)}
+            className="flex-1 min-w-40 h-8 px-2 text-xs border border-slate-200 rounded-md"
+          >
+            <option value="">Select permission...</option>
+            {allPermissions.map(p => (
+              <option key={p.codename} value={p.codename}>{p.name} ({p.codename})</option>
+            ))}
+          </select>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setIsAllowed(true)}
+              className={`px-2 py-1 text-[10px] font-semibold rounded ${isAllowed ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}
+            >ALLOW</button>
+            <button
+              type="button"
+              onClick={() => setIsAllowed(false)}
+              className={`px-2 py-1 text-[10px] font-semibold rounded ${!isAllowed ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-500'}`}
+            >DENY</button>
+          </div>
+          <button
+            onClick={handleAdd}
+            disabled={!selectedPerm || saving}
+            className="px-3 h-8 text-[10px] font-semibold bg-theme-600 text-white rounded-md disabled:opacity-50 flex items-center gap-1"
+          >
+            {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />} Save
+          </button>
+        </div>
+      )}
+
+      {overrides.length === 0 ? (
+        <p className="text-[10px] text-slate-400">No overrides. Use &quot;Add Override&quot; to grant or block specific permissions.</p>
+      ) : (
+        <div className="space-y-1">
+          {overrides.map(ov => (
+            <div key={ov.id} className="flex items-center justify-between p-2 bg-white rounded-lg border border-slate-100">
+              <div className="flex items-center gap-2">
+                <span className={`px-1.5 py-0.5 text-[10px] font-bold rounded ${ov.is_allowed ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
+                  {ov.is_allowed ? 'ALLOW' : 'DENY'}
+                </span>
+                <span className="text-[11px] font-mono text-slate-600">{ov.permission_codename}</span>
+              </div>
+              <button onClick={() => handleRemove(ov.id)} className="text-slate-400 hover:text-rose-500 transition">
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AuthAssignmentRow({
+  assignment,
+  onRemove,
+}: {
+  assignment: EmployeeRoleAssignment;
+  onRemove: (id: string) => Promise<void>;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const [removing, setRemoving] = useState(false);
+
+  return (
+    <>
+      <tr className="hover:bg-slate-50/50 transition">
+        <td className="px-6 py-4 font-mono text-[11px]">{assignment.employee_id}</td>
+        <td className="px-6 py-4">
+          <span className="px-2 py-1 bg-theme-50 text-theme-700 text-[10px] font-bold rounded-md uppercase tracking-wider">
+            {assignment.role_name}
+          </span>
+        </td>
+        <td className="px-6 py-4 font-mono text-[10px] text-slate-400">
+          {new Date(assignment.granted_at).toLocaleDateString()}
+        </td>
+        <td className="px-6 py-4 text-right">
+          <div className="flex items-center justify-end gap-2">
+            <button
+              onClick={() => setExpanded(!expanded)}
+              className="inline-flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-semibold border border-slate-200 rounded-lg hover:bg-slate-50 transition text-slate-600"
+            >
+              <Edit className="h-3 w-3" /> Overrides
+            </button>
+            <button
+              onClick={async () => {
+                setRemoving(true);
+                try { await onRemove(assignment.id); } finally { setRemoving(false); }
+              }}
+              disabled={removing}
+              className="inline-flex items-center justify-center p-2 rounded-lg border border-rose-100 text-rose-600 hover:bg-rose-50 transition"
+            >
+              {removing ? <Loader2 className="h-4 w-4 animate-spin" /> : <X className="h-4 w-4" />}
+            </button>
+          </div>
+        </td>
+      </tr>
+      {expanded && (
+        <tr>
+          <td colSpan={4} className="px-6 pb-4">
+            <OverridesPanel employeeId={assignment.employee_id} />
+          </td>
+        </tr>
+      )}
+    </>
+  );
+}
+
+// ==========================================
+// 5. INLINE COMPONENT: ASYNC SEARCH SELECT
 // ==========================================
 function AsyncSearchSelect({
   fetchOptions,
@@ -264,10 +643,12 @@ export default function ServiceAccessManagement() {
   const [users, setUsers] = useState<any[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
-  const [selectedSubsystem, setSelectedSubsystem] = useState<'hdms' | 'vms'>('hdms');
+  const [selectedSubsystem, setSelectedSubsystem] = useState<'hdms' | 'vms' | 'auth'>('hdms');
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [authAssignments, setAuthAssignments] = useState<EmployeeRoleAssignment[]>([]);
+  const [loadingAuth, setLoadingAuth] = useState(false);
 
   const currentAdmin = { id: 1, name: "Alexander Wright (Superadmin)" };
 
@@ -292,6 +673,8 @@ export default function ServiceAccessManagement() {
   const passwordVal = watch('password') || '';
   const isActiveVal = watch('is_active');
   const serviceCodeVal = watch('service_code');
+  const [dynamicRoles, setDynamicRoles] = useState<{ value: string; label: string }[]>([]);
+  const [loadingRoles, setLoadingRoles] = useState(false);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -326,7 +709,15 @@ export default function ServiceAccessManagement() {
   };
 
   useEffect(() => {
-    fetchUsersList();
+    if (selectedSubsystem === 'auth') {
+      setLoadingAuth(true);
+      rbacService.listEmployeeRoles()
+        .then(data => setAuthAssignments(data.assignments))
+        .catch(() => setAuthAssignments([]))
+        .finally(() => setLoadingAuth(false));
+    } else {
+      fetchUsersList();
+    }
   }, [selectedSubsystem, searchQuery, roleFilter, statusFilter]);
 
   useEffect(() => {
@@ -337,6 +728,36 @@ export default function ServiceAccessManagement() {
   useEffect(() => {
     setValue('role', '');
   }, [serviceCodeVal, setValue]);
+
+  useEffect(() => {
+    if (!serviceCodeVal) { setDynamicRoles([]); return; }
+    if (serviceCodeVal === 'hdms') {
+      setDynamicRoles([
+        { value: 'requestor', label: 'Requestor (Can only create tickets)' },
+        { value: 'assignee', label: 'Assignee (Can be assigned tickets)' },
+        { value: 'moderator', label: 'Moderator (Full ticket management)' },
+        { value: 'admin', label: 'Administrator (Full system access)' },
+      ]);
+      return;
+    }
+    if (serviceCodeVal === 'vms') {
+      setDynamicRoles([
+        { value: 'security_staff', label: 'Security Staff' },
+        { value: 'receptionist', label: 'Receptionist' },
+        { value: 'admin', label: 'Administrator (Full control)' },
+      ]);
+      return;
+    }
+    if (serviceCodeVal === 'auth') {
+      setLoadingRoles(true);
+      rbacService.listRoles('auth')
+        .then(data => setDynamicRoles(data.roles.map(r => ({ value: r.id, label: r.name }))))
+        .catch(() => setDynamicRoles([]))
+        .finally(() => setLoadingRoles(false));
+      return;
+    }
+    setDynamicRoles([]);
+  }, [serviceCodeVal]);
 
   const getPasswordStrength = (pwd: string) => {
     let score = 0;
@@ -433,10 +854,18 @@ export default function ServiceAccessManagement() {
                 >
                   VMS Subsystem
                 </button>
+                <button
+                  onClick={() => { setSelectedSubsystem('auth'); setRoleFilter(''); }}
+                  className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all ${selectedSubsystem === 'auth' ? 'bg-white text-theme-700 shadow-sm border border-slate-200' : 'text-slate-600 hover:text-slate-800'}`}
+                >
+                  Auth Subsystem
+                </button>
               </div>
               
               <div className="text-xs text-slate-400 font-mono">
-                {users.length} provisioned {selectedSubsystem.toUpperCase()} credentials
+                {selectedSubsystem === 'auth'
+                  ? `${authAssignments.length} auth role assignments`
+                  : `${users.length} provisioned ${selectedSubsystem.toUpperCase()} credentials`}
               </div>
             </div>
 
@@ -510,80 +939,121 @@ export default function ServiceAccessManagement() {
             </div>
           </div>
 
+          {/* Role Management Panel — Auth only */}
+          {selectedSubsystem === 'auth' && <RoleManagementPanel />}
+
           {/* Table Listing */}
           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-            {loadingUsers ? (
-              <div className="p-20 flex flex-col items-center justify-center gap-3 text-slate-400">
-                <Loader2 className="h-8 w-8 animate-spin text-theme-500" />
-                <span className="text-xs font-medium">Resolving access profiles directory...</span>
-              </div>
-            ) : users.length === 0 ? (
-              <div className="p-20 text-center text-slate-400 text-xs font-medium">
-                No active service access records found matching the criteria.
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="bg-slate-50/75 border-b border-slate-100 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                      <th className="px-6 py-4">Employee Details</th>
-                      <th className="px-6 py-4">System Service</th>
-                      <th className="px-6 py-4">Assigned Role</th>
-                      <th className="px-6 py-4">Department</th>
-                      <th className="px-6 py-4">Status</th>
-                      <th className="px-6 py-4">Last Interaction</th>
-                      <th className="px-6 py-4">Provision Date</th>
-                      <th className="px-6 py-4 text-right">Access Controls</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-50 text-xs text-slate-600">
-                    {users.map((user) => (
-                      <tr key={user.id} className="hover:bg-slate-50/50 transition">
-                        <td className="px-6 py-4">
-                          <div className="font-semibold text-slate-800">{user.name}</div>
-                          <div className="text-[10px] text-slate-400 font-mono mt-0.5">{user.employee_code}</div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className="px-2 py-1 bg-theme-50 text-theme-700 text-[10px] font-bold rounded-md uppercase tracking-wider">
-                            {selectedSubsystem}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 font-mono text-[11px] capitalize">{user.role}</td>
-                        <td className="px-6 py-4 text-slate-500">{user.department || '—'}</td>
-                        <td className="px-6 py-4">
-                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold ${user.status === 'active' ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>
-                            <span className={`w-1.5 h-1.5 rounded-full ${user.status === 'active' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
-                            {user.status}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 font-mono text-[10px] text-slate-400">
-                          {user.last_login ? new Date(user.last_login).toLocaleString() : 'Never'}
-                        </td>
-                        <td className="px-6 py-4 font-mono text-[10px] text-slate-400">
-                          {user.join_date ? new Date(user.join_date).toLocaleDateString() : '—'}
-                        </td>
-                        <td className="px-6 py-4 text-right">
-                          <button
-                            onClick={async () => {
-                              try {
-                                const res = await accessService.toggleAccess(user.employee_code, selectedSubsystem);
-                                toast.success(res.message || "Successfully toggled access status.");
-                                fetchUsersList();
-                              } catch (err: any) {
-                                toast.error(err.message || "Failed to toggle status.");
-                              }
-                            }}
-                            className={`inline-flex items-center justify-center p-2 rounded-lg border transition ${user.status === 'active' ? 'border-rose-100 text-rose-600 hover:bg-rose-50' : 'border-emerald-100 text-emerald-600 hover:bg-emerald-50'}`}
-                            title={user.status === 'active' ? 'Deactivate Access' : 'Activate Access'}
-                          >
-                            <Power className="h-4 w-4" />
-                          </button>
-                        </td>
+            {selectedSubsystem === 'auth' ? (
+              loadingAuth ? (
+                <div className="p-20 flex flex-col items-center justify-center gap-3 text-slate-400">
+                  <Loader2 className="h-8 w-8 animate-spin text-theme-500" />
+                  <span className="text-xs font-medium">Loading Auth role assignments...</span>
+                </div>
+              ) : authAssignments.length === 0 ? (
+                <div className="p-20 text-center text-slate-400 text-xs font-medium">
+                  No Auth service role assignments found.
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-slate-50/75 border-b border-slate-100 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                        <th className="px-6 py-4">Employee ID</th>
+                        <th className="px-6 py-4">Role</th>
+                        <th className="px-6 py-4">Granted At</th>
+                        <th className="px-6 py-4 text-right">Actions</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody className="divide-y divide-slate-50 text-xs text-slate-600">
+                      {authAssignments.map((assignment) => (
+                        <AuthAssignmentRow
+                          key={assignment.id}
+                          assignment={assignment}
+                          onRemove={async (id) => {
+                            await rbacService.removeRoleAssignment(id);
+                            setAuthAssignments(prev => prev.filter(a => a.id !== id));
+                          }}
+                        />
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )
+            ) : (
+              loadingUsers ? (
+                <div className="p-20 flex flex-col items-center justify-center gap-3 text-slate-400">
+                  <Loader2 className="h-8 w-8 animate-spin text-theme-500" />
+                  <span className="text-xs font-medium">Resolving access profiles directory...</span>
+                </div>
+              ) : users.length === 0 ? (
+                <div className="p-20 text-center text-slate-400 text-xs font-medium">
+                  No active service access records found matching the criteria.
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-slate-50/75 border-b border-slate-100 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                        <th className="px-6 py-4">Employee Details</th>
+                        <th className="px-6 py-4">System Service</th>
+                        <th className="px-6 py-4">Assigned Role</th>
+                        <th className="px-6 py-4">Department</th>
+                        <th className="px-6 py-4">Status</th>
+                        <th className="px-6 py-4">Last Interaction</th>
+                        <th className="px-6 py-4">Provision Date</th>
+                        <th className="px-6 py-4 text-right">Access Controls</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-50 text-xs text-slate-600">
+                      {users.map((user) => (
+                        <tr key={user.id} className="hover:bg-slate-50/50 transition">
+                          <td className="px-6 py-4">
+                            <div className="font-semibold text-slate-800">{user.name}</div>
+                            <div className="text-[10px] text-slate-400 font-mono mt-0.5">{user.employee_code}</div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className="px-2 py-1 bg-theme-50 text-theme-700 text-[10px] font-bold rounded-md uppercase tracking-wider">
+                              {selectedSubsystem}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 font-mono text-[11px] capitalize">{user.role}</td>
+                          <td className="px-6 py-4 text-slate-500">{user.department || '—'}</td>
+                          <td className="px-6 py-4">
+                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold ${user.status === 'active' ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>
+                              <span className={`w-1.5 h-1.5 rounded-full ${user.status === 'active' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+                              {user.status}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 font-mono text-[10px] text-slate-400">
+                            {user.last_login ? new Date(user.last_login).toLocaleString() : 'Never'}
+                          </td>
+                          <td className="px-6 py-4 font-mono text-[10px] text-slate-400">
+                            {user.join_date ? new Date(user.join_date).toLocaleDateString() : '—'}
+                          </td>
+                          <td className="px-6 py-4 text-right">
+                            <button
+                              onClick={async () => {
+                                try {
+                                  const res = await accessService.toggleAccess(user.employee_code, selectedSubsystem);
+                                  toast.success(res.message || "Successfully toggled access status.");
+                                  fetchUsersList();
+                                } catch (err: any) {
+                                  toast.error(err.message || "Failed to toggle status.");
+                                }
+                              }}
+                              className={`inline-flex items-center justify-center p-2 rounded-lg border transition ${user.status === 'active' ? 'border-rose-100 text-rose-600 hover:bg-rose-50' : 'border-emerald-100 text-emerald-600 hover:bg-emerald-50'}`}
+                              title={user.status === 'active' ? 'Deactivate Access' : 'Activate Access'}
+                            >
+                              <Power className="h-4 w-4" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )
             )}
           </div>
         </main>
@@ -680,7 +1150,7 @@ export default function ServiceAccessManagement() {
                         {errors.service_code && <p className="text-xs text-rose-500 mt-1">{errors.service_code.message}</p>}
                       </div>
 
-                      {watch('service_code') && (watch('service_code') === 'hdms' || watch('service_code') === 'vms') && (
+                      {watch('service_code') && watch('service_code') !== 'sis' && (
                         <div>
                           <label className="text-xs font-medium text-slate-500 block mb-1.5">Access Role Assignment</label>
                           <div className="relative w-full">
@@ -688,16 +1158,17 @@ export default function ServiceAccessManagement() {
                               {...register('role')}
                               className="w-full h-10 px-3 py-2 text-sm bg-white border border-slate-200 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-theme-500 transition-colors cursor-pointer appearance-none text-slate-600"
                               defaultValue=""
+                              disabled={loadingRoles}
                             >
-                              <option value="" disabled hidden>Select assigned system role...</option>
-                              {serviceRoles[watch('service_code')]?.map((r) => (
-                                <option key={r.value} value={r.value}>
-                                  {r.label}
-                                </option>
+                              <option value="" disabled hidden>
+                                {loadingRoles ? 'Loading roles...' : 'Select assigned system role...'}
+                              </option>
+                              {dynamicRoles.map((r) => (
+                                <option key={r.value} value={r.value}>{r.label}</option>
                               ))}
                             </select>
                             <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-400">
-                              <ChevronsUpDown className="h-4 w-4" />
+                              {loadingRoles ? <Loader2 className="h-4 w-4 animate-spin" /> : <ChevronsUpDown className="h-4 w-4" />}
                             </div>
                           </div>
                           {errors.role && <p className="text-xs text-rose-500 mt-1">{errors.role.message}</p>}
@@ -726,8 +1197,8 @@ export default function ServiceAccessManagement() {
                     </div>
                   </div>
 
-                  {/* SECTION 3: Credentials & Handshakes */}
-                  <div className="rounded-xl bg-white p-5 border border-slate-100 shadow-sm space-y-3">
+                  {/* SECTION 3: Credentials & Handshakes — hidden for auth service (no password needed) */}
+                  {watch('service_code') !== 'auth' && <div className="rounded-xl bg-white p-5 border border-slate-100 shadow-sm space-y-3">
                     <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-400">03. Credentials & Handshakes</h2>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
@@ -769,7 +1240,7 @@ export default function ServiceAccessManagement() {
                         {errors.confirm_password && <p className="text-xs text-rose-500 mt-1">{errors.confirm_password.message}</p>}
                       </div>
                     </div>
-                  </div>
+                  </div>}
 
                   {/* SECTION 4: System Ledger Metadata */}
                   <div className="rounded-lg bg-white p-5 border border-slate-100 shadow-sm space-y-3">

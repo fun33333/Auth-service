@@ -10,6 +10,7 @@ from authentication.api import router as auth_router
 from permissions.api import router as permissions_router
 from employees.api import router as employees_router
 from audit.api import router as audit_router
+from permissions.rbac_api import router as rbac_router
 
 # Initialize Ninja API
 api = NinjaAPI(
@@ -23,6 +24,7 @@ api.add_router("/auth", auth_router)
 api.add_router("/permissions", permissions_router)
 api.add_router("/employees", employees_router)  # Employees at /api/employees
 api.add_router("/audit", audit_router)          # Audit logs at /api/audit
+api.add_router("/permissions/rbac", rbac_router)  # RBAC management at /api/permissions/rbac
 
 urlpatterns = [
     path('auth-admin/', admin.site.urls),
