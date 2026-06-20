@@ -18,4 +18,5 @@ jobs:
           docker compose build --no-cache
           docker compose up -d
           docker exec -u root auth_service python manage.py collectstatic --noinput || true
+          docker exec auth_service python manage.py seed_permissions
           echo "Auth-service deployed successfully"

@@ -39,4 +39,4 @@ EXPOSE 8000
 
 # Run migrations and start Gunicorn
 # Run migrations and start Gunicorn
-CMD ["sh", "-c", "python manage.py migrate --fake-initial && gunicorn --bind 0.0.0.0:8000 --workers 3 --access-logfile - --error-logfile - core.wsgi:application"]
+CMD ["sh", "-c", "python manage.py migrate --fake-initial && python manage.py seed_permissions && gunicorn --bind 0.0.0.0:8000 --workers 3 --access-logfile - --error-logfile - core.wsgi:application"]
