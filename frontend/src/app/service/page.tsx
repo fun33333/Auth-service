@@ -500,7 +500,7 @@ function OverridesPanel({ employeeId }: { employeeId: string }) {
             >DENY</button>
           </div>
           <button
-            onClick={handleAdd}
+            onClick={() => handleAdd()}
             disabled={!selectedPerm || saving}
             className="px-3 h-8 text-[10px] font-semibold bg-theme-600 text-white rounded-md disabled:opacity-50 flex items-center gap-1"
           >

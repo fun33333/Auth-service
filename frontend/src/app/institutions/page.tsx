@@ -19,6 +19,7 @@ import {
 import { useSearchParams } from "next/navigation";
 import { fetchWithAuth } from "@/utils/api";
 import { Suspense } from "react";
+import AccessDenied from "@/components/AccessDenied";
 import toast from "react-hot-toast";
 
 // ==========================================================================
@@ -458,6 +459,7 @@ function InstitutionsPage() {
   const [branches, setBranches] = useState<Branch[]>([]);
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [loading, setLoading] = useState(true);
+  const [forbidden, setForbidden] = useState(false);
   const [search, setSearch] = useState("");
 
   const [totalUnits, setTotalUnits] = useState(0);
@@ -476,6 +478,11 @@ function InstitutionsPage() {
         fetchWithAuth("/employees/organizations"),
         fetchWithAuth("/employees/branches")
       ]);
+
+      if (instRes.status === 403 || orgRes.status === 403 || branchRes.status === 403) {
+        setForbidden(true);
+        return;
+      }
 
       if (instRes.ok) {
         const data = await instRes.json();
@@ -594,6 +601,8 @@ function InstitutionsPage() {
   const selectedBranches = branches.filter(b => b.institution_code === selectedInst?.inst_code);
   const activeUnits = selectedBranches.filter(b => b.status === "active").length;
   const offlineUnits = selectedBranches.filter(b => b.status === "offline").length;
+
+  if (forbidden) return <ProtectedLayout><AccessDenied permission="institution.view" /></ProtectedLayout>;
 
   return (
     <ProtectedLayout>
